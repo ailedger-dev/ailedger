@@ -888,6 +888,10 @@ async function logInference({
 		if (match) modelName = match[1];
 	}
 
+	// chain_prev_hash and chain_genesis_at are filled in by the BEFORE INSERT
+	// trigger (migrations/20260418_tamper_evident_chain.sql). Computing the
+	// hash worker-side would race under concurrent inserts for the same
+	// customer; the trigger serializes via a per-customer advisory lock.
 	const entry = {
 		customer_id: customerId,
 		system_id: systemId,

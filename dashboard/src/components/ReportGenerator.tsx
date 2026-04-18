@@ -59,8 +59,14 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
     const formatDate = (d: Date) =>
       d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 
-    // Fetch logs, all systems, profile, and subscription in parallel
-    const [{ data: rawLogs }, { data: allSystems }, { data: subData }, { data: profileData }] = await Promise.all([
+    // Fetch logs, all systems, profile, subscription, and chain head in parallel
+    const [
+      { data: rawLogs },
+      { data: allSystems },
+      { data: subData },
+      { data: profileData },
+      { data: chainHeadData },
+    ] = await Promise.all([
       supabase
         .from('inference_logs')
         .select('*')
@@ -80,7 +86,14 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
         .select('org_name')
         .eq('customer_id', customerId)
         .maybeSingle(),
+      supabase.schema('ledger').rpc('chain_head', { p_customer_id: customerId }),
     ])
+
+    const chainHead = (chainHeadData as { chain_head_hash: string | null; last_id: number | null; row_count: number } | null) ?? {
+      chain_head_hash: null,
+      last_id: null,
+      row_count: 0,
+    }
 
     // Determine plan limit
     const activePlan = subData?.status === 'active' ? subData.plan : null
@@ -380,6 +393,7 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
       ['Retention Policy', retentionPolicy],
       ['Hash Algorithm', 'SHA-256 (inputs and outputs - raw data is never stored)'],
       ['Immutability', 'Append-only - records cannot be modified or deleted'],
+      ['Chain Integrity', 'Every row\'s chain_prev_hash is the SHA-256 of the prior row\'s canonical serialization (tamper-evident hash chain)'],
     ]
 
     let gy = afterAnomaliesY + 8
@@ -393,6 +407,49 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
       const lines = doc.splitTextToSize(value, pageWidth - margin * 2 - 52)
       doc.text(lines, margin + 52, gy)
       gy += lines.length * 5 + 2
+    }
+
+    // ─── Chain-Head Signature ──────────────────────────────────────────────────
+    // Regulators re-verify by calling ledger.verify_chain(customer_id); the
+    // returned chain_head_hash MUST equal the value printed here. Any row
+    // tampered with after export invalidates the chain and produces a
+    // different head hash.
+    gy += 8
+    if (gy > doc.internal.pageSize.getHeight() - 60) {
+      doc.addPage()
+      gy = 20
+    }
+
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 30, 40)
+    doc.text('Chain-Head Signature', margin, gy)
+    doc.setDrawColor(220, 220, 230)
+    doc.line(margin, gy + 2, pageWidth - margin, gy + 2)
+    gy += 8
+
+    const chainRows: [string, string][] = [
+      ['Algorithm', 'SHA-256 over pipe-delimited canonical serialization'],
+      ['Row Count', String(chainHead.row_count)],
+      ['Last Row ID', chainHead.last_id != null ? String(chainHead.last_id) : '-'],
+      ['Chain Head Hash', chainHead.chain_head_hash ?? '(no rows)'],
+      ['Re-verify Command', 'select ledger.verify_chain(\'' + customerId + '\'::uuid);'],
+    ]
+
+    doc.setFontSize(9)
+    for (const [label, value] of chainRows) {
+      if (gy > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage()
+        gy = 20
+      }
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(80, 80, 100)
+      doc.text(label, margin, gy)
+      doc.setFont(label === 'Chain Head Hash' || label === 'Re-verify Command' ? 'courier' : 'helvetica', 'normal')
+      doc.setTextColor(30, 30, 40)
+      const vLines = doc.splitTextToSize(value, pageWidth - margin * 2 - 52)
+      doc.text(vLines, margin + 52, gy)
+      gy += vLines.length * 5 + 2
     }
 
     // ─── Article 12 Compliance Matrix ───────────────────────────────────────────
