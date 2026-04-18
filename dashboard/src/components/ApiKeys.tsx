@@ -60,6 +60,34 @@ export default function ApiKeys({ customerId, onUpgrade }: { customerId: string;
     fetchAll()
   }, [customerId])
 
+  // Systems can be deleted from the Settings tab (or another browser tab).
+  // Refresh when the document becomes visible so the dropdowns don't render
+  // stale entries that would produce orphan system_id references on create.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') fetchSystems()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId])
+
+  async function fetchSystems() {
+    const { data } = await supabase
+      .from('account_settings')
+      .select('id, system_name')
+      .eq('customer_id', customerId)
+      .order('system_name')
+    const fresh = (data ?? []) as AiSystem[]
+    setSystems(fresh)
+    // If the currently-staged selection was deleted elsewhere, clear it.
+    setNewKeySystem((prev) => (prev && !fresh.some((s) => s.id === prev) ? '' : prev))
+  }
+
   async function fetchAll() {
     setLoading(true)
     const [{ data: keysData }, { data: sysData }, { data: subData }] = await Promise.all([
