@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# welcome-render — render docs/pasha-welcome.md → DRAFT-watermarked PDF.
+#
+# Output:
+#   dist/pasha-welcome-DRAFT-<YYYY-MM-DD>.{html,pdf}   (repo-local, gitignored)
+#
+# Mirror (optional, on by default when ~/Downloads exists):
+#   ~/Downloads/pasha-welcome-DRAFT-<YYYY-MM-DD>.{md,pdf}
+#
+# The DRAFT watermark is non-removable from this script by design. The bead
+# ai-crt mandates DRAFT status until explicit ship-approval; removing the
+# watermark is a separate, auditable change.
+#
+# Usage:
+#   bin/welcome-render            # render + mirror to ~/Downloads
+#   bin/welcome-render --no-mirror # render only, no Downloads mirror
+#
+# Deps: node (for `npx marked`), chromium (headless PDF).
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SRC="$REPO_ROOT/docs/pasha-welcome.md"
+DIST="$REPO_ROOT/dist"
+STAMP="$(date +%Y-%m-%d)"
+OUT_HTML="$DIST/pasha-welcome-DRAFT-$STAMP.html"
+OUT_PDF="$DIST/pasha-welcome-DRAFT-$STAMP.pdf"
+
+MIRROR=1
+for arg in "$@"; do
+  case "$arg" in
+    --no-mirror) MIRROR=0 ;;
+    -h|--help)
+      sed -n '2,20p' "$0"; exit 0 ;;
+    *) echo "unknown arg: $arg" >&2; exit 2 ;;
+  esac
+done
+
+[ -f "$SRC" ] || { echo "missing source: $SRC" >&2; exit 1; }
+command -v node >/dev/null      || { echo "node required" >&2; exit 1; }
+command -v npx >/dev/null       || { echo "npx required" >&2; exit 1; }
+command -v chromium >/dev/null  || { echo "chromium required (for headless PDF)" >&2; exit 1; }
+
+mkdir -p "$DIST"
+
+BODY_HTML="$(npx --yes marked@latest --gfm -i "$SRC")"
+
+cat > "$OUT_HTML" <<HTML
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome — Pasha onboarding (DRAFT $STAMP)</title>
+<style>
+  @page { size: letter; margin: 0.9in 0.9in 1in 0.9in; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font: 11.5pt/1.55 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: #111; max-width: 6.8in; margin: 0 auto;
+  }
+  h1 { font-size: 20pt; margin: 0 0 .4em; letter-spacing: -0.01em; }
+  h2 { font-size: 13.5pt; margin: 1.5em 0 .35em; border-bottom: 1px solid #ddd; padding-bottom: .15em; }
+  h3 { font-size: 11.8pt; margin: 1.2em 0 .3em; color: #333; }
+  p, li { margin: .35em 0; }
+  ul, ol { padding-left: 1.2em; }
+  code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: 0.92em; background: #f4f4f4; padding: 0 .25em; border-radius: 3px; }
+  hr { border: 0; border-top: 1px solid #ccc; margin: 1.4em 0; }
+  em { color: #555; }
+  strong { color: #000; }
+  .draft-banner {
+    text-align: center; font-weight: 700; letter-spacing: .12em;
+    color: #a33; background: #fff5f5; border: 1px solid #f4c7c7;
+    padding: .5em .8em; margin-bottom: 1.3em; border-radius: 4px;
+    font-size: 10pt;
+  }
+  /* Diagonal DRAFT watermark behind every page. */
+  body::before {
+    content: "DRAFT";
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font: 900 180pt/1 -apple-system, Arial, sans-serif;
+    color: rgba(200, 30, 30, 0.08);
+    transform: rotate(-28deg);
+    pointer-events: none; z-index: 0;
+  }
+  main { position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+<div class="draft-banner">⚠ DRAFT · REVISIONS EXPECTED · NOT YET SENT TO PASHA · $STAMP</div>
+<main>
+$BODY_HTML
+</main>
+</body>
+</html>
+HTML
+
+# Chromium headless → PDF. --no-sandbox needed in some sandboxed envs.
+chromium \
+  --headless=new \
+  --no-sandbox \
+  --disable-gpu \
+  --no-pdf-header-footer \
+  --print-to-pdf="$OUT_PDF" \
+  "file://$OUT_HTML" 2>/dev/null
+
+echo "wrote: $OUT_HTML"
+echo "wrote: $OUT_PDF"
+
+if [ "$MIRROR" = "1" ] && [ -d "$HOME/Downloads" ]; then
+  cp "$SRC"     "$HOME/Downloads/pasha-welcome-DRAFT-$STAMP.md"
+  cp "$OUT_PDF" "$HOME/Downloads/pasha-welcome-DRAFT-$STAMP.pdf"
+  echo "mirrored: $HOME/Downloads/pasha-welcome-DRAFT-$STAMP.{md,pdf}"
+fi
