@@ -189,24 +189,73 @@ $input.addEventListener('input', () => {
   $input.style.height = Math.min($input.scrollHeight, 200) + 'px';
 });
 
-async function bootSession() {
+// Stable per-browser session id for the greeting cache (ai-9qy). Separate from
+// the httpOnly jc_session cookie used for /chat history (ai-b4q) — the former
+// keys the opener, the latter keys conversation turns.
+function getSessionId() {
+  const KEY = 'john-session-id';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2, 10));
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
+function getContractorParam() {
+  const p = new URL(window.location.href).searchParams.get('contractor');
+  if (!p) return null;
+  return /^[A-Za-z][A-Za-z0-9_.-]{0,31}$/.test(p) ? p : null;
+}
+
+async function fetchGreeting() {
+  const typingEl = showTyping();
   try {
-    const r = await fetch('/session', { credentials: 'same-origin' });
-    if (!r.ok) { setSystemLine('new session · type below to begin'); return; }
+    const r = await fetch('/greeting', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: getSessionId(), contractor: getContractorParam() }),
+    });
     const data = await r.json();
-    const msgs = Array.isArray(data.messages) ? data.messages : [];
-    if (msgs.length === 0) {
-      setSystemLine('new session · type below to begin');
+    typingEl.remove();
+    if (!r.ok || !data.content) {
+      setSystemLine('session ready · type below to begin');
       return;
     }
-    setSystemLine('resumed · ' + msgs.length + ' message' + (msgs.length === 1 ? '' : 's'));
-    for (const m of msgs) {
-      const role = m.role === 'assistant' ? 'john' : 'user';
-      renderMessage(role, m.content || '');
-      history.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content || '' });
-    }
+    renderMessage('john', data.content);
+    history.push({ role: 'assistant', content: data.content });
   } catch (err) {
-    setSystemLine('new session · type below to begin');
+    typingEl.remove();
+    setSystemLine('session ready · type below to begin');
+  }
+}
+
+async function bootSession() {
+  $input.disabled = true;
+  $send.disabled = true;
+  try {
+    const r = await fetch('/session', { credentials: 'same-origin' });
+    if (r.ok) {
+      const data = await r.json();
+      const msgs = Array.isArray(data.messages) ? data.messages : [];
+      if (msgs.length > 0) {
+        setSystemLine('resumed · ' + msgs.length + ' message' + (msgs.length === 1 ? '' : 's'));
+        for (const m of msgs) {
+          const role = m.role === 'assistant' ? 'john' : 'user';
+          renderMessage(role, m.content || '');
+          history.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content || '' });
+        }
+        return;
+      }
+    }
+    // No prior history — John opens with a warm greeting.
+    await fetchGreeting();
+  } catch (err) {
+    await fetchGreeting();
+  } finally {
+    $input.disabled = false;
+    $send.disabled = false;
+    $input.focus();
   }
 }
 
@@ -220,10 +269,11 @@ $newSession.addEventListener('click', async () => {
   }
   history.length = 0;
   $messages.innerHTML = '';
-  setSystemLine('new session · type below to begin');
+  await fetchGreeting();
   $newSession.disabled = false;
   $input.focus();
 });
+
 
 $form.addEventListener('submit', async (e) => {
   e.preventDefault();

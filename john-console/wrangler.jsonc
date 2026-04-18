@@ -22,10 +22,12 @@
   //   ANTHROPIC_API_KEY  — Jake's Anthropic key (sk-ant-*)
   "placement": { "mode": "smart" },
 
-  // Session store: conversation history keyed by opaque session UUID (cookie).
-  // 30-day rolling TTL; each /chat POST rewrites the entry with expirationTtl.
-  // Provision with: `wrangler kv namespace create SESSIONS` (paste id below).
+  // SESSION_KV: greeting-opener cache (ai-9qy), keyed by stable browser session_id.
+  // SESSIONS:   /chat conversation history (ai-b4q), keyed by opaque cookie UUID,
+  //             30-day rolling TTL refreshed on each write.
+  // Provision SESSIONS with: `wrangler kv namespace create SESSIONS` (paste id below).
   "kv_namespaces": [
+    { "binding": "SESSION_KV", "id": "801ecc0deebc4384b8417441071050c1" },
     { "binding": "SESSIONS", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
   ]
 }
