@@ -177,7 +177,27 @@ export default function ApiKeys({ customerId, onUpgrade }: { customerId: string;
   }
 
   async function deleteKey(id: number) {
-    await supabase.from('api_keys').delete().eq('id', id)
+    // Mirror the assertion from SystemSettings.deleteSystem: if RLS filters
+    // the row, Postgres reports 0 rows and PostgREST returns 204. Surface
+    // that as an error instead of letting the UI lie.
+    const { data, error } = await supabase
+      .from('api_keys')
+      .delete()
+      .eq('id', id)
+      .select('id')
+    if (error) {
+      console.error('delete key error:', error)
+      window.alert(`Could not revoke key: ${error.message}`)
+      return
+    }
+    if (!data || data.length === 0) {
+      console.error('delete key: 0 rows affected for id', id)
+      window.alert(
+        'Revoke did not persist (database declined the operation). Please reload and try again, or contact support if this repeats.'
+      )
+      await fetchKeys()
+      return
+    }
     setKeys((prev) => prev.filter((k) => k.id !== id))
   }
 

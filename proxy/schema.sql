@@ -72,9 +72,13 @@ create policy "customer_update_own_settings"
   on ledger.account_settings for update
   to authenticated using (customer_id = auth.uid()) with check (customer_id = auth.uid());
 
+create policy "customer_delete_own_settings"
+  on ledger.account_settings for delete
+  to authenticated using (customer_id = auth.uid());
+
 -- ─── Grants ─────────────────────────────────────────────────────────────────
 grant usage on schema ledger to postgres, authenticator, service_role, anon, authenticated;
 grant all privileges on all tables in schema ledger to postgres, authenticator, service_role;
 grant all privileges on all sequences in schema ledger to postgres, authenticator, service_role;
 grant select on all tables in schema ledger to anon, authenticated;
-grant select, insert, update on ledger.account_settings to authenticated;
+grant select, insert, update, delete on ledger.account_settings to authenticated;
