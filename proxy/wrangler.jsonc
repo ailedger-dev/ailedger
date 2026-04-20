@@ -24,7 +24,13 @@
 		{ "pattern": "proxy.ailedger.dev", "custom_domain": true }
 	],
 	"triggers": {
-		"crons": ["0 10 * * *"]
+		// 07:13 UTC = 09:13 CEST (summer) / 08:13 CET (winter) = EU morning
+		// commute / coffee window. AILedger ICP = EU AI Act compliance
+		// officers per ADR-042; morning-inbox-in-CET is the optimized
+		// send-slot. For US customers this lands at 00:13 PDT / 23:13 PST —
+		// fine (emails queue overnight and surface with their morning
+		// inbox anyway). Minute 13 avoids stacking with :00 / :30 cohorts.
+		"crons": ["13 7 * * *"]
 	},
 	"placement": { "mode": "smart" },
 	"kv_namespaces": [
