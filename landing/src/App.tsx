@@ -3,6 +3,39 @@ import { useState } from 'react'
 const DASHBOARD_URL = 'https://dash.ailedger.dev?view=sign-up'
 const PROXY_URL = 'https://proxy.ailedger.dev'
 
+// Per-route canonical fix (2026-04-20). index.html ships a static canonical
+// pointing at the homepage; GSC flagged every sub-page as "duplicate without
+// user-selected canonical" because the SPA serves the same HTML for /docs,
+// /guide/*, /contact, /legal — each claiming the homepage is its canonical,
+// which instructed Google to de-index everything except /. This runs once per
+// full page load and rewrites the canonical + og:url to match the actual
+// route before Googlebot's DOM-snapshot pass (modern Googlebot executes JS).
+const CANONICAL_BASE = 'https://ailedger.dev'
+const CANONICAL_PATHS: Record<string, string> = {
+  '/': '/',
+  '/docs': '/docs',
+  '/guide/annex-iii': '/guide/annex-iii',
+  '/contact': '/contact',
+  '/legal': '/legal',
+  '/terms': '/legal',   // /terms + /privacy collapse to /legal (same component)
+  '/privacy': '/legal',
+  '/pricing': '/',      // /pricing redirects + scrolls the homepage
+}
+if (typeof window !== 'undefined') {
+  const raw = window.location.pathname
+  const canon = CANONICAL_PATHS[raw] ?? raw
+  const href = CANONICAL_BASE + canon
+  let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'canonical'
+    document.head.appendChild(link)
+  }
+  link.href = href
+  const og = document.querySelector('meta[property="og:url"]') as HTMLMetaElement | null
+  if (og) og.content = href
+}
+
 // Resolve hero-entry-animation state exactly once per page load (survives strict-mode
 // double-render; gated so returning-from-internal-route users don't re-watch the reveal).
 const heroAnimClass = ((): string => {
