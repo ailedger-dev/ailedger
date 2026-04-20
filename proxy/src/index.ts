@@ -703,16 +703,20 @@ async function checkUsageLimit(env: Env, customerId: string): Promise<boolean> {
 
 async function runDripEmails(env: Env): Promise<void> {
 	const now = new Date();
+	const nowMs = now.getTime();
 
-	// Find free users who signed up exactly 3 or 7 days ago (±12h window)
-	// and have zero inference logs — they haven't integrated yet.
-	for (const day of [3, 7]) {
-		const windowStart = new Date(now.getTime() - (day * 24 + 12) * 60 * 60 * 1000).toISOString();
-		const windowEnd   = new Date(now.getTime() - (day * 24 - 12) * 60 * 60 * 1000).toISOString();
-
-		// Fetch users created in the window (auth.users via service key)
-		const usersRes = await fetch(
-			`${env.SUPABASE_URL}/auth/v1/admin/users?created_after=${encodeURIComponent(windowStart)}&created_before=${encodeURIComponent(windowEnd)}`,
+	// Fetch the user list ONCE per run, paginated. Supabase's
+	// /auth/v1/admin/users endpoint does NOT honor `created_after` /
+	// `created_before` URL params (they are silently ignored by GoTrue),
+	// so we must filter client-side. Not filtering server-side was the
+	// 2026-04-20 double-drip bug: every free user matched both day-3 and
+	// day-7 windows every 24h regardless of actual signup date.
+	const allUsers: { id: string; email: string; created_at: string;
+		user_metadata?: Record<string, string> }[] = [];
+	const perPage = 500;
+	for (let page = 1; page <= 20; page++) { // cap at 10,000 users
+		const pageRes = await fetch(
+			`${env.SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
 			{
 				headers: {
 					apikey: env.SUPABASE_SERVICE_KEY,
@@ -720,11 +724,32 @@ async function runDripEmails(env: Env): Promise<void> {
 				},
 			}
 		);
-		if (!usersRes.ok) {
-			console.error(`Drip day ${day}: failed to fetch users`, await usersRes.text());
-			continue;
+		if (!pageRes.ok) {
+			console.error(`Drip: failed to fetch users page ${page}`, await pageRes.text());
+			break;
 		}
-		const { users } = await usersRes.json() as { users: { id: string; email: string; user_metadata?: Record<string, string> }[] };
+		const { users } = await pageRes.json() as {
+			users: { id: string; email: string; created_at: string;
+				user_metadata?: Record<string, string> }[];
+		};
+		if (!users || users.length === 0) break;
+		allUsers.push(...users);
+		if (users.length < perPage) break;
+	}
+
+	// Find free users who signed up 3 or 7 days ago (±12h window) and
+	// have zero inference logs — they haven't integrated yet.
+	for (const day of [3, 7]) {
+		const windowStartMs = nowMs - (day * 24 + 12) * 60 * 60 * 1000;
+		const windowEndMs   = nowMs - (day * 24 - 12) * 60 * 60 * 1000;
+
+		// Client-side filter: only users whose created_at falls in the window.
+		const users = allUsers.filter((u) => {
+			const createdMs = new Date(u.created_at).getTime();
+			return Number.isFinite(createdMs)
+				&& createdMs >= windowStartMs
+				&& createdMs <= windowEndMs;
+		});
 
 		for (const user of users ?? []) {
 			// Skip if they have an active paid subscription
