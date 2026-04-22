@@ -196,7 +196,7 @@ function Hero() {
           August 2, 2026 — EU AI Act enforcement
         </div>
         <h1 className="hero-title" style={{
-          fontSize: 'clamp(36px, 7vw, 104px)', fontWeight: 700, color: '#fff',
+          fontSize: 'clamp(36px, 6vw, 80px)', fontWeight: 700, color: '#fff',
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`}>Keep a record of <span style={{ color: '#818cf8' }}>every AI decision.</span></span>
@@ -1441,7 +1441,7 @@ function PricingPage() {
       <section className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 36 }}>
-            Why this tier for you
+            Why this tier is for you
           </h2>
           <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             {personaCards.map((card) => (
