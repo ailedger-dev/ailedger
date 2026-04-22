@@ -1049,13 +1049,13 @@ function Contact() {
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 32px' }}>
         <a href="/" style={{ color: '#475569', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
         <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>Contact</h1>
-        <p style={{ color: '#475569', fontSize: 15, lineHeight: 1.8, marginBottom: 36 }}>
+        <p style={{ color: '#94a3b8', fontSize: 15, lineHeight: 1.8, marginBottom: 36 }}>
           For support, billing questions, and to exercise your data rights under GDPR, reach us at:
         </p>
         <a href="mailto:support@ailedger.dev" style={{ fontSize: 18, color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>
           support@ailedger.dev
         </a>
-        <p style={{ color: '#334155', fontSize: 14, marginTop: 48, lineHeight: 1.8 }}>
+        <p style={{ color: '#64748b', fontSize: 14, marginTop: 48, lineHeight: 1.8 }}>
           For enterprise inquiries or EU data residency questions, use the same address and we'll route you to the correct person.
         </p>
       </div>
