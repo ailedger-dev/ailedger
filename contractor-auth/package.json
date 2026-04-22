@@ -1,0 +1,22 @@
+{
+  "name": "contractor-auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generalized contractor-auth Cloudflare Worker. One codebase, deployed per contractor via wrangler env. Passkeys-first, magic-link fallback (disabled post-passkey). Forked from onboard-auth 2026-04-21.",
+  "type": "module",
+  "scripts": {
+    "deploy": "echo 'use: npm run deploy:<slug>  (e.g. deploy:pasha)' && exit 1",
+    "deploy:pasha": "wrangler deploy --env pasha",
+    "dev": "wrangler dev",
+    "tail:pasha": "wrangler tail --env pasha",
+    "schema:apply:pasha": "wrangler d1 execute contractor-auth-pasha --env pasha --file=./schema.sql",
+    "schema:apply:pasha:remote": "wrangler d1 execute contractor-auth-pasha --env pasha --remote --file=./schema.sql"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "^10.0.1",
+    "@tsndr/cloudflare-worker-jwt": "^3.1.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.81.1"
+  }
+}

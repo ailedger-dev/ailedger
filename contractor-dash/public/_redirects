@@ -1,0 +1,5 @@
+# Cloudflare Pages SPA fallback — route unknown paths to index.html so
+# react-router handles them. /auth/* is handled by the Pages Function and
+# MUST NOT be rewritten.
+/auth/* /auth/:splat 200
+/* /index.html 200

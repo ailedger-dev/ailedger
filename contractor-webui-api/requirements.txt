@@ -1,0 +1,7 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pyjwt>=2.9.0
+markdown-it-py>=3.0.0
+pydantic>=2.9.0
+python-multipart>=0.0.12
+pexpect>=4.9.0

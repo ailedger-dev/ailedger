@@ -1,0 +1,82 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "contractor-auth",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Base config is a SAFE-DEFAULT placeholder. Do NOT deploy the base — each
+  // contractor deploys via `wrangler deploy --env <slug>`. The base exists only
+  // so `wrangler dev` can run locally without a contractor context.
+  "vars": {
+    "CONTRACTOR_SLUG": "unset",
+    "RP_ID": "localhost",
+    "RP_NAME": "Contractor Web UI (dev)",
+    "RP_ORIGIN": "http://localhost:8787",
+    "MAGIC_LINK_FROM": "no-reply@example.invalid",
+    "SESSION_TTL_SECONDS": "900",
+    "REFRESH_TTL_SECONDS": "604800",
+    "MAGIC_LINK_TTL_SECONDS": "600",
+    "ALLOWED_RETURN_HOSTS": "localhost:5173"
+  },
+
+  "observability": { "enabled": true },
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  // Per-contractor environments. Add a new stanza per contractor deployment.
+  // Each environment owns its own D1, KV, and secrets. Secrets required per env:
+  //   SESSION_JWT_SECRET        (>= 32 bytes random; distinct per contractor)
+  //   REFRESH_JWT_SECRET        (>= 32 bytes random; distinct per contractor)
+  //   RESEND_API_KEY            (for magic-link email)
+  //   CONTRACTOR_ALLOWED_EMAILS (comma-separated allowlist; required — empty = deny-all)
+  //
+  // Bootstrap commands for env.pasha:
+  //   wrangler d1 create contractor-auth-pasha
+  //   wrangler kv namespace create AUTH_KV --env pasha
+  //   (paste the returned ids into this file under env.pasha, then:)
+  //   wrangler d1 execute contractor-auth-pasha --env pasha --file=./schema.sql
+  //   wrangler d1 execute contractor-auth-pasha --env pasha --remote --file=./schema.sql
+  //   wrangler secret put SESSION_JWT_SECRET --env pasha
+  //   wrangler secret put REFRESH_JWT_SECRET --env pasha
+  //   wrangler secret put CONTRACTOR_ALLOWED_EMAILS --env pasha
+  //   wrangler deploy --env pasha
+  "env": {
+    "pasha": {
+      "name": "contractor-auth-pasha",
+      "vars": {
+        "CONTRACTOR_SLUG": "pasha",
+        "CONTRACTOR_DISPLAY_NAME": "Pasha Missaghieh",
+        "RP_ID": "pasha.jvholdings.co",
+        "RP_NAME": "Joyner Ventures (Pasha)",
+        "RP_ORIGIN": "https://pasha.jvholdings.co",
+        "MAGIC_LINK_FROM": "no-reply@jvholdings.co",
+        "MAGIC_LINK_REDIRECT_BASE": "https://pasha.jvholdings.co",
+        "SESSION_TTL_SECONDS": "900",
+        "REFRESH_TTL_SECONDS": "604800",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "pasha.jvholdings.co"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "contractor-auth-pasha",
+          "database_id": "52688a68-8664-4c68-9f96-7c789a3667d7"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "46e08970c6c748709e099ffeb0670316"
+        }
+      ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      }
+    }
+  }
+}
