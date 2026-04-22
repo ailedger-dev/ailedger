@@ -5,5 +5,17 @@
   "compatibility_date": "2026-04-10",
   "routes": [
     { "pattern": "dashboard.ailedger.dev", "custom_domain": true }
-  ]
+  ],
+
+  // Named environments — see docs/deploy-runbook.md.
+  // Deploy: `wrangler deploy --env staging`
+  "env": {
+    "staging": {
+      "name": "dashboard-redirect-staging",
+      "workers_dev": true
+      // "routes": [
+      //   { "pattern": "staging.dashboard.ailedger.dev", "custom_domain": true }
+      // ]
+    }
+  }
 }

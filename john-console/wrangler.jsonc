@@ -29,5 +29,35 @@
   "kv_namespaces": [
     { "binding": "SESSION_KV", "id": "801ecc0deebc4384b8417441071050c1" },
     { "binding": "SESSIONS", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
-  ]
+  ],
+
+  // Named environments — see docs/deploy-runbook.md.
+  // Deploy: `wrangler deploy --env staging`
+  // Staging rides workers.dev until sales.ailedger.dev is live in prod; the
+  // staging custom domain (staging.sales.ailedger.dev) follows the same gate.
+  //
+  // Staging secrets MUST be distinct from production:
+  //   wrangler secret put AILEDGER_KEY --env staging
+  //   wrangler secret put ANTHROPIC_API_KEY --env staging
+  "env": {
+    "staging": {
+      "name": "john-console-staging",
+      "workers_dev": true,
+      // "routes": [
+      //   { "pattern": "staging.sales.ailedger.dev", "custom_domain": true }
+      // ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      },
+      "observability": {
+        "enabled": true
+      },
+      "placement": { "mode": "smart" },
+      "kv_namespaces": [
+        { "binding": "SESSION_KV", "id": "REPLACE_WITH_STAGING_SESSION_KV_ID" },
+        { "binding": "SESSIONS", "id": "REPLACE_WITH_STAGING_SESSIONS_KV_ID" }
+      ]
+    }
+  }
 }

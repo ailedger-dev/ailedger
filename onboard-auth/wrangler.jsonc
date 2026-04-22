@@ -55,5 +55,62 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS"
+  },
+
+  // Named environments — see docs/deploy-runbook.md.
+  // Deploy: `wrangler deploy --env staging`
+  // Bindings, vars, and routes do NOT inherit from the top-level; each env
+  // redeclares everything it needs.
+  //
+  // Staging secrets MUST be distinct from production:
+  //   wrangler secret put SESSION_JWT_SECRET --env staging
+  //   wrangler secret put REFRESH_JWT_SECRET --env staging
+  //   wrangler secret put RESEND_API_KEY --env staging
+  //   wrangler secret put ADMIN_BOOTSTRAP_TOKEN --env staging
+  "env": {
+    "staging": {
+      "name": "onboard-auth-staging",
+      // Staging lives on a workers.dev subdomain until
+      // staging.login.joynerventures.com is provisioned (see
+      // docs/staging-provisioning.md). Passkeys (WebAuthn) are bound to the
+      // exact RP_ID/RP_ORIGIN below, so changing these invalidates any
+      // credentials registered against the prior origin.
+      "workers_dev": true,
+      // "routes": [
+      //   { "pattern": "staging.login.joynerventures.com", "custom_domain": true }
+      // ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "onboard_auth_staging",
+          "database_id": "REPLACE_WITH_STAGING_D1_ID"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "REPLACE_WITH_STAGING_AUTH_KV_ID"
+        }
+      ],
+      "vars": {
+        // When using workers.dev, RP_ID/RP_ORIGIN must match the served
+        // origin. Update both once custom DNS is live.
+        "RP_ID": "onboard-auth-staging.workers.dev",
+        "RP_NAME": "Joyner Ventures (staging)",
+        "RP_ORIGIN": "https://onboard-auth-staging.workers.dev",
+        "MAGIC_LINK_FROM": "auth-staging@joynerventures.com",
+        "SESSION_TTL_SECONDS": "900",
+        "REFRESH_TTL_SECONDS": "2592000",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "staging.sales.ailedger.dev,onboard-auth-staging.workers.dev"
+      },
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      },
+      "observability": {
+        "enabled": true
+      }
+    }
   }
 }

@@ -35,20 +35,27 @@
 	"placement": { "mode": "smart" },
 	"kv_namespaces": [
 		{ "binding": "AILEDGER_CACHE", "id": "993c05bf26ef4ac8a7f1d11b557d2d80" }
-	]
-	/**
-	 * Bindings
-	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-	 * databases, object storage, AI inference, real-time communication and more.
-	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
-	 */
-	// "vars": {  "MY_VARIABLE": "production_value" }
+	],
+	// Named environments — see docs/deploy-runbook.md.
+	// Deploy: `wrangler deploy --env staging`
+	// Bindings do NOT inherit from the top-level; every env redeclares what it needs.
+	"env": {
+		"staging": {
+			"name": "proxy-staging",
+			// staging lives on a workers.dev subdomain until staging.proxy.ailedger.dev is
+			// provisioned (see docs/staging-provisioning.md). Flip `workers_dev` off and
+			// uncomment the route once DNS is live.
+			"workers_dev": true,
+			// "routes": [
+			//   { "pattern": "staging.proxy.ailedger.dev", "custom_domain": true }
+			// ],
+			// No drip-email cron in staging — we never email customers from staging.
+			"triggers": { "crons": [] },
+			"kv_namespaces": [
+				{ "binding": "AILEDGER_CACHE", "id": "REPLACE_WITH_STAGING_AILEDGER_CACHE_KV_ID" }
+			]
+		}
+	}
 	/**
 	 * Service Bindings (communicate between multiple Workers)
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings

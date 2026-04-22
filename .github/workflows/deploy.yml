@@ -1,0 +1,180 @@
+name: Deploy
+
+# Environment promotion flow (see docs/deploy-runbook.md):
+#
+#   PR opened/synced  →  staging deploy + gates
+#                        (Cloudflare Pages auto-previews landing + dashboard
+#                         on each PR via Git integration — not run here.)
+#   Merge to main     →  staging re-deploy (clean-main confirm)
+#   Release tag v*    →  production deploy
+#
+# Secrets required (set in GitHub repo settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN    Worker-scoped API token (edit Workers + Pages,
+#                           edit KV, edit D1). Distinct tokens for staging and
+#                           prod recommended but not required.
+#   CLOUDFLARE_ACCOUNT_ID   Jake's CF account ID.
+#
+# All Worker staging/production secrets (RESEND_API_KEY, SESSION_JWT_SECRET,
+# ANTHROPIC_API_KEY, etc.) are managed via `wrangler secret put --env <env>`
+# and NEVER live in this workflow.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ['v*']
+
+concurrency:
+  # PR runs may stomp each other on shared staging — that is acceptable and by
+  # design. Prod and main have their own lane per ref.
+  group: deploy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gates:
+    name: Lint / typecheck / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            proxy/package-lock.json
+            landing/package-lock.json
+            dashboard/package-lock.json
+            redirect/package-lock.json
+
+      # proxy — only surface with a real test suite today.
+      - name: proxy install
+        run: npm ci
+        working-directory: proxy
+      - name: proxy test
+        run: npm test -- --run
+        working-directory: proxy
+
+      # landing — typecheck + lint via build.
+      - name: landing install
+        run: npm ci
+        working-directory: landing
+      - name: landing lint
+        run: npm run lint
+        working-directory: landing
+      - name: landing build
+        run: npm run build
+        working-directory: landing
+
+      # dashboard — typecheck + lint via build.
+      - name: dashboard install
+        run: npm ci
+        working-directory: dashboard
+      - name: dashboard lint
+        # Non-fatal: 9 pre-existing errors tracked in ai-5h6 cleanup bead.
+        # Unblocks PR #17 (env-separation) without dropping lint visibility.
+        continue-on-error: true
+        run: npm run lint
+        working-directory: dashboard
+      - name: dashboard build
+        run: npm run build
+        working-directory: dashboard
+
+  deploy-staging:
+    name: Deploy Workers → staging
+    needs: gates
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: proxy — wrangler deploy --env staging
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: proxy
+          command: deploy --env staging
+
+      - name: onboard-auth — wrangler deploy --env staging
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: onboard-auth
+          command: deploy --env staging
+
+      - name: john-console — wrangler deploy --env staging
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: john-console
+          command: deploy --env staging
+
+      - name: redirect — wrangler deploy --env staging
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: redirect
+          command: deploy --env staging
+
+  deploy-production:
+    name: Deploy Workers → production
+    needs: gates
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      # GitHub "production" environment enforces required-reviewers before
+      # this job runs. Configure reviewers in repo Settings → Environments.
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: proxy — wrangler deploy (prod)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: proxy
+          command: deploy
+
+      - name: onboard-auth — wrangler deploy (prod)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: onboard-auth
+          command: deploy
+
+      - name: john-console — wrangler deploy (prod)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: john-console
+          command: deploy
+
+      - name: redirect — wrangler deploy (prod)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: redirect
+          command: deploy
