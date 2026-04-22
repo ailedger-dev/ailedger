@@ -11,6 +11,8 @@
  *   x-ailedger-key: agl_sk_xxxx...
  */
 
+import canonicalize from 'canonicalize';
+
 export interface Env {
 	SUPABASE_URL: string;
 	SUPABASE_SERVICE_KEY: string;
@@ -112,6 +114,7 @@ export default {
 
 		// Clone request body once so we can read it and still forward it
 		const requestBody = request.body ? await request.arrayBuffer() : null;
+		const requestContentType = request.headers.get('content-type');
 
 		// Strip our auth header and SDK telemetry headers before forwarding.
 		// OpenAI's abuse detection blocks requests that carry the Python/Node SDK
@@ -135,6 +138,7 @@ export default {
 		const completedAt = new Date().toISOString();
 
 		const responseBody = await upstreamResponse.arrayBuffer();
+		const responseContentType = upstreamResponse.headers.get('content-type');
 
 		// Log async — never block the response
 		ctx.waitUntil(
@@ -144,7 +148,9 @@ export default {
 				method: request.method,
 				path: upstreamPath,
 				requestBody,
+				requestContentType,
 				responseBody,
+				responseContentType,
 				statusCode: upstreamResponse.status,
 				latencyMs,
 				startedAt,
@@ -455,6 +461,61 @@ async function sha256hex(data: ArrayBuffer | null | string): Promise<string | nu
 	return Array.from(new Uint8Array(hashBuffer))
 		.map((b) => b.toString(16).padStart(2, '0'))
 		.join('');
+}
+
+// ─── RFC 8785 JCS canonical hashing ─────────────────────────────────────────
+// Cross-SDK JSON hash stability: the same logical object must produce the
+// same hash regardless of which SDK serialized it. Raw-byte SHA-256 fails
+// this (key order, whitespace, number format vary), so for JSON bodies we
+// canonicalize per RFC 8785 first and hash the canonical form.
+//
+// JCS library: `canonicalize` (erdtman/canonicalize), Apache-2.0, ~1.3 KB,
+// co-authored by Anders Rundgren (RFC 8785 primary author) and Samuel
+// Erdtman. Chosen over `json-canonicalize` for authorship provenance and
+// smaller bundle footprint (Workers: every KB matters).
+//
+// Content branching (HARD CONTRACT — changing these rules invalidates the
+// chain going forward, not retroactively):
+//   • content-type matches `application/json` (or `+json`) AND body parses
+//     as valid JSON  → hash = SHA-256(JCS(parsed))
+//   • anything else (binary, multipart/form-data, text/event-stream SSE,
+//     malformed JSON, compressed encodings) → hash = SHA-256(raw-bytes)
+//
+// JSON with embedded base64 binary is hashed via the JCS path; the base64
+// string is treated as an opaque value. Base64 expected to be standard
+// RFC 4648 form (no line-wrapping); providers that emit line-wrapped
+// base64 will get a stable hash only if wrapping is stable across calls.
+export function isJsonContentType(contentType: string | null | undefined): boolean {
+	if (!contentType) return false;
+	const ct = contentType.toLowerCase().split(';')[0].trim();
+	return ct === 'application/json' || ct.endsWith('+json');
+}
+
+export async function sha256jcs(
+	data: ArrayBuffer | null,
+	contentType: string | null,
+): Promise<string | null> {
+	if (!data) return null;
+	const buf = new Uint8Array(data);
+	if (buf.byteLength === 0) return null;
+
+	if (isJsonContentType(contentType)) {
+		try {
+			const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(buf);
+			const parsed = JSON.parse(text);
+			const canonical = canonicalize(parsed);
+			if (canonical !== undefined) {
+				return sha256hex(canonical);
+			}
+		} catch {
+			// Fall through to raw-byte hashing. Examples: invalid UTF-8,
+			// malformed JSON, values JCS rejects (NaN, Infinity, symbols).
+			// Staying raw keeps the hash stable and ties it to what was
+			// actually on the wire.
+		}
+	}
+
+	return sha256hex(data);
 }
 
 async function resolveApiKey(env: Env, apiKey: string, ctx: ExecutionContext): Promise<{ customerId: string; systemId: string | null } | null> {
@@ -875,7 +936,9 @@ async function logInference({
 	method,
 	path,
 	requestBody,
+	requestContentType,
 	responseBody,
+	responseContentType,
 	statusCode,
 	latencyMs,
 	startedAt,
@@ -888,7 +951,9 @@ async function logInference({
 	method: string;
 	path: string;
 	requestBody: ArrayBuffer | null;
+	requestContentType: string | null;
 	responseBody: ArrayBuffer;
+	responseContentType: string | null;
 	statusCode: number;
 	latencyMs: number;
 	startedAt: string;
@@ -896,7 +961,10 @@ async function logInference({
 	customerId: string;
 	systemId: string | null;
 }): Promise<void> {
-	const [inputHash, outputHash] = await Promise.all([sha256hex(requestBody), sha256hex(responseBody)]);
+	const [inputHash, outputHash] = await Promise.all([
+		sha256jcs(requestBody, requestContentType),
+		sha256jcs(responseBody, responseContentType),
+	]);
 
 	let modelName: string | null = null;
 	if (requestBody && requestBody.byteLength > 0) {
