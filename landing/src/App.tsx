@@ -196,15 +196,15 @@ function Hero() {
           August 2, 2026 — EU AI Act enforcement
         </div>
         <h1 className="hero-title" style={{
-          fontSize: 72, fontWeight: 700, color: '#fff',
-          letterSpacing: '-2px', lineHeight: 1.02, marginBottom: 28,
+          fontSize: 'clamp(36px, 8vw, 72px)', fontWeight: 700, color: '#fff',
+          letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`}>Keep a record of every AI decision.</span>
         </h1>
-        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 19, color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
+        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
         </p>
-        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 19, color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
+        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
           No prompts are stored. No outputs are stored. Only SHA-256 fingerprints + metadata — the evidence a regulator or auditor can verify, without AILedger holding your customers' data.
         </p>
         <div className={`hero-cta-group fade-in fade-4 ${anim}`} style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -270,7 +270,7 @@ function HowItWorks() {
     <section id="how-it-works" className="section-pad" style={{ padding: '100px 32px' }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <div style={{ marginBottom: 48 }}>
-          <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>How it works</h2>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', letterSpacing: '-0.025em', marginBottom: 16 }}>How it works</h2>
           <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7 }}>
             Three steps, each reversible: point, log, export.
           </p>
@@ -448,7 +448,7 @@ function Pricing() {
     <section id="pricing" className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid rgba(255,255,255,0.06)', scrollMarginTop: '120px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ marginBottom: 48, maxWidth: 720 }}>
-          <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', letterSpacing: '-0.025em', marginBottom: 16 }}>
             Pricing.
           </h2>
           <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7 }}>
@@ -591,7 +591,7 @@ function CTA() {
       borderTop: '1px solid rgba(255,255,255,0.06)',
     }}>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>
+        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', letterSpacing: '-0.025em', marginBottom: 16 }}>
           Start before the deadline.
         </h2>
         <p style={{ fontSize: 17, color: '#94a3b8', marginBottom: 40, lineHeight: 1.7 }}>
@@ -613,7 +613,7 @@ function Footer() {
   return (
     <footer style={{
       borderTop: '1px solid rgba(255,255,255,0.06)',
-      padding: '28px 32px',
+      padding: '28px 0',
     }}>
       <div className="footer-row" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ color: '#334155', fontSize: 14 }}>AILedger</span>
@@ -1025,7 +1025,7 @@ function Legal() {
 
         <h2 id="terms" style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px', marginTop: 24, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Terms of Service</h2>
         {termsSections.map((s) => (
-          <div key={s.title} style={{ marginBottom: 36 }}>
+          <div key={s.title} style={{ marginBottom: 36, paddingLeft: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>{s.title}</h3>
             <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.8 }}>{s.body}</p>
           </div>
@@ -1033,7 +1033,7 @@ function Legal() {
 
         <h2 id="privacy" style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px', marginTop: 64, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Privacy Policy</h2>
         {privacySections.map((s) => (
-          <div key={s.title} style={{ marginBottom: 36 }}>
+          <div key={s.title} style={{ marginBottom: 36, paddingLeft: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>{s.title}</h3>
             <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.8 }}>{s.body}</p>
           </div>
