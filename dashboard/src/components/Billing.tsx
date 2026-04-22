@@ -14,7 +14,7 @@ const PLANS = [
     name: 'Scale',
     price_monthly: '$499/mo',
     price_annual: '$4,990/yr',
-    description: 'Unlimited inferences, unlimited API keys, unlimited AI systems, priority support',
+    description: 'Up to 1M inferences/mo, unlimited API keys, unlimited AI systems, priority support',
     key_monthly: 'scale_monthly',
     key_annual: 'scale_annual',
   },

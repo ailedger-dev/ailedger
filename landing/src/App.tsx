@@ -81,7 +81,7 @@ function Nav() {
       borderBottom: '1px solid rgba(255,255,255,0.06)',
       background: 'rgba(10,11,15,0.85)', backdropFilter: 'blur(12px)',
     }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 48px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', cursor: 'pointer' }}>
           <img src="/favicon.svg" alt="AILedger" style={{ width: 20, height: 20, marginTop: -1 }} />
           <span style={{ color: '#fff', fontWeight: 600, fontSize: 16, letterSpacing: '-0.3px' }}>AILedger</span>
@@ -199,7 +199,7 @@ function Hero() {
           fontSize: 'clamp(36px, 8vw, 72px)', fontWeight: 700, color: '#fff',
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
-          <span className={`hero-title-line fade-in fade-2a ${anim}`}>Keep a record of every AI decision.</span>
+          <span className={`hero-title-line fade-in fade-2a ${anim}`}>Keep a record of <span style={{ color: '#818cf8' }}>every AI decision.</span></span>
         </h1>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
@@ -615,7 +615,7 @@ function Footer() {
       borderTop: '1px solid rgba(255,255,255,0.06)',
       padding: '28px 0',
     }}>
-      <div className="footer-row" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="footer-row" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ color: '#334155', fontSize: 14 }}>AILedger</span>
         <div className="footer-links" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           <a href="/legal" style={{ color: '#334155', fontSize: 14, textDecoration: 'none' }}>Legal</a>
