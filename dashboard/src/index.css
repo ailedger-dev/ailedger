@@ -11,10 +11,15 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background: #0f1117;
-  color: #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ─── Dark mode ───────────────────────────────────────────────────────────── */
+/* Restore the original dark palette when html.dark is set (via system pref,
+   toggle, or stored preference — see src/useTheme.ts + index.html). */
+html.dark body { background: #0f1117; color: #e2e8f0; }
 
 /* Full-width dashboard layout */
 .dashboard-main {

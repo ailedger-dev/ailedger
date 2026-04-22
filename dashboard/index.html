@@ -8,6 +8,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <title>AILedger - Dashboard</title>
+    <script>
+      // Resolve theme before first paint (light default; honours stored + system pref).
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = stored === 'dark' || stored === 'light' ? stored : (prefersDark ? 'dark' : 'light');
+          document.documentElement.classList.add(theme);
+        } catch (_) {
+          document.documentElement.classList.add('light');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

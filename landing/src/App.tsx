@@ -55,7 +55,7 @@ function App() {
   if (path === '/docs') return <Docs />
   if (path === '/pricing') return <PricingPage />
   return (
-    <div className="min-h-screen bg-[#0a0b0f] text-slate-300" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-page)", color: "var(--fg-body)", fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
       <Hero />
       <TrustBar />
@@ -78,21 +78,21 @@ function Nav() {
   return (
     <nav style={{
       position: 'fixed', top: 0, width: '100%', zIndex: 50,
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(10,11,15,0.85)', backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid var(--border)',
+      background: 'var(--bg-nav)', backdropFilter: 'blur(12px)',
     }}>
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', cursor: 'pointer' }}>
           <img src="/favicon.svg" alt="AILedger" style={{ width: 20, height: 20, marginTop: -1 }} />
-          <span style={{ color: '#fff', fontWeight: 600, fontSize: 16, letterSpacing: '-0.3px' }}>AILedger</span>
+          <span style={{ color: 'var(--fg-primary)', fontWeight: 600, fontSize: 16, letterSpacing: '-0.3px' }}>AILedger</span>
         </a>
 
         {/* Desktop nav */}
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <a href="/pricing" style={{ color: '#64748b', fontSize: 14, textDecoration: 'none', fontWeight: 500, cursor: 'pointer' }}>Pricing</a>
-          <a href="/docs" style={{ color: '#64748b', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
+          <a href="/pricing" style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500, cursor: 'pointer' }}>Pricing</a>
+          <a href="/docs" style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
           <a href={DASHBOARD_URL} style={{
-            padding: '8px 18px', background: '#4f46e5', color: '#fff',
+            padding: '8px 18px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
             fontSize: 14, fontWeight: 500, borderRadius: 10, textDecoration: 'none',
           }}>
             Get started
@@ -119,15 +119,15 @@ function Nav() {
           }}
         >
           <span className="hamburger-line" style={{
-            display: 'block', width: 22, height: 2, background: '#e2e8f0', borderRadius: 2,
+            display: 'block', width: 22, height: 2, background: 'var(--fg-body)', borderRadius: 2,
             transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none',
           }} />
           <span className="hamburger-line" style={{
-            display: 'block', width: 22, height: 2, background: '#e2e8f0', borderRadius: 2,
+            display: 'block', width: 22, height: 2, background: 'var(--fg-body)', borderRadius: 2,
             opacity: menuOpen ? 0 : 1,
           }} />
           <span className="hamburger-line" style={{
-            display: 'block', width: 22, height: 2, background: '#e2e8f0', borderRadius: 2,
+            display: 'block', width: 22, height: 2, background: 'var(--fg-body)', borderRadius: 2,
             transform: menuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none',
           }} />
         </button>
@@ -141,20 +141,20 @@ function Nav() {
           top: 64,
           left: 0,
           right: 0,
-          background: 'rgba(10,11,15,0.98)',
+          background: 'var(--bg-nav-solid)',
           backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid var(--border-strong)',
           padding: '24px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: 20,
         }}
       >
-        <a href="/pricing" onClick={closeMenu} style={{ color: '#e2e8f0', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Pricing</a>
-        <a href="/docs" onClick={() => setMenuOpen(false)} style={{ color: '#e2e8f0', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
-        <a href="/legal" onClick={() => setMenuOpen(false)} style={{ color: '#64748b', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Legal</a>
+        <a href="/pricing" onClick={closeMenu} style={{ color: 'var(--fg-body)', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Pricing</a>
+        <a href="/docs" onClick={() => setMenuOpen(false)} style={{ color: 'var(--fg-body)', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
+        <a href="/legal" onClick={() => setMenuOpen(false)} style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Legal</a>
         <a href={DASHBOARD_URL} onClick={() => setMenuOpen(false)} style={{
-          padding: '12px 18px', background: '#4f46e5', color: '#fff',
+          padding: '12px 18px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
           fontSize: 15, fontWeight: 500, borderRadius: 10, textDecoration: 'none',
           textAlign: 'center', marginTop: 4,
         }}>
@@ -186,7 +186,7 @@ function Hero() {
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
         width: 1100, height: 1100,
-        background: 'radial-gradient(circle, rgba(99,102,241,0.11) 0%, rgba(99,102,241,0.03) 40%, transparent 72%)',
+        background: 'radial-gradient(circle, var(--hero-glow-inner) 0%, var(--hero-glow-mid) 40%, transparent 72%)',
         pointerEvents: 'none',
         zIndex: 0,
       }} />
@@ -196,30 +196,30 @@ function Hero() {
           August 2, 2026 — EU AI Act enforcement
         </div>
         <h1 className="hero-title" style={{
-          fontSize: 'clamp(48px, 7vw, 80px)', fontWeight: 700, color: '#fff',
+          fontSize: 'clamp(48px, 7vw, 80px)', fontWeight: 700, color: 'var(--fg-primary)',
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Keep a record of</span>
-          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', transform: 'translateY(-0.08em)', background: 'linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c4b5fd 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI decision.</span>
+          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', transform: 'translateY(-0.08em)', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI decision.</span>
         </h1>
-        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
+        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
         </p>
-        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
+        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
           No prompts are stored. No outputs are stored. Only SHA-256 fingerprints + metadata — the evidence a regulator or auditor can verify, without AILedger holding your customers' data.
         </p>
         <div className={`hero-cta-group fade-in fade-4 ${anim}`} style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <a className="hero-cta-primary" href={DASHBOARD_URL} style={{
-            padding: '14px 28px', background: '#4f46e5', color: '#fff',
+            padding: '14px 28px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
             fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none',
             letterSpacing: '-0.005em',
           }}>
             Set it up
           </a>
           <a className="hero-cta-secondary" href="#how-it-works" style={{
-            padding: '14px 28px', color: '#94a3b8', fontSize: 15,
+            padding: '14px 28px', color: 'var(--fg-muted)', fontSize: 15,
             textDecoration: 'none', borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: '1px solid var(--border-strong)',
           }}>
             Read how it works
           </a>
@@ -232,16 +232,16 @@ function Hero() {
 function TrustBar() {
   return (
     <section className="section-pad trust-bar" style={{
-      borderTop: '1px solid rgba(255,255,255,0.05)',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(255,255,255,0.015)',
+      borderTop: '1px solid var(--border-subtle)',
+      borderBottom: '1px solid var(--border)',
+      background: 'var(--surface-tint-soft)',
       padding: '72px 32px',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.75, marginBottom: 20 }}>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 20 }}>
           What AILedger stores: SHA-256 fingerprints of inputs and outputs, plus metadata (timestamp, model, latency, status). What it doesn't store: the raw prompts or responses themselves. Records are hash-chained and append-only; data resides in EU-central-1 (Frankfurt).
         </p>
-        <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
           The EU AI Act enters full enforcement on August 2, 2026. High-risk AI systems face up to €35M in administrative fines for Article 12 violations. Industry estimates put compliance readiness at under 30% across EU AI operators today.
         </p>
       </div>
@@ -271,18 +271,18 @@ function HowItWorks() {
     <section id="how-it-works" className="section-pad" style={{ padding: '100px 32px' }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <div style={{ marginBottom: 48 }}>
-          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', letterSpacing: '-0.025em', marginBottom: 16 }}>How it works</h2>
-          <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7 }}>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>How it works</h2>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
             Three steps, each reversible: point, log, export.
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {steps.map((s) => (
             <div key={s.n} style={{ display: 'flex', gap: 20 }}>
-              <div style={{ fontSize: 13, fontFamily: 'monospace', color: '#818cf8', fontWeight: 600, letterSpacing: 1, flexShrink: 0, paddingTop: 4, width: 32 }}>{s.n}</div>
+              <div style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--accent-text)', fontWeight: 600, letterSpacing: 1, flexShrink: 0, paddingTop: 4, width: 32 }}>{s.n}</div>
               <div>
-                <h3 style={{ fontSize: 18, fontWeight: 600, color: '#f1f5f9', marginBottom: 10, lineHeight: 1.4 }}>{s.title}</h3>
-                <p style={{ fontSize: 15, color: '#94a3b8', lineHeight: 1.75 }}>{s.body}</p>
+                <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 10, lineHeight: 1.4 }}>{s.title}</h3>
+                <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75 }}>{s.body}</p>
               </div>
             </div>
           ))}
@@ -318,40 +318,40 @@ function Compliance() {
   return (
     <section className="section-pad" style={{
       padding: '100px 32px',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(255,255,255,0.015)',
+      borderTop: '1px solid var(--border)',
+      borderBottom: '1px solid var(--border)',
+      background: 'var(--surface-tint-soft)',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <div style={{ marginBottom: 48 }}>
-          <h2 className="section-title" style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', lineHeight: 1.2, marginBottom: 20 }}>
+          <h2 className="section-title" style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', lineHeight: 1.2, marginBottom: 20 }}>
             Built as infrastructure for auditing AI, not a dashboard with logging bolted on.
           </h2>
-          <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7 }}>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
             The whole system is designed to produce records regulators will accept — and to be incapable of producing records regulators won't.
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
           {paragraphs.map((p) => (
             <div key={p.title}>
-              <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f1f5f9', marginBottom: 8, lineHeight: 1.4 }}>{p.title}</h3>
-              <p style={{ fontSize: 15, color: '#94a3b8', lineHeight: 1.75 }}>{p.body}</p>
+              <h3 style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8, lineHeight: 1.4 }}>{p.title}</h3>
+              <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75 }}>{p.body}</p>
             </div>
           ))}
         </div>
         <figure style={{
           marginTop: 48, marginBottom: 0,
           padding: '28px 32px', borderRadius: 12,
-          border: '1px solid rgba(129,140,248,0.25)',
-          background: 'rgba(99,102,241,0.06)',
+          border: '1px solid var(--border-accent)',
+          background: 'var(--accent-tint-bg-soft)',
         }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
             Customer question
           </div>
-          <p style={{ fontSize: 17, color: '#e2e8f0', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 14 }}>
+          <p style={{ fontSize: 17, color: 'var(--fg-body)', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 14 }}>
             Why can't we just hash ourselves?
           </p>
-          <blockquote style={{ fontSize: 17, color: '#cbd5e1', lineHeight: 1.7, margin: 0, borderLeft: '2px solid rgba(129,140,248,0.5)', paddingLeft: 18 }}>
+          <blockquote style={{ fontSize: 17, color: 'var(--fg-body)', lineHeight: 1.7, margin: 0, borderLeft: '2px solid var(--border-accent)', paddingLeft: 18 }}>
             "A customer could hash themselves. But then their audit defense is 'trust our internal log.' Our chain is externally verifiable by a regulator in SQL. That's the product."
           </blockquote>
         </figure>
@@ -364,49 +364,49 @@ function CodeSnippet() {
   return (
     <section className="section-pad" style={{ padding: '100px 32px' }}>
       <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
-        <h2 className="section-title" style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 16, lineHeight: 1.2 }}>Integration is one URL and one header.</h2>
-        <p style={{ fontSize: 17, color: '#94a3b8', marginBottom: 44, lineHeight: 1.7 }}>Two lines change. The rest of your application code stays intact.</p>
+        <h2 className="section-title" style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', marginBottom: 16, lineHeight: 1.2 }}>Integration is one URL and one header.</h2>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 44, lineHeight: 1.7 }}>Two lines change. The rest of your application code stays intact.</p>
         <div style={{
           textAlign: 'left', borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
-          background: '#0d1017', overflow: 'hidden',
+          border: '1px solid var(--border-prominent)',
+          background: 'var(--bg-code)', overflow: 'hidden',
         }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+            padding: '12px 18px', borderBottom: '1px solid var(--border)',
           }}>
             {['#ef4444','#f59e0b','#22c55e'].map((c) => (
               <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, opacity: 0.6 }} />
             ))}
-            <span style={{ fontSize: 12, color: '#475569', marginLeft: 8, fontFamily: 'monospace' }}>your_app.py</span>
+            <span style={{ fontSize: 12, color: 'var(--fg-ultrasubtle)', marginLeft: 8, fontFamily: 'monospace' }}>your_app.py</span>
           </div>
           <pre style={{ padding: '28px 24px', fontSize: 13.5, lineHeight: 2, overflowX: 'auto', margin: 0 }}>
             <code style={{ fontFamily: 'ui-monospace, monospace' }}>
-              <span style={{ color: '#475569' }}># Before{'\n'}</span>
+              <span style={{ color: 'var(--fg-ultrasubtle)' }}># Before{'\n'}</span>
               <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: '#e2e8f0' }}> = </span>
+              <span style={{ color: 'var(--fg-body)' }}> = </span>
               <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: '#e2e8f0' }}>(api_key=</span>
+              <span style={{ color: 'var(--fg-body)' }}>(api_key=</span>
               <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: '#e2e8f0' }}>){'\n\n'}</span>
-              <span style={{ color: '#475569' }}># After{'\n'}</span>
+              <span style={{ color: 'var(--fg-body)' }}>){'\n\n'}</span>
+              <span style={{ color: 'var(--fg-ultrasubtle)' }}># After{'\n'}</span>
               <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: '#e2e8f0' }}> = </span>
+              <span style={{ color: 'var(--fg-body)' }}> = </span>
               <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: '#e2e8f0' }}>({'\n'}{'  '}api_key=</span>
+              <span style={{ color: 'var(--fg-body)' }}>({'\n'}{'  '}api_key=</span>
               <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: '#e2e8f0' }}>,{'\n'}{'  '}base_url=</span>
+              <span style={{ color: 'var(--fg-body)' }}>,{'\n'}{'  '}base_url=</span>
               <span style={{ color: '#86efac' }}>"{PROXY_URL}/proxy/openai"</span>
-              <span style={{ color: '#e2e8f0' }}>,{'\n'}{'  '}default_headers=</span>
-              <span style={{ color: '#e2e8f0' }}>{'{'}  </span>
+              <span style={{ color: 'var(--fg-body)' }}>,{'\n'}{'  '}default_headers=</span>
+              <span style={{ color: 'var(--fg-body)' }}>{'{'}  </span>
               <span style={{ color: '#86efac' }}>"x-ailedger-key"</span>
-              <span style={{ color: '#e2e8f0' }}>: </span>
+              <span style={{ color: 'var(--fg-body)' }}>: </span>
               <span style={{ color: '#86efac' }}>"agl_sk_..."</span>
-              <span style={{ color: '#e2e8f0' }}> {'}'}{'\n)' }</span>
+              <span style={{ color: 'var(--fg-body)' }}> {'}'}{'\n)' }</span>
             </code>
           </pre>
         </div>
-        <p style={{ fontSize: 15, color: '#94a3b8', lineHeight: 1.75, marginTop: 32, textAlign: 'left' }}>
+        <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75, marginTop: 32, textAlign: 'left' }}>
           Works with OpenAI, Anthropic, Gemini, and any OpenAI-compatible API. From the moment the base URL switches, every request flows through AILedger and produces a record. If you remove AILedger tomorrow, your application goes back to calling the provider directly — no lock-in, no migration, no ceremony.
         </p>
       </div>
@@ -443,13 +443,13 @@ function Pricing() {
   ]
 
   return (
-    <section id="pricing" className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid rgba(255,255,255,0.06)', scrollMarginTop: '120px' }}>
+    <section id="pricing" className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid var(--border)', scrollMarginTop: '120px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ marginBottom: 48, maxWidth: 720 }}>
-          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', letterSpacing: '-0.025em', marginBottom: 16 }}>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>
             Pricing.
           </h2>
-          <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7 }}>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
             Three tiers, priced by where you are in the compliance journey.
           </p>
         </div>
@@ -457,27 +457,27 @@ function Pricing() {
           {tiers.map((tier) => (
             <div key={tier.name} style={{
               borderRadius: 16,
-              border: tier.highlight ? '1px solid rgba(99,102,241,0.5)' : '1px solid rgba(255,255,255,0.07)',
-              background: tier.highlight ? 'rgba(99,102,241,0.07)' : 'rgba(255,255,255,0.02)',
+              border: tier.highlight ? '1px solid var(--border-accent)' : '1px solid var(--border)',
+              background: tier.highlight ? 'var(--accent-tint-bg-soft)' : 'var(--surface-tint)',
               padding: '32px 28px',
               display: 'flex', flexDirection: 'column',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: tier.highlight ? '#818cf8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: tier.highlight ? 'var(--accent-text)' : 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
                 {tier.name}
               </div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#f1f5f9', marginBottom: 16, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 16, lineHeight: 1.4 }}>
                 {tier.band}
               </div>
-              <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.75, marginBottom: 24, flex: 1 }}>
+              <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 24, flex: 1 }}>
                 {tier.body}
               </p>
               <a href={tier.href} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '11px 20px', borderRadius: 10,
                 fontSize: 14, fontWeight: 600, textDecoration: 'none',
-                background: tier.highlight ? '#4f46e5' : 'rgba(255,255,255,0.06)',
-                color: tier.highlight ? '#fff' : '#e2e8f0',
-                border: tier.highlight ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                background: tier.highlight ? 'var(--accent)' : 'var(--border)',
+                color: tier.highlight ? 'var(--fg-on-accent)' : 'var(--fg-body)',
+                border: tier.highlight ? 'none' : '1px solid var(--border-prominent)',
               }}>
                 {tier.cta}
               </a>
@@ -486,8 +486,8 @@ function Pricing() {
         </div>
         <div style={{ textAlign: 'center', marginTop: 40 }}>
           <a href="/pricing" style={{
-            fontSize: 15, color: '#818cf8', fontWeight: 500, textDecoration: 'none',
-            borderBottom: '1px solid rgba(129,140,248,0.3)', paddingBottom: 2,
+            fontSize: 15, color: 'var(--accent-text)', fontWeight: 500, textDecoration: 'none',
+            borderBottom: '1px solid var(--hero-glow-dot)', paddingBottom: 2,
           }}>
             See full pricing →
           </a>
@@ -536,14 +536,14 @@ function FAQ() {
   return (
     <section className="section-pad" style={{
       padding: '100px 32px',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      borderTop: '1px solid var(--border)',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 12 }}>
+          <h2 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', marginBottom: 12 }}>
             Frequently asked questions
           </h2>
-          <p style={{ fontSize: 16, color: '#64748b' }}>
+          <p style={{ fontSize: 16, color: 'var(--fg-subtle)' }}>
             Everything you need to know before integrating.
           </p>
         </div>
@@ -551,15 +551,15 @@ function FAQ() {
           {items.map((item) => (
             <details key={item.q} style={{
               borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.07)',
-              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-tint)',
               overflow: 'hidden',
             }}>
               <summary style={{
                 padding: '18px 22px',
                 fontSize: 15,
                 fontWeight: 500,
-                color: '#f1f5f9',
+                color: 'var(--fg-secondary)',
                 cursor: 'pointer',
                 listStyle: 'none',
                 display: 'flex',
@@ -568,12 +568,12 @@ function FAQ() {
                 gap: 16,
               }}>
                 {item.q}
-                <span style={{ color: '#475569', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
+                <span style={{ color: 'var(--fg-ultrasubtle)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
               </summary>
               <div style={{
                 padding: '0 22px 18px',
                 fontSize: 14,
-                color: '#64748b',
+                color: 'var(--fg-subtle)',
                 lineHeight: 1.8,
               }}>
                 {item.a}
@@ -590,18 +590,18 @@ function CTA() {
   return (
     <section className="section-pad" style={{
       padding: '100px 32px', textAlign: 'center',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      borderTop: '1px solid var(--border)',
     }}>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: '#fff', letterSpacing: '-0.025em', marginBottom: 16 }}>
+        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>
           Start before the deadline.
         </h2>
-        <p style={{ fontSize: 17, color: '#94a3b8', marginBottom: 40, lineHeight: 1.7 }}>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 40, lineHeight: 1.7 }}>
           Free to start. No credit card required. Integration takes about a minute: one URL, one header, one account.
         </p>
         <a href={DASHBOARD_URL} style={{
           display: 'inline-block', padding: '16px 36px',
-          background: '#4f46e5', color: '#fff',
+          background: 'var(--accent)', color: 'var(--fg-on-accent)',
           fontWeight: 600, fontSize: 16, borderRadius: 12, textDecoration: 'none',
         }}>
           Create your account
@@ -614,16 +614,16 @@ function CTA() {
 function Footer() {
   return (
     <footer style={{
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      borderTop: '1px solid var(--border)',
       padding: '28px 0',
     }}>
       <div className="footer-row" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ color: '#334155', fontSize: 14 }}>AILedger</span>
+        <span style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>AILedger</span>
         <div className="footer-links" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <a href="/legal" style={{ color: '#334155', fontSize: 14, textDecoration: 'none' }}>Legal</a>
-          <a href="/contact" style={{ color: '#334155', fontSize: 14, textDecoration: 'none' }}>Contact</a>
-          <a href="/docs" style={{ color: '#334155', fontSize: 14, textDecoration: 'none' }}>Docs</a>
-          <span className="footer-tagline" style={{ color: '#334155', fontSize: 14 }}>EU AI Act record-keeping infrastructure</span>
+          <a href="/legal" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Legal</a>
+          <a href="/contact" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Contact</a>
+          <a href="/docs" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Docs</a>
+          <span className="footer-tagline" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>EU AI Act record-keeping infrastructure</span>
         </div>
       </div>
     </footer>
@@ -633,15 +633,15 @@ function Footer() {
 function CodeBlock({ filename, raw, children }: { filename: string; raw: string; children: React.ReactNode }) {
   const [copied, setCopied] = useState(false)
   return (
-    <div style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)', background: '#0d1017', overflow: 'hidden', marginTop: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+    <div style={{ borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--bg-code)', overflow: 'hidden', marginTop: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
         {['#ef4444','#f59e0b','#22c55e'].map((col) => (
           <div key={col} style={{ width: 10, height: 10, borderRadius: '50%', background: col, opacity: 0.5 }} />
         ))}
-        <span style={{ fontSize: 12, color: '#475569', marginLeft: 6, fontFamily: 'monospace', flex: 1 }}>{filename}</span>
+        <span style={{ fontSize: 12, color: 'var(--fg-ultrasubtle)', marginLeft: 6, fontFamily: 'monospace', flex: 1 }}>{filename}</span>
         <button
           onClick={() => { navigator.clipboard.writeText(raw); setCopied(true); setTimeout(() => setCopied(false), 1800) }}
-          style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '3px 10px', fontSize: 11, color: copied ? '#86efac' : '#64748b', transition: 'color 0.15s' }}
+          style={{ cursor: 'pointer', background: 'var(--border)', border: '1px solid var(--border-strong)', borderRadius: 6, padding: '3px 10px', fontSize: 11, color: copied ? '#86efac' : 'var(--fg-subtle)', transition: 'color 0.15s' }}
         >{copied ? '✓' : '📋'}</button>
       </div>
       <pre style={{ padding: '22px 22px', fontSize: 13, lineHeight: 1.9, overflowX: 'auto', margin: 0 }}>
@@ -666,18 +666,18 @@ function Docs() {
   )
 
   const c = {
-    comment: '#475569',
+    comment: 'var(--fg-ultrasubtle)',
     name: '#93c5fd',
     fn: '#fcd34d',
     str: '#86efac',
-    plain: '#e2e8f0',
+    plain: 'var(--fg-body)',
     kw: '#c084fc',
   }
 
   const s = (color: string, text: string) => <span style={{ color }}>{text}</span>
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', color: '#e2e8f0', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', color: 'var(--fg-body)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '100px 32px 80px', display: 'flex', gap: 64 }}>
@@ -685,12 +685,12 @@ function Docs() {
         {/* Sidebar */}
         <aside style={{ width: 180, flexShrink: 0 }}>
           <div style={{ position: 'sticky', top: 96 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>On this page</p>
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-ultrasubtle)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>On this page</p>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {sections.map((s) => (
-                <a key={s.id} href={`#${s.id}`} style={{ fontSize: 14, color: '#64748b', textDecoration: 'none', padding: '4px 0', transition: 'color 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = '#e2e8f0')}
-                  onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
+                <a key={s.id} href={`#${s.id}`} style={{ fontSize: 14, color: 'var(--fg-subtle)', textDecoration: 'none', padding: '4px 0', transition: 'color 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--fg-body)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--fg-subtle)')}
                 >{s.label}</a>
               ))}
             </nav>
@@ -700,27 +700,27 @@ function Docs() {
         {/* Content */}
         <main style={{ flex: 1, minWidth: 0 }}>
 
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>Documentation</h1>
-          <p style={{ fontSize: 16, color: '#64748b', marginBottom: 64, lineHeight: 1.7 }}>Everything you need to integrate AILedger and start logging AI inferences.</p>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>Documentation</h1>
+          <p style={{ fontSize: 16, color: 'var(--fg-subtle)', marginBottom: 64, lineHeight: 1.7 }}>Everything you need to integrate AILedger and start logging AI inferences.</p>
 
           {/* Quick start */}
           <section id="quickstart" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Quick start</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 16 }}>
-              Two steps: create an API key in the <a href={DASHBOARD_URL} style={{ color: '#818cf8', textDecoration: 'none' }}>dashboard</a>, then add it to your existing AI client.
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Quick start</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
+              Two steps: create an API key in the <a href={DASHBOARD_URL} style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>dashboard</a>, then add it to your existing AI client.
             </p>
-            <ol style={{ fontSize: 14, color: '#94a3b8', lineHeight: 2, paddingLeft: 20 }}>
-              <li>Sign up at <a href={DASHBOARD_URL} style={{ color: '#818cf8', textDecoration: 'none' }}>dash.ailedger.dev</a></li>
-              <li>Go to <strong style={{ color: '#e2e8f0' }}>API Keys</strong> and create a key</li>
-              <li>Set <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>base_url</code> and pass your key in <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>x-ailedger-key</code></li>
+            <ol style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 2, paddingLeft: 20 }}>
+              <li>Sign up at <a href={DASHBOARD_URL} style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>dash.ailedger.dev</a></li>
+              <li>Go to <strong style={{ color: 'var(--fg-body)' }}>API Keys</strong> and create a key</li>
+              <li>Set <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>base_url</code> and pass your key in <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>x-ailedger-key</code></li>
               <li>Every inference is now logged automatically</li>
             </ol>
           </section>
 
           {/* OpenAI */}
           <section id="openai" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>OpenAI</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install openai</code></p>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>OpenAI</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install openai</code></p>
             {codeBlock('openai_example.py', `from openai import OpenAI\n\nclient = OpenAI(\n  api_key="your-openai-key",\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\ncompletion = client.chat.completions.create(\n  model="gpt-4.1-mini",\n  messages=[{"role": "user", "content": "Hello!"}]\n)\nprint(completion.choices[0].message.content)\n`, <>
               {s(c.kw, 'from')}{s(c.plain, ' openai ')}{s(c.kw, 'import')}{s(c.plain, ' OpenAI\n\n')}
               {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'OpenAI')}{s(c.plain, '(\n')}
@@ -736,8 +736,8 @@ function Docs() {
 
           {/* Anthropic */}
           <section id="anthropic" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Anthropic</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install anthropic</code></p>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Anthropic</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install anthropic</code></p>
             {codeBlock('anthropic_example.py', `from anthropic import Anthropic\n\nclient = Anthropic(\n  api_key="your-anthropic-key",\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\nmessage = client.messages.create(\n  model="claude-opus-4-6",\n  max_tokens=1024,\n  messages=[{"role": "user", "content": "Hello, Claude"}]\n)\nprint(message.content)\n`, <>
               {s(c.kw, 'from')}{s(c.plain, ' anthropic ')}{s(c.kw, 'import')}{s(c.plain, ' Anthropic\n\n')}
               {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'Anthropic')}{s(c.plain, '(\n')}
@@ -754,8 +754,8 @@ function Docs() {
 
           {/* Gemini */}
           <section id="gemini" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Gemini</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install google-genai</code></p>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Gemini</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install google-genai</code></p>
             {codeBlock('gemini_example.py', `from google import genai\n\nclient = genai.Client(\n  api_key="your-gemini-key",\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": "alg_sk_..."},\n  }\n)\n\nresponse = client.models.generate_content(\n  model="gemini-2.5-flash",\n  contents="Explain how AI works in a few words"\n)\nprint(response.text)\n`, <>
               {s(c.kw, 'from')}{s(c.plain, ' google ')}{s(c.kw, 'import')}{s(c.plain, ' genai\n\n')}
               {s(c.name, 'client')}{s(c.plain, ' = genai.')}{s(c.fn, 'Client')}{s(c.plain, '(\n')}
@@ -773,8 +773,8 @@ function Docs() {
 
           {/* Test your keys */}
           <section id="test" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Test your keys</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 16 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Test your keys</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
               Run this script to verify all three providers are routing through AILedger correctly.
             </p>
             {codeBlock('test_proxy.py', `import time\nfrom openai import OpenAI\nfrom anthropic import Anthropic\nfrom google import genai\n\nAILEDGER_KEY  = "alg_sk_..."\nOPENAI_KEY    = "sk-..."\nANTHROPIC_KEY = "sk-ant-..."\nGEMINI_KEY    = "AIza..."\n\nRUNS = 3\ndef avg(times): return sum(times) / len(times)\n\n# OpenAI\ndirect = OpenAI(api_key=OPENAI_KEY)\nproxy  = OpenAI(\n  api_key=OPENAI_KEY,\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": AILEDGER_KEY},\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.chat.completions.create(model="gpt-4.1-mini", messages=[{"role": "user", "content": "Say: ok"}], max_tokens=5)\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.chat.completions.create(model="gpt-4.1-mini", messages=[{"role": "user", "content": "Say: ok"}], max_tokens=5)\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.choices and r.choices[0].message.content:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [OpenAI]    '{r.choices[0].message.content.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n\n# Anthropic\ndirect = Anthropic(api_key=ANTHROPIC_KEY)\nproxy  = Anthropic(\n  api_key=ANTHROPIC_KEY,\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": AILEDGER_KEY},\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.messages.create(model="claude-opus-4-6", max_tokens=5, messages=[{"role": "user", "content": "Say: ok"}])\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.messages.create(model="claude-opus-4-6", max_tokens=5, messages=[{"role": "user", "content": "Say: ok"}])\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.content and r.content[0].text:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [Anthropic] '{r.content[0].text.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n\n# Gemini\ndirect = genai.Client(api_key=GEMINI_KEY)\nproxy  = genai.Client(\n  api_key=GEMINI_KEY,\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": AILEDGER_KEY},\n  },\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.models.generate_content(model="gemini-2.5-flash", contents="Say: ok")\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.models.generate_content(model="gemini-2.5-flash", contents="Say: ok")\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.text:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [Gemini]    '{r.text.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n`, <>
@@ -844,8 +844,8 @@ function Docs() {
             </>)}
 
             {/* Expected output */}
-            <div style={{ marginTop: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)', background: '#0d1017', overflow: 'hidden' }}>
-              <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>expected output</div>
+            <div style={{ marginTop: 16, borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--bg-code)', overflow: 'hidden' }}>
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--fg-ultrasubtle)', fontFamily: 'monospace' }}>expected output</div>
               <div style={{ padding: '20px 22px', fontFamily: 'ui-monospace, monospace', fontSize: 13, lineHeight: 2.2 }}>
                 {[
                   { label: '[OpenAI]    ' },
@@ -855,32 +855,32 @@ function Docs() {
                   <div key={label} style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                      <span style={{ color: '#475569' }}>{label}</span>
+                      <span style={{ color: 'var(--fg-ultrasubtle)' }}>{label}</span>
                       <span style={{ color: '#86efac' }}>'ok'</span>
                     </div>
-                    <div style={{ paddingLeft: 28, color: '#475569', fontSize: 12 }}>
-                      avg over 3 runs - direct=<span style={{ color: '#94a3b8' }}>450ms</span>  proxy=<span style={{ color: '#94a3b8' }}>468ms</span>  overhead=<span style={{ color: '#86efac' }}>+18ms</span>
+                    <div style={{ paddingLeft: 28, color: 'var(--fg-ultrasubtle)', fontSize: 12 }}>
+                      avg over 3 runs - direct=<span style={{ color: 'var(--fg-muted)' }}>450ms</span>  proxy=<span style={{ color: 'var(--fg-muted)' }}>468ms</span>  overhead=<span style={{ color: '#86efac' }}>+18ms</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <p style={{ marginTop: 16, fontSize: 13, color: '#94a3b8', lineHeight: 1.8 }}>
-              LLM inference time is noisy - bump <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>RUNS</code> to <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>10</code> for a stable average.
-              {' '}Typical overhead is <span style={{ color: '#e2e8f0' }}>150–300ms</span> - an extra network hop through Cloudflare's edge. This is well within the natural variance of LLM inference time and has no meaningful impact on end-user experience. You may occasionally see the proxy come in <em>faster</em> than direct when Cloudflare's backbone beats your ISP's path to the provider.
+            <p style={{ marginTop: 16, fontSize: 13, color: 'var(--fg-muted)', lineHeight: 1.8 }}>
+              LLM inference time is noisy - bump <code style={{ background: 'var(--border)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>RUNS</code> to <code style={{ background: 'var(--border)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>10</code> for a stable average.
+              {' '}Typical overhead is <span style={{ color: 'var(--fg-body)' }}>150–300ms</span> - an extra network hop through Cloudflare's edge. This is well within the natural variance of LLM inference time and has no meaningful impact on end-user experience. You may occasionally see the proxy come in <em>faster</em> than direct when Cloudflare's backbone beats your ISP's path to the provider.
             </p>
           </section>
 
           {/* API reference */}
           <section id="reference" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 16 }}>API reference</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 16 }}>API reference</h2>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
                   {['Header', 'Required', 'Description'].map((h) => (
-                    <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: '#475569', fontWeight: 500 }}>{h}</th>
+                    <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -889,18 +889,18 @@ function Docs() {
                   ['x-ailedger-key', 'Yes', 'Your AILedger API key (alg_sk_...)'],
                   ['Authorization', 'Yes', 'Your provider key - forwarded as-is to the upstream API'],
                 ].map(([h, r, d]) => (
-                  <tr key={h} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '10px 12px' }}><code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#93c5fd' }}>{h}</code></td>
-                    <td style={{ padding: '10px 12px', color: r === 'Yes' ? '#86efac' : '#475569' }}>{r}</td>
-                    <td style={{ padding: '10px 12px', color: '#64748b' }}>{d}</td>
+                  <tr key={h} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                    <td style={{ padding: '10px 12px' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{h}</code></td>
+                    <td style={{ padding: '10px 12px', color: r === 'Yes' ? 'var(--color-success)' : 'var(--fg-ultrasubtle)' }}>{r}</td>
+                    <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)' }}>{d}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            <p style={{ marginTop: 24, fontSize: 14, color: '#475569', lineHeight: 1.8 }}>
-              Proxy base URL: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>{PROXY_URL}/proxy/{'<provider>'}</code>
-              <br />Supported providers: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>openai</code> · <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>anthropic</code> · <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>gemini</code>
+            <p style={{ marginTop: 24, fontSize: 14, color: 'var(--fg-ultrasubtle)', lineHeight: 1.8 }}>
+              Proxy base URL: <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>{PROXY_URL}/proxy/{'<provider>'}</code>
+              <br />Supported providers: <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>openai</code> · <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>anthropic</code> · <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>gemini</code>
             </p>
           </section>
 
@@ -1019,25 +1019,25 @@ function Legal() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 32px' }}>
-        <a href="/" style={{ color: '#475569', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>Legal</h1>
-        <p style={{ color: '#475569', fontSize: 14, marginBottom: 48 }}>Last updated: April 13, 2026</p>
+        <a href="/" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>Legal</h1>
+        <p style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, marginBottom: 48 }}>Last updated: April 13, 2026</p>
 
-        <h2 id="terms" style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px', marginTop: 24, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Terms of Service</h2>
+        <h2 id="terms" style={{ fontSize: 26, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginTop: 24, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border-strong)' }}>Terms of Service</h2>
         {termsSections.map((s) => (
           <div key={s.title} style={{ marginBottom: 36, paddingLeft: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>{s.title}</h3>
-            <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.8 }}>{s.body}</p>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8 }}>{s.title}</h3>
+            <p style={{ fontSize: 15, color: 'var(--fg-subtle)', lineHeight: 1.8 }}>{s.body}</p>
           </div>
         ))}
 
-        <h2 id="privacy" style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px', marginTop: 64, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Privacy Policy</h2>
+        <h2 id="privacy" style={{ fontSize: 26, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginTop: 64, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border-strong)' }}>Privacy Policy</h2>
         {privacySections.map((s) => (
           <div key={s.title} style={{ marginBottom: 36, paddingLeft: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>{s.title}</h3>
-            <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.8 }}>{s.body}</p>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8 }}>{s.title}</h3>
+            <p style={{ fontSize: 15, color: 'var(--fg-subtle)', lineHeight: 1.8 }}>{s.body}</p>
           </div>
         ))}
       </div>
@@ -1047,17 +1047,17 @@ function Legal() {
 
 function Contact() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 32px' }}>
-        <a href="/" style={{ color: '#475569', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>Contact</h1>
-        <p style={{ color: '#94a3b8', fontSize: 15, lineHeight: 1.8, marginBottom: 36 }}>
+        <a href="/" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>Contact</h1>
+        <p style={{ color: 'var(--fg-muted)', fontSize: 15, lineHeight: 1.8, marginBottom: 36 }}>
           For support, billing questions, and to exercise your data rights under GDPR, reach us at:
         </p>
-        <a href="mailto:support@ailedger.dev" style={{ fontSize: 18, color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>
+        <a href="mailto:support@ailedger.dev" style={{ fontSize: 18, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>
           support@ailedger.dev
         </a>
-        <p style={{ color: '#64748b', fontSize: 14, marginTop: 48, lineHeight: 1.8 }}>
+        <p style={{ color: 'var(--fg-subtle)', fontSize: 14, marginTop: 48, lineHeight: 1.8 }}>
           For enterprise inquiries or EU data residency questions, use the same address and we'll route you to the correct person.
         </p>
       </div>
@@ -1124,44 +1124,44 @@ function AnnexIIIGuide() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '100px 32px 80px' }}>
-        <a href="/docs" style={{ color: '#475569', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back to docs</a>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>
+        <a href="/docs" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back to docs</a>
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>
           Annex III Category Guide
         </h1>
-        <p style={{ color: '#64748b', fontSize: 16, lineHeight: 1.7, marginBottom: 16 }}>
+        <p style={{ color: 'var(--fg-subtle)', fontSize: 16, lineHeight: 1.7, marginBottom: 16 }}>
           The EU AI Act (Regulation 2024/1689) classifies certain AI systems as "high-risk" under Annex III. If your system falls into any of these categories, you are required to maintain automatic event logs under Article 12.
         </p>
-        <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.7, marginBottom: 48 }}>
+        <p style={{ color: 'var(--fg-subtle)', fontSize: 14, lineHeight: 1.7, marginBottom: 48 }}>
           For each category below, ask yourself the question. If the answer is yes, that is likely your Annex III classification. If your system spans multiple categories, select the most specific one. If you are unsure, consult your legal or compliance team.
         </p>
 
         {categories.map((cat, i) => (
-          <div key={cat.num} style={{ marginBottom: 36, paddingBottom: i < categories.length - 1 ? 36 : 0, borderBottom: i < categories.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+          <div key={cat.num} style={{ marginBottom: 36, paddingBottom: i < categories.length - 1 ? 36 : 0, borderBottom: i < categories.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', marginBottom: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', fontFamily: 'monospace', minWidth: 28 }}>{cat.num}.</span>
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#fff' }}>{cat.title}</h2>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)', fontFamily: 'monospace', minWidth: 28 }}>{cat.num}.</span>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)' }}>{cat.title}</h2>
             </div>
             <div style={{ paddingLeft: 44 }}>
-              <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.8, marginBottom: 12 }}>
-                <span style={{ color: '#e2e8f0', fontWeight: 500 }}>Ask:</span> {cat.ask}
+              <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.8, marginBottom: 12 }}>
+                <span style={{ color: 'var(--fg-body)', fontWeight: 500 }}>Ask:</span> {cat.ask}
               </p>
-              <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>
-                <span style={{ color: '#475569', fontWeight: 500 }}>Examples:</span> {cat.examples}
+              <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7 }}>
+                <span style={{ color: 'var(--fg-ultrasubtle)', fontWeight: 500 }}>Examples:</span> {cat.examples}
               </p>
             </div>
           </div>
         ))}
 
-        <div style={{ marginTop: 48, padding: '20px 24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 12 }}>
-          <p style={{ fontSize: 14, color: '#818cf8', lineHeight: 1.7 }}>
+        <div style={{ marginTop: 48, padding: '20px 24px', background: 'var(--accent-tint-bg)', border: '1px solid var(--border-accent-soft)', borderRadius: 12 }}>
+          <p style={{ fontSize: 14, color: 'var(--accent-text)', lineHeight: 1.7 }}>
             <span style={{ fontWeight: 600 }}>Not sure?</span> Select "Other (describe in system purpose)" in your system settings and describe your use case in the purpose field. Your compliance report will include this description for regulators to assess.
           </p>
         </div>
 
-        <p style={{ marginTop: 32, fontSize: 12, color: '#475569', lineHeight: 1.7 }}>
+        <p style={{ marginTop: 32, fontSize: 12, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
           Source: Annex III, Regulation (EU) 2024/1689 of the European Parliament and of the Council (EU AI Act).
         </p>
       </div>
@@ -1323,23 +1323,23 @@ function PricingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#0a0b0f] text-slate-300" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-page)", color: "var(--fg-body)", fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
 
       {/* Header banner */}
       <section className="section-pad" style={{ padding: '120px 32px 72px', textAlign: 'center' }}>
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
-          <h1 style={{ fontSize: 56, fontWeight: 700, color: '#fff', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 24 }}>
-            Audit-grade evidence for <span style={{ display: 'inline-block', transform: 'translateY(-0.08em)', background: 'linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c4b5fd 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.
+          <h1 style={{ fontSize: 56, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 24 }}>
+            Audit-grade evidence for <span style={{ display: 'inline-block', transform: 'translateY(-0.08em)', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.
           </h1>
-          <p style={{ fontSize: 19, color: '#94a3b8', lineHeight: 1.6, marginBottom: 36, maxWidth: 680, margin: '0 auto 36px' }}>
+          <p style={{ fontSize: 19, color: 'var(--fg-muted)', lineHeight: 1.6, marginBottom: 36, maxWidth: 680, margin: '0 auto 36px' }}>
             Three tiers. One chain of custody. Built for the EU AI Act Article&nbsp;12 conformance question your enterprise customers are already asking.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="#tiers" style={{ padding: '14px 28px', background: '#4f46e5', color: '#fff', fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none' }}>
+            <a href="#tiers" style={{ padding: '14px 28px', background: 'var(--accent)', color: 'var(--fg-on-accent)', fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none' }}>
               See your tier
             </a>
-            <a href="/contact" style={{ padding: '14px 28px', color: '#94a3b8', fontSize: 15, textDecoration: 'none', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <a href="/contact" style={{ padding: '14px 28px', color: 'var(--fg-muted)', fontSize: 15, textDecoration: 'none', borderRadius: 12, border: '1px solid var(--border-strong)' }}>
               Talk to us →
             </a>
           </div>
@@ -1353,24 +1353,24 @@ function PricingPage() {
             {tiers.map((tier) => (
               <div key={tier.name} style={{
                 borderRadius: 16,
-                border: tier.highlight ? '1px solid rgba(99,102,241,0.5)' : '1px solid rgba(255,255,255,0.07)',
-                background: tier.highlight ? 'rgba(99,102,241,0.07)' : 'rgba(255,255,255,0.02)',
+                border: tier.highlight ? '1px solid var(--border-accent)' : '1px solid var(--border)',
+                background: tier.highlight ? 'var(--accent-tint-bg-soft)' : 'var(--surface-tint)',
                 padding: '32px 28px',
                 display: 'flex', flexDirection: 'column',
               }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: tier.highlight ? '#818cf8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: tier.highlight ? 'var(--accent-text)' : 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
                   {tier.name}
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9', marginBottom: 14, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 14, lineHeight: 1.5 }}>
                   {tier.band}
                 </div>
-                <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.7, marginBottom: 24, fontStyle: 'italic' }}>
+                <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.7, marginBottom: 24, fontStyle: 'italic' }}>
                   {tier.positioning}
                 </p>
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px 0', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                   {tier.bullets.map((b, idx) => (
-                    <li key={idx} style={{ display: 'flex', gap: 10, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
-                      <span style={{ color: '#34d399', flexShrink: 0, marginTop: 2 }}>•</span>
+                    <li key={idx} style={{ display: 'flex', gap: 10, fontSize: 13, color: 'var(--fg-muted)', lineHeight: 1.6 }}>
+                      <span style={{ color: 'var(--accent-text)', flexShrink: 0, marginTop: 2 }}>•</span>
                       <span>{b}</span>
                     </li>
                   ))}
@@ -1380,16 +1380,16 @@ function PricingPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '11px 20px', borderRadius: 10,
                     fontSize: 14, fontWeight: 600, textDecoration: 'none',
-                    background: tier.highlight ? '#4f46e5' : 'rgba(255,255,255,0.06)',
-                    color: tier.highlight ? '#fff' : '#e2e8f0',
-                    border: tier.highlight ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                    background: tier.highlight ? 'var(--accent)' : 'var(--border)',
+                    color: tier.highlight ? 'var(--fg-on-accent)' : 'var(--fg-body)',
+                    border: tier.highlight ? 'none' : '1px solid var(--border-prominent)',
                   }}>
                     {tier.primary.label}
                   </a>
                   <a href={tier.secondary.href} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '9px 20px', fontSize: 13, textDecoration: 'none',
-                    color: '#94a3b8',
+                    color: 'var(--fg-muted)',
                   }}>
                     {tier.secondary.label}
                   </a>
@@ -1402,37 +1402,37 @@ function PricingPage() {
 
       {/* Comparison table */}
       <section className="section-pad" style={{
-        padding: '80px 32px', borderTop: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.015)',
+        padding: '80px 32px', borderTop: '1px solid var(--border)',
+        background: 'var(--surface-tint-soft)',
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 36 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', marginBottom: 36 }}>
             What you get, tier by tier
           </h2>
-          <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid var(--border)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 720 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}>
-                  <th style={{ textAlign: 'left', padding: '16px 18px', color: '#cbd5e1', fontWeight: 600, fontSize: 13 }}>Feature</th>
-                  <th style={{ textAlign: 'left', padding: '16px 18px', color: '#cbd5e1', fontWeight: 600, fontSize: 13 }}>Ledger</th>
-                  <th style={{ textAlign: 'left', padding: '16px 18px', color: '#cbd5e1', fontWeight: 600, fontSize: 13 }}>Evidence</th>
-                  <th style={{ textAlign: 'left', padding: '16px 18px', color: '#cbd5e1', fontWeight: 600, fontSize: 13 }}>Audit</th>
+                <tr style={{ borderBottom: '1px solid var(--border-prominent)', background: 'var(--surface-tint)' }}>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Feature</th>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Ledger</th>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Evidence</th>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Audit</th>
                 </tr>
               </thead>
               <tbody>
                 {compareRows.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '14px 18px', color: row.bold ? '#f1f5f9' : '#94a3b8', fontWeight: row.bold ? 600 : 400, lineHeight: 1.5 }}>{row.feature}</td>
-                    <td style={{ padding: '14px 18px', color: '#94a3b8', lineHeight: 1.5 }}>{row.ledger}</td>
-                    <td style={{ padding: '14px 18px', color: '#94a3b8', lineHeight: 1.5 }}>{row.evidence}</td>
-                    <td style={{ padding: '14px 18px', color: '#94a3b8', lineHeight: 1.5 }}>{row.audit}</td>
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '14px 18px', color: row.bold ? 'var(--fg-secondary)' : 'var(--fg-muted)', fontWeight: row.bold ? 600 : 400, lineHeight: 1.5 }}>{row.feature}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--fg-muted)', lineHeight: 1.5 }}>{row.ledger}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--fg-muted)', lineHeight: 1.5 }}>{row.evidence}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--fg-muted)', lineHeight: 1.5 }}>{row.audit}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 920 }}>
-            <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>
+            <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7 }}>
               ISO 27001, HIPAA BAA, and sector-specific attestations on roadmap post–SOC 2 Type II (Q3 2027 target).
             </p>
           </div>
@@ -1440,28 +1440,28 @@ function PricingPage() {
       </section>
 
       {/* Persona cards */}
-      <section className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <section className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid var(--border)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 36 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', marginBottom: 36 }}>
             Why this tier is for you
           </h2>
           <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             {personaCards.map((card) => (
               <div key={card.tier} style={{
                 padding: '28px 26px', borderRadius: 12,
-                border: '1px solid rgba(255,255,255,0.07)',
-                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid var(--border)',
+                background: 'var(--surface-tint)',
               }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
                   {card.tier}
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', lineHeight: 1.45, marginBottom: 14 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-secondary)', lineHeight: 1.45, marginBottom: 14 }}>
                   {card.header}
                 </h3>
-                <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.75, marginBottom: 14 }}>
+                <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 14 }}>
                   {card.body}
                 </p>
-                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, fontStyle: 'italic' }}>
+                <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7, fontStyle: 'italic' }}>
                   {card.footer}
                 </p>
               </div>
@@ -1473,52 +1473,52 @@ function PricingPage() {
       {/* Competitive positioning */}
       <section className="section-pad" style={{
         padding: '100px 32px',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.015)',
+        borderTop: '1px solid var(--border)',
+        background: 'var(--surface-tint-soft)',
       }}>
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 20 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', marginBottom: 20 }}>
             Where we sit
           </h2>
-          <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7, marginBottom: 36 }}>
-            AILedger is <strong style={{ color: '#e2e8f0' }}>the audit-ready logging layer</strong> — not a governance-layer dashboard, not a dev-observability tool, not a full MRM platform. We sit below the governance workflow your compliance team already runs; we're complementary to all three.
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7, marginBottom: 36 }}>
+            AILedger is <strong style={{ color: 'var(--fg-body)' }}>the audit-ready logging layer</strong> — not a governance-layer dashboard, not a dev-observability tool, not a full MRM platform. We sit below the governance workflow your compliance team already runs; we're complementary to all three.
           </p>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
             {positioning.map((p, idx) => (
-              <li key={idx} style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.75 }}>
-                <strong style={{ color: '#e2e8f0' }}>{p.label}</strong> {p.body}
+              <li key={idx} style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
+                <strong style={{ color: 'var(--fg-body)' }}>{p.label}</strong> {p.body}
               </li>
             ))}
           </ul>
-          <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginTop: 36, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7, marginTop: 36, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
             SOC 2 Type I target Q3 2026. SOC 2 Type II target Q3 2027.
           </p>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <section className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid var(--border)' }}>
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 36 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', marginBottom: 36 }}>
             Pricing FAQ
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {faqItems.map((item) => (
               <details key={item.q} style={{
                 borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.07)',
-                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid var(--border)',
+                background: 'var(--surface-tint)',
                 overflow: 'hidden',
               }}>
                 <summary style={{
-                  padding: '18px 22px', fontSize: 15, fontWeight: 500, color: '#f1f5f9',
+                  padding: '18px 22px', fontSize: 15, fontWeight: 500, color: 'var(--fg-secondary)',
                   cursor: 'pointer', listStyle: 'none',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
                 }}>
                   {item.q}
-                  <span style={{ color: '#475569', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
+                  <span style={{ color: 'var(--fg-ultrasubtle)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
                 </summary>
-                <div style={{ padding: '0 22px 20px', fontSize: 14, color: '#94a3b8', lineHeight: 1.8 }}>
+                <div style={{ padding: '0 22px 20px', fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.8 }}>
                   {item.a}
                 </div>
               </details>
@@ -1530,20 +1530,20 @@ function PricingPage() {
       {/* Page-foot CTA */}
       <section className="section-pad" style={{
         padding: '100px 32px', textAlign: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid var(--border)',
       }}>
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.75px', marginBottom: 16 }}>
             Not sure which tier fits?
           </h2>
-          <p style={{ fontSize: 17, color: '#94a3b8', marginBottom: 36, lineHeight: 1.7 }}>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 36, lineHeight: 1.7 }}>
             A 20-minute call maps your Article 12 surface against the three tiers. If there's no fit — on your side or ours — the call is where you find out, not after a procurement cycle.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/contact" style={{ padding: '14px 28px', background: '#4f46e5', color: '#fff', fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none' }}>
+            <a href="/contact" style={{ padding: '14px 28px', background: 'var(--accent)', color: 'var(--fg-on-accent)', fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none' }}>
               Book a fit conversation
             </a>
-            <a href="/docs" style={{ padding: '14px 28px', color: '#94a3b8', fontSize: 15, textDecoration: 'none', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <a href="/docs" style={{ padding: '14px 28px', color: 'var(--fg-muted)', fontSize: 15, textDecoration: 'none', borderRadius: 12, border: '1px solid var(--border-strong)' }}>
               Read the docs
             </a>
           </div>
