@@ -135,8 +135,8 @@ body {
 
   /* Hero - full viewport on mobile too, so stats stay below fold */
   .hero-section { padding: 80px 20px !important; }
-  .hero-title { font-size: 44px !important; letter-spacing: -1px !important; line-height: 1.05 !important; }
-  .hero-subtitle { font-size: 16px !important; margin-bottom: 32px !important; }
+  .hero-title { letter-spacing: -1px !important; line-height: 1.05 !important; }
+  .hero-subtitle { margin-bottom: 32px !important; }
   .hero-cta-group { flex-direction: column !important; width: 100% !important; }
   .hero-cta-group > a { width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
 
