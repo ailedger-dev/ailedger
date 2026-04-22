@@ -113,17 +113,17 @@ export async function finishRegistration({ env, userId, response, deviceLabel })
   if (!verification.verified || !verification.registrationInfo) {
     return { ok: false, reason: "verification_failed" };
   }
-  const { credential } = verification.registrationInfo;
+  const info = verification.registrationInfo;
   await insertPasskey(env.DB, {
-    credentialId: credential.id, // base64url string in simplewebauthn v10+
+    credentialId: info.credentialID, // base64url string in simplewebauthn v10
     userId,
-    publicKey: credential.publicKey, // Uint8Array → stored as BLOB
-    counter: credential.counter,
+    publicKey: info.credentialPublicKey, // Uint8Array → stored as BLOB
+    counter: info.counter,
     transports: response.response?.transports,
     deviceLabel,
   });
   await markEmailVerified(env.DB, userId);
-  return { ok: true, credentialId: credential.id };
+  return { ok: true, credentialId: info.credentialID };
 }
 
 export async function beginLogin({ env, email }) {
@@ -170,9 +170,9 @@ export async function finishLogin({ env, handle, response }) {
     expectedChallenge: stash.challenge,
     expectedOrigin: env.RP_ORIGIN,
     expectedRPID: env.RP_ID,
-    credential: {
-      id: passkey.credential_id,
-      publicKey: passkey.public_key,
+    authenticator: {
+      credentialID: passkey.credential_id,
+      credentialPublicKey: passkey.public_key,
       counter: passkey.counter,
     },
     requireUserVerification: false,
