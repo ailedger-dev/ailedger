@@ -199,7 +199,8 @@ function Hero() {
           fontSize: 'clamp(36px, 6vw, 80px)', fontWeight: 700, color: '#fff',
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
-          <span className={`hero-title-line fade-in fade-2a ${anim}`}>Keep a record of <span style={{ color: '#818cf8' }}>every AI decision.</span></span>
+          <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Keep a record of</span>
+          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block', color: '#818cf8', fontSize: 'clamp(30px, 5vw, 68px)', letterSpacing: '-0.025em' }}>every AI decision.</span>
         </h1>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: '#94a3b8', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
