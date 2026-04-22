@@ -196,7 +196,7 @@ function Hero() {
           August 2, 2026 — EU AI Act enforcement
         </div>
         <h1 className="hero-title" style={{
-          fontSize: 'clamp(36px, 6vw, 80px)', fontWeight: 700, color: '#fff',
+          fontSize: 'clamp(48px, 7vw, 80px)', fontWeight: 700, color: '#fff',
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Keep a record of</span>
