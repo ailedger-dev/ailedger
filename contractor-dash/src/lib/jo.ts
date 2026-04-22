@@ -5,6 +5,30 @@
 // with `credentials: "include"` to keep the session cookie attached.
 
 import { config } from "../config";
+import { refreshSession } from "./auth";
+
+// Shared 401-auto-refresh wrapper (mirrors api.ts). One refresh attempt per
+// 401; on failure the error propagates and App.tsx routes to /login.
+let _refreshInFlight: Promise<boolean> | null = null;
+function _refreshOnce(): Promise<boolean> {
+  if (!_refreshInFlight) {
+    _refreshInFlight = refreshSession().finally(() => {
+      _refreshInFlight = null;
+    });
+  }
+  return _refreshInFlight;
+}
+
+async function _fetchWithRefresh(input: string, init: RequestInit): Promise<Response> {
+  const first = await fetch(input, init);
+  if (first.status !== 401) return first;
+  const ok = await _refreshOnce();
+  if (ok) return fetch(input, init);
+  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    window.location.assign("/login");
+  }
+  return first;
+}
 
 export interface JoSession {
   id: string;
@@ -14,35 +38,35 @@ export interface JoSession {
 }
 
 export async function createJoSession(): Promise<JoSession> {
-  const r = await fetch(`${config.apiBaseUrl}/jo/session`, {
+  const r = await _fetchWithRefresh(`${config.apiBaseUrl}/jo/session`, {
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },
     body: "{}",
   });
-  if (!r.ok) throw new Error(`jo_create_${r.status}`);
+  if (!r.ok) throw new Error(r.status === 401 ? "session_expired" : `jo_create_${r.status}`);
   return (await r.json()) as JoSession;
 }
 
 export async function listJoSessions(): Promise<JoSession[]> {
-  const r = await fetch(`${config.apiBaseUrl}/jo/sessions`, { credentials: "include" });
-  if (!r.ok) throw new Error(`jo_list_${r.status}`);
+  const r = await _fetchWithRefresh(`${config.apiBaseUrl}/jo/sessions`, { credentials: "include" });
+  if (!r.ok) throw new Error(r.status === 401 ? "session_expired" : `jo_list_${r.status}`);
   const j = (await r.json()) as { items: JoSession[] };
   return j.items;
 }
 
 export async function sendJoMessage(sessionId: string, text: string): Promise<void> {
-  const r = await fetch(`${config.apiBaseUrl}/jo/session/${encodeURIComponent(sessionId)}/send`, {
+  const r = await _fetchWithRefresh(`${config.apiBaseUrl}/jo/session/${encodeURIComponent(sessionId)}/send`, {
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ text }),
   });
-  if (!r.ok) throw new Error(`jo_send_${r.status}`);
+  if (!r.ok) throw new Error(r.status === 401 ? "session_expired" : `jo_send_${r.status}`);
 }
 
 export async function closeJoSession(sessionId: string): Promise<void> {
-  await fetch(`${config.apiBaseUrl}/jo/session/${encodeURIComponent(sessionId)}`, {
+  await _fetchWithRefresh(`${config.apiBaseUrl}/jo/session/${encodeURIComponent(sessionId)}`, {
     method: "DELETE",
     credentials: "include",
   });
