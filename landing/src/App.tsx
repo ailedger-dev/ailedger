@@ -190,13 +190,13 @@ function Hero() {
         pointerEvents: 'none',
         zIndex: 0,
       }} />
-      <div style={{ maxWidth: 780, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 'min(92vw, 1280px)', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div className={`hero-eyebrow fade-in fade-1 ${anim}`}>
           <span className="hero-eyebrow-dot" aria-hidden="true" />
           August 2, 2026 — EU AI Act enforcement
         </div>
         <h1 className="hero-title" style={{
-          fontSize: 'clamp(36px, 8vw, 72px)', fontWeight: 700, color: '#fff',
+          fontSize: 'clamp(36px, 7vw, 104px)', fontWeight: 700, color: '#fff',
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`}>Keep a record of <span style={{ color: '#818cf8' }}>every AI decision.</span></span>
