@@ -45,6 +45,12 @@ JO_PENDING_FIRST_TURN_DIR = os.environ.get(
 JO_PENDING_FIRST_TURN_CONSUME_ON_READ = (
     os.environ.get("JO_PENDING_FIRST_TURN_CONSUME_ON_READ", "0") == "1"
 )
+# Spawn cwd for claude. Claude has a silent-suppress-output failure mode when
+# launched from a directory containing a .claude/ workspace trust entry in an
+# unexpected state (e.g. %h/contractor-webui-api inherits jjoyner's config into
+# a subprocess running as sales-agent, and claude bails with no stdout).
+# Setting this to a neutral dir the target user owns avoids that trap.
+JO_SPAWN_CWD = os.environ.get("JO_SPAWN_CWD", "/tmp")
 
 
 class JoClaudeMissing(RuntimeError):
@@ -195,6 +201,7 @@ class JoSessionManager:
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                cwd=JO_SPAWN_CWD,
             )
         except Exception:
             log.exception("jo.session.spawn.fail id=%s", sess.id)
