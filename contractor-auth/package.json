@@ -7,10 +7,14 @@
   "scripts": {
     "deploy": "echo 'use: npm run deploy:<slug>  (e.g. deploy:pasha)' && exit 1",
     "deploy:pasha": "wrangler deploy --env pasha",
+    "deploy:staging-pasha": "wrangler deploy --env staging-pasha",
     "dev": "wrangler dev",
     "tail:pasha": "wrangler tail --env pasha",
+    "tail:staging-pasha": "wrangler tail --env staging-pasha",
     "schema:apply:pasha": "wrangler d1 execute contractor-auth-pasha --env pasha --file=./schema.sql",
-    "schema:apply:pasha:remote": "wrangler d1 execute contractor-auth-pasha --env pasha --remote --file=./schema.sql"
+    "schema:apply:pasha:remote": "wrangler d1 execute contractor-auth-pasha --env pasha --remote --file=./schema.sql",
+    "schema:apply:staging-pasha": "wrangler d1 execute contractor-auth-staging-pasha --env staging-pasha --file=./schema.sql",
+    "schema:apply:staging-pasha:remote": "wrangler d1 execute contractor-auth-staging-pasha --env staging-pasha --remote --file=./schema.sql"
   },
   "dependencies": {
     "@simplewebauthn/server": "^10.0.1",

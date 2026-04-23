@@ -98,14 +98,18 @@ def _plaza_addendum() -> str:
     them the absolute path. system-prompt.md mentions Plaza generically but
     says "the path your Mayor has configured" — which had no configured value
     for web-UI Jo. Explicit path per-contractor fixes it.
+
+    Resolves from cfg.publish_box rather than cfg.slug so staging envs
+    (slug=pasha-staging) write to the SHARED /srv/town/shared/publish/pasha/
+    dir — John sees staging hails alongside prod hails without persona drift.
     """
+    publish_dir = "/srv/town/shared/publish/pasha"
     try:
         from .config import load_config as _load_config
         cfg = _load_config()
-        slug = cfg.slug
+        publish_dir = str(cfg.publish_box)
     except Exception:  # noqa: BLE001
-        slug = "pasha"
-    publish_dir = f"/srv/town/shared/publish/{slug}"
+        pass
     return (
         "\n\n## Plaza publishing — explicit path\n\n"
         "When you publish a hail (e.g., to your Mayor, to another silo), write "

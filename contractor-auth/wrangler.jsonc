@@ -94,6 +94,62 @@
       },
       "observability": { "enabled": true }
     },
+    "staging-pasha": {
+      "name": "contractor-auth-staging-pasha",
+      // Staging sibling of env.pasha. Same shape; distinct slug, RP_ID,
+      // secrets, D1, and KV so passkeys, sessions, and allowlist never cross.
+      // Shared data layer (Plaza publish dir, canonical-jo persona) lives
+      // outside Cloudflare and is handled by the contractor-webui-api env.
+      //
+      // Bootstrap — Jake only (polecat cannot run these):
+      //   wrangler d1 create contractor-auth-staging-pasha
+      //   wrangler kv namespace create AUTH_KV --env staging-pasha
+      //   (paste the returned ids into this file, then:)
+      //   wrangler d1 execute contractor-auth-staging-pasha --env staging-pasha --file=./schema.sql
+      //   wrangler d1 execute contractor-auth-staging-pasha --env staging-pasha --remote --file=./schema.sql
+      //   wrangler secret put SESSION_JWT_SECRET --env staging-pasha       # MUST differ from env.pasha
+      //   wrangler secret put REFRESH_JWT_SECRET --env staging-pasha       # MUST differ from env.pasha
+      //   wrangler secret put RESEND_API_KEY --env staging-pasha
+      //   wrangler secret put CONTRACTOR_ALLOWED_EMAILS --env staging-pasha  # jjoyner+bob only
+      //   wrangler deploy --env staging-pasha
+      "workers_dev": true,
+      // Add a custom_domain route only after staging-pasha.jvholdings.co is
+      // created in CF Pages/tunnel (see docs/staging-pasha-provisioning.md):
+      // "routes": [
+      //   { "pattern": "auth.staging-pasha.jvholdings.co", "custom_domain": true }
+      // ],
+      "vars": {
+        "CONTRACTOR_SLUG": "pasha-staging",
+        "CONTRACTOR_DISPLAY_NAME": "Pasha Missaghieh (Staging)",
+        "RP_ID": "staging-pasha.jvholdings.co",
+        "RP_NAME": "Joyner Ventures (Pasha staging)",
+        "RP_ORIGIN": "https://staging-pasha.jvholdings.co",
+        "MAGIC_LINK_FROM": "no-reply-staging@jvholdings.co",
+        "MAGIC_LINK_REDIRECT_BASE": "https://staging-pasha.jvholdings.co",
+        "SESSION_TTL_SECONDS": "28800",
+        "REFRESH_TTL_SECONDS": "604800",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "staging-pasha.jvholdings.co"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "contractor-auth-staging-pasha",
+          "database_id": "REPLACE_WITH_STAGING_PASHA_D1_ID"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "REPLACE_WITH_STAGING_PASHA_AUTH_KV_ID"
+        }
+      ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      },
+      "observability": { "enabled": true }
+    },
     "pasha": {
       "name": "contractor-auth-pasha",
       "vars": {
