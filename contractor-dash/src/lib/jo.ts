@@ -5,19 +5,11 @@
 // with `credentials: "include"` to keep the session cookie attached.
 
 import { config } from "../config";
-import { refreshSession } from "./auth";
+import { refreshSessionShared } from "./auth";
 
-// Shared 401-auto-refresh wrapper (mirrors api.ts). One refresh attempt per
-// 401; on failure the error propagates and App.tsx routes to /login.
-let _refreshInFlight: Promise<boolean> | null = null;
-function _refreshOnce(): Promise<boolean> {
-  if (!_refreshInFlight) {
-    _refreshInFlight = refreshSession().finally(() => {
-      _refreshInFlight = null;
-    });
-  }
-  return _refreshInFlight;
-}
+// Shared singleton — see auth.ts. Two-module duplication caused concurrent
+// refresh races that dropped session mid-conversation.
+const _refreshOnce = refreshSessionShared;
 
 async function _fetchWithRefresh(input: string, init: RequestInit): Promise<Response> {
   const first = await fetch(input, init);

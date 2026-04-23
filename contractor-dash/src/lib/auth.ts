@@ -37,6 +37,25 @@ export async function logout(): Promise<void> {
   });
 }
 
+// Shared in-flight dedupe across api.ts + jo.ts + any other fetcher that
+// needs 401-auto-refresh. Before this existed, api.ts and jo.ts each kept
+// their own singleton — when both fetched while the access token was
+// expired, they'd both call refreshSession concurrently, the first would
+// rotate the refresh cookie, the second would fail with the now-invalidated
+// old cookie, and the second caller would redirect to /login even though
+// the first had already succeeded. That manifests as "Pasha got logged out
+// mid-session" when the 30-second /jo/notifications/count poll races with
+// another fetch. Fix: ONE singleton across the module graph.
+let _sharedRefreshInFlight: Promise<boolean> | null = null;
+export function refreshSessionShared(): Promise<boolean> {
+  if (!_sharedRefreshInFlight) {
+    _sharedRefreshInFlight = refreshSession().finally(() => {
+      _sharedRefreshInFlight = null;
+    });
+  }
+  return _sharedRefreshInFlight;
+}
+
 export async function refreshSession(): Promise<boolean> {
   const r = await fetch(`${AUTH_BASE}/session/refresh`, {
     method: "POST",

@@ -8,7 +8,7 @@
 // App.tsx routes back to /login.
 
 import { config } from "../config";
-import { refreshSession } from "./auth";
+import { refreshSessionShared } from "./auth";
 
 export interface InboxEntry {
   id: string;
@@ -25,17 +25,11 @@ export interface DocEntry {
   path: string;
 }
 
-// In-flight refresh dedupe: if many fetches 401 at once, we only want one
-// refresh call, and the others wait for its result.
-let _refreshInFlight: Promise<boolean> | null = null;
-function _refreshOnce(): Promise<boolean> {
-  if (!_refreshInFlight) {
-    _refreshInFlight = refreshSession().finally(() => {
-      _refreshInFlight = null;
-    });
-  }
-  return _refreshInFlight;
-}
+// Shared 401-refresh dedupe lives in auth.ts (refreshSessionShared) so
+// api.ts + jo.ts race against the SAME in-flight promise. Prior per-module
+// dedupe allowed concurrent refresh calls, the second of which would hit
+// the Worker with a just-rotated refresh token and fail → logout loop.
+const _refreshOnce = refreshSessionShared;
 
 async function _fetchWithRefresh(input: RequestInfo, init: RequestInit): Promise<Response> {
   const first = await fetch(input, init);
