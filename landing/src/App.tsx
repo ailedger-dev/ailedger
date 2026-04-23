@@ -653,13 +653,20 @@ function CodeBlock({ filename, raw, children }: { filename: string; raw: string;
 }
 
 function Docs() {
-  const sections = [
+  type Section = { id: string; label: string; sub?: boolean }
+  const sections: Section[] = [
     { id: 'quickstart', label: 'Quick start' },
-    { id: 'openai', label: 'OpenAI' },
-    { id: 'anthropic', label: 'Anthropic' },
-    { id: 'gemini', label: 'Gemini' },
-    { id: 'test', label: 'Test your keys' },
+    { id: 'integration', label: 'Integration snippets' },
+    { id: 'curl', label: 'cURL', sub: true },
+    { id: 'python', label: 'Python', sub: true },
+    { id: 'javascript', label: 'JavaScript', sub: true },
+    { id: 'go', label: 'Go', sub: true },
+    { id: 'streaming', label: 'Streaming / SSE' },
+    { id: 'audit-trail', label: 'Your audit trail' },
+    { id: 'verify', label: 'Verify a record' },
+    { id: 'performance', label: 'Performance' },
     { id: 'reference', label: 'API reference' },
+    { id: 'troubleshooting', label: 'Troubleshooting' },
   ]
 
   const codeBlock = (filename: string, raw: string, children: React.ReactNode) => (
@@ -680,6 +687,375 @@ function Docs() {
 
   const s = (color: string, text: string) => <span style={{ color }}>{text}</span>
 
+  // hl: lightweight string + line-comment highlighter for the new code samples
+  // (cURL, JavaScript, Go, verify recipes). The Python integration snippets and
+  // the benchmark below are preserved with their hand-tuned per-token coloring.
+  const hl = (raw: string): React.ReactNode => {
+    const out: React.ReactNode[] = []
+    let buf = ''
+    let i = 0
+    let k = 0
+    const flush = () => { if (buf) { out.push(buf); buf = '' } }
+    while (i < raw.length) {
+      const ch = raw[i]
+      const isJsComment = ch === '/' && raw[i + 1] === '/'
+      const isShellComment = ch === '#' && (i === 0 || raw[i - 1] === '\n' || raw[i - 1] === ' ' || raw[i - 1] === '\t')
+      if (ch === '"' || ch === "'" || ch === '`') {
+        flush()
+        const q = ch
+        let j = i + 1
+        while (j < raw.length && raw[j] !== q) {
+          if (raw[j] === '\\' && j + 1 < raw.length) j += 2
+          else j++
+        }
+        const end = Math.min(j + 1, raw.length)
+        out.push(<span key={k++} style={{ color: c.str }}>{raw.slice(i, end)}</span>)
+        i = end
+      } else if (isJsComment || isShellComment) {
+        flush()
+        let j = i
+        while (j < raw.length && raw[j] !== '\n') j++
+        out.push(<span key={k++} style={{ color: c.comment }}>{raw.slice(i, j)}</span>)
+        i = j
+      } else {
+        buf += ch
+        i++
+      }
+    }
+    flush()
+    return <>{out}</>
+  }
+
+  // Inline-code chip used in body copy
+  const chip = (text: string) => (
+    <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>{text}</code>
+  )
+
+  // Curl samples — provider-specific auth header is the only thing that changes.
+  const curlOpenAI = `# OpenAI: Authorization: Bearer <your-openai-key>
+curl ${PROXY_URL}/proxy/openai/chat/completions \\
+  -H "Authorization: Bearer $OPENAI_API_KEY" \\
+  -H "x-ailedger-key: $AILEDGER_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "gpt-4.1-mini",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+`
+  const curlAnthropic = `# Anthropic: x-api-key + anthropic-version
+curl ${PROXY_URL}/proxy/anthropic/v1/messages \\
+  -H "x-api-key: $ANTHROPIC_API_KEY" \\
+  -H "anthropic-version: 2023-06-01" \\
+  -H "x-ailedger-key: $AILEDGER_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "claude-opus-4-6",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Hello, Claude"}]
+  }'
+`
+  const curlGemini = `# Gemini: ?key= query param OR x-goog-api-key header
+curl "${PROXY_URL}/proxy/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY" \\
+  -H "x-ailedger-key: $AILEDGER_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contents": [{"parts": [{"text": "Explain how AI works in a few words"}]}]
+  }'
+`
+
+  // JavaScript / TypeScript samples — official provider SDKs all expose
+  // baseURL + defaultHeaders, so the diff vs a direct call is two lines.
+  const jsOpenAI = `import OpenAI from 'openai';
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: '${PROXY_URL}/proxy/openai',
+  defaultHeaders: { 'x-ailedger-key': process.env.AILEDGER_KEY },
+});
+
+const completion = await client.chat.completions.create({
+  model: 'gpt-4.1-mini',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+console.log(completion.choices[0].message.content);
+`
+  const jsAnthropic = `import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  baseURL: '${PROXY_URL}/proxy/anthropic',
+  defaultHeaders: { 'x-ailedger-key': process.env.AILEDGER_KEY },
+});
+
+const message = await client.messages.create({
+  model: 'claude-opus-4-6',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: 'Hello, Claude' }],
+});
+console.log(message.content);
+`
+  const jsGemini = `import { GoogleGenAI } from '@google/genai';
+
+const client = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    baseUrl: '${PROXY_URL}/proxy/gemini',
+    headers: { 'x-ailedger-key': process.env.AILEDGER_KEY },
+  },
+});
+
+const response = await client.models.generateContent({
+  model: 'gemini-2.5-flash',
+  contents: 'Explain how AI works in a few words',
+});
+console.log(response.text);
+`
+
+  // Go samples — net/http stays close to the wire so the swap is unambiguous.
+  const goOpenAI = `package main
+
+import (
+  "bytes"
+  "fmt"
+  "io"
+  "net/http"
+  "os"
+)
+
+func main() {
+  body := []byte(\`{"model":"gpt-4.1-mini","messages":[{"role":"user","content":"Hello!"}]}\`)
+  req, _ := http.NewRequest("POST",
+    "${PROXY_URL}/proxy/openai/chat/completions",
+    bytes.NewReader(body))
+  req.Header.Set("Authorization", "Bearer "+os.Getenv("OPENAI_API_KEY"))
+  req.Header.Set("x-ailedger-key", os.Getenv("AILEDGER_KEY"))
+  req.Header.Set("Content-Type", "application/json")
+  resp, _ := http.DefaultClient.Do(req)
+  defer resp.Body.Close()
+  out, _ := io.ReadAll(resp.Body)
+  fmt.Println(string(out))
+}
+`
+  const goAnthropic = `package main
+
+import (
+  "bytes"
+  "fmt"
+  "io"
+  "net/http"
+  "os"
+)
+
+func main() {
+  body := []byte(\`{"model":"claude-opus-4-6","max_tokens":1024,"messages":[{"role":"user","content":"Hello, Claude"}]}\`)
+  req, _ := http.NewRequest("POST",
+    "${PROXY_URL}/proxy/anthropic/v1/messages",
+    bytes.NewReader(body))
+  req.Header.Set("x-api-key", os.Getenv("ANTHROPIC_API_KEY"))
+  req.Header.Set("anthropic-version", "2023-06-01")
+  req.Header.Set("x-ailedger-key", os.Getenv("AILEDGER_KEY"))
+  req.Header.Set("Content-Type", "application/json")
+  resp, _ := http.DefaultClient.Do(req)
+  defer resp.Body.Close()
+  out, _ := io.ReadAll(resp.Body)
+  fmt.Println(string(out))
+}
+`
+  const goGemini = `package main
+
+import (
+  "bytes"
+  "fmt"
+  "io"
+  "net/http"
+  "os"
+)
+
+func main() {
+  body := []byte(\`{"contents":[{"parts":[{"text":"Explain how AI works in a few words"}]}]}\`)
+  url := "${PROXY_URL}/proxy/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=" + os.Getenv("GEMINI_API_KEY")
+  req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+  req.Header.Set("x-ailedger-key", os.Getenv("AILEDGER_KEY"))
+  req.Header.Set("Content-Type", "application/json")
+  resp, _ := http.DefaultClient.Do(req)
+  defer resp.Body.Close()
+  out, _ := io.ReadAll(resp.Body)
+  fmt.Println(string(out))
+}
+`
+
+  // Verify recipes — the recomputed hash must equal what we stored.
+  const verifyJS = `import { createHash } from 'node:crypto';
+import canonicalize from 'canonicalize'; // npm i canonicalize  (RFC 8785)
+
+// Mirrors the proxy's sha256jcs(): JCS-canonicalize JSON, otherwise raw bytes.
+function ailedgerHash(rawBody, contentType) {
+  const ct = (contentType || '').toLowerCase().split(';')[0].trim();
+  const isJson = ct === 'application/json' || ct.endsWith('+json');
+  if (isJson) {
+    try {
+      const parsed = JSON.parse(rawBody.toString('utf8'));
+      const canonical = canonicalize(parsed);
+      if (canonical !== undefined) {
+        return createHash('sha256').update(canonical, 'utf8').digest('hex');
+      }
+    } catch { /* malformed JSON — fall through to raw-byte hash */ }
+  }
+  return createHash('sha256').update(rawBody).digest('hex');
+}
+
+// Compare against input_hash / output_hash from your AILedger record.
+const computed = ailedgerHash(yourRawBodyBytes, yourStoredContentType);
+console.log(computed === storedHashFromAiledger ? 'verified ✓' : 'MISMATCH ✗');
+`
+  const verifyPython = `import hashlib, json
+from jcs import canonicalize  # pip install jcs  (RFC 8785)
+
+def ailedger_hash(raw: bytes, content_type: str | None) -> str:
+    ct = (content_type or '').lower().split(';')[0].strip()
+    is_json = ct == 'application/json' or ct.endswith('+json')
+    if is_json:
+        try:
+            canonical = canonicalize(json.loads(raw.decode('utf-8')))
+            return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            pass  # fall through to raw-byte hash
+    return hashlib.sha256(raw).hexdigest()
+
+# Compare against input_hash / output_hash from your AILedger record.
+computed = ailedger_hash(your_raw_body_bytes, your_stored_content_type)
+print('verified ✓' if computed == stored_hash_from_ailedger else 'MISMATCH ✗')
+`
+  const verifyGo = `package verify
+
+import (
+  "crypto/sha256"
+  "encoding/hex"
+  "strings"
+
+  jcs "webpki.org/jsoncanonicalizer" // github.com/cyberphone/json-canonicalization
+)
+
+// Mirrors the proxy's sha256jcs().
+func AILedgerHash(raw []byte, contentType string) string {
+  ct := strings.TrimSpace(strings.ToLower(strings.SplitN(contentType, ";", 2)[0]))
+  isJSON := ct == "application/json" || strings.HasSuffix(ct, "+json")
+  if isJSON {
+    if canonical, err := jcs.Transform(raw); err == nil {
+      sum := sha256.Sum256(canonical)
+      return hex.EncodeToString(sum[:])
+    }
+    // malformed JSON — fall through to raw-byte hash
+  }
+  sum := sha256.Sum256(raw)
+  return hex.EncodeToString(sum[:])
+}
+`
+  const verifyRuby = `require 'digest'
+require 'json'
+require 'json/canonicalization' # gem install json-canonicalization (RFC 8785)
+
+def ailedger_hash(raw_body, content_type)
+  ct = (content_type || '').downcase.split(';').first.to_s.strip
+  is_json = ct == 'application/json' || ct.end_with?('+json')
+  if is_json
+    begin
+      canonical = JSON.parse(raw_body).to_json_c14n
+      return Digest::SHA256.hexdigest(canonical)
+    rescue JSON::ParserError, Encoding::UndefinedConversionError
+      # fall through to raw-byte hash
+    end
+  end
+  Digest::SHA256.hexdigest(raw_body)
+end
+
+computed = ailedger_hash(stored_body, stored_content_type)
+puts(computed == stored_hash ? 'verified ✓' : 'MISMATCH ✗')
+`
+
+  // Sample inference_logs row — fields documented in the table below.
+  const sampleRow = `{
+  "id":               "01HKZ8VX9R8C3T...",
+  "customer_id":      "cus_2nQ7vXk...",
+  "system_id":        "sys_7xPq3aR...",
+  "provider":         "openai",
+  "model_name":       "gpt-4.1-mini",
+  "method":           "POST",
+  "path":             "/v1/chat/completions",
+  "status_code":      200,
+  "input_hash":       "a3f5b2e8c91d4f7a6b...",
+  "output_hash":      "9e1c8d4a2f5b6c0d3e...",
+  "latency_ms":       412,
+  "started_at":       "2026-04-22T10:23:11.041Z",
+  "completed_at":     "2026-04-22T10:23:11.453Z",
+  "logged_at":        "2026-04-22T10:23:11.498Z",
+  "chain_prev_hash":  "f0a8b3c2d1e4f5a6...",
+  "chain_genesis_at": "2026-04-15T00:00:00Z"
+}
+`
+
+  const inferenceFields: Array<[string, string, string]> = [
+    ['id', 'uuid', 'Unique row identifier.'],
+    ['customer_id', 'string', 'Your AILedger customer ID. Scopes the row to your account.'],
+    ['system_id', 'string | null', 'Optional AI-system tag tied to the API key (configure in the dashboard).'],
+    ['provider', 'string', 'Upstream provider this call routed to: openai, anthropic, or gemini.'],
+    ['model_name', 'string | null', 'Model name parsed from the request body (or path, for Gemini).'],
+    ['method', 'string', 'HTTP method of the upstream call (POST, GET, ...).'],
+    ['path', 'string', 'Upstream path forwarded after /proxy/<provider>/.'],
+    ['status_code', 'integer', 'HTTP status returned by the upstream provider.'],
+    ['input_hash', 'string | null', 'SHA-256 of the request body — JCS-canonicalized when JSON, raw bytes otherwise.'],
+    ['output_hash', 'string | null', 'SHA-256 of the response body, computed the same way.'],
+    ['latency_ms', 'integer', 'Wall-clock time spent on the upstream call (excludes our overhead).'],
+    ['started_at', 'timestamp', 'ISO-8601 instant the upstream request was dispatched.'],
+    ['completed_at', 'timestamp', 'ISO-8601 instant the upstream response was received.'],
+    ['logged_at', 'timestamp', 'ISO-8601 instant the row was persisted to the ledger.'],
+    ['chain_prev_hash', 'string', 'Hash of the previous row in your tamper-evident chain (set by trigger).'],
+    ['chain_genesis_at', 'timestamp', 'Start of the chain segment this row belongs to (set by trigger).'],
+  ]
+
+  const headersTable: Array<[string, string, string]> = [
+    ['x-ailedger-key', 'Yes', 'Your AILedger API key (alg_sk_...). Identifies the customer and any system_id.'],
+    ['Content-Type', 'Yes (for JSON paths)', "Forwarded as-is. Drives whether the body is hashed via JCS or raw-bytes — getting this right is what makes your hash reproducible."],
+    ['Authorization', 'Conditional', "Provider key for OpenAI (Bearer ...) — forwarded unchanged. Anthropic uses x-api-key instead. Gemini accepts ?key=... or x-goog-api-key."],
+    ['anthropic-version', 'Anthropic only', 'Standard Anthropic API version header — pass through as you would directly.'],
+  ]
+
+  const statusCodes: Array<[string, string, string]> = [
+    ['200 / 2xx', 'Pass-through', "Whatever the upstream provider returned. Body is forwarded byte-for-byte."],
+    ['400', 'Unknown provider', "Path was /proxy/<X>/... where X isn't one of openai, anthropic, gemini."],
+    ['401', 'Missing or invalid x-ailedger-key', 'Header is absent, malformed, or the key has been revoked.'],
+    ['404', 'Unknown route', 'Path did not match /proxy/<provider>/... or any documented endpoint.'],
+    ['429', 'Monthly inference limit reached', 'Free-tier ceiling hit. Upgrade in the dashboard to keep going.'],
+    ['4xx / 5xx (upstream)', 'Forwarded upstream error', "The upstream provider returned an error (auth, rate-limit, model unavailable, etc.). Body and status are passed through unchanged."],
+  ]
+
+  const troubles: Array<[string, string]> = [
+    [
+      '401 — missing or invalid x-ailedger-key',
+      "Either you didn't send the header, or the key is wrong / revoked. Confirm in the dashboard that the key is active and that you're sending the header literally (no quotes, no Bearer prefix). The proxy expects the raw alg_sk_... value.",
+    ],
+    [
+      '400 — unknown provider',
+      "The path is /proxy/<provider>/... and <provider> must be openai, anthropic, or gemini (lowercase). A typo here is the most common cause of a 400 on a brand-new integration.",
+    ],
+    [
+      '429 — monthly inference limit reached',
+      "You've crossed the free-tier ceiling for the current calendar month. Upgrade in the dashboard; usage resets on the first of the next month.",
+    ],
+    [
+      'Hash mismatch when verifying a record',
+      "Your recomputed hash doesn't match input_hash / output_hash. The cause is almost always one of: (a) the wrong content-type — the JCS path only fires for application/json or +json; anything else hashes raw bytes, (b) middleware between your code and us re-serialized the body (a body-parser, a logging proxy, gzip-on-the-wire), so the bytes you stored aren't the bytes we hashed, (c) for streaming responses, you're hashing per-chunk instead of the reassembled body.",
+    ],
+    [
+      'High latency vs. direct calls',
+      "Expected: 150–300ms p50 overhead — one extra network hop through Cloudflare's edge. This is well within natural LLM-inference variance and has no meaningful end-user impact. If you're seeing more, run the benchmark in the Performance section and share results with support.",
+    ],
+    [
+      'Rows missing from the dashboard',
+      "Logging is fire-and-forget on a Cloudflare waitUntil() background task — usually visible within a second or two of the response. If a row is missing for more than a minute, it almost always means the upstream call itself errored before reaching us (DNS failure on your end, SDK retry without going through the proxy URL).",
+    ],
+  ]
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-page)', color: 'var(--fg-body)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
@@ -687,15 +1063,24 @@ function Docs() {
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '100px 32px 80px', display: 'flex', gap: 64 }}>
 
         {/* Sidebar */}
-        <aside style={{ width: 180, flexShrink: 0 }}>
+        <aside style={{ width: 200, flexShrink: 0 }}>
           <div style={{ position: 'sticky', top: 96 }}>
             <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-ultrasubtle)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>On this page</p>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {sections.map((s) => (
-                <a key={s.id} href={`#${s.id}`} style={{ fontSize: 14, color: 'var(--fg-subtle)', textDecoration: 'none', padding: '4px 0', transition: 'color 0.15s' }}
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {sections.map((sec) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  style={{
+                    fontSize: sec.sub ? 13 : 14,
+                    color: sec.sub ? 'var(--fg-ultrasubtle)' : 'var(--fg-subtle)',
+                    textDecoration: 'none',
+                    padding: sec.sub ? '3px 0 3px 14px' : '4px 0',
+                    transition: 'color 0.15s',
+                  }}
                   onMouseEnter={e => (e.currentTarget.style.color = 'var(--fg-body)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--fg-subtle)')}
-                >{s.label}</a>
+                  onMouseLeave={e => (e.currentTarget.style.color = sec.sub ? 'var(--fg-ultrasubtle)' : 'var(--fg-subtle)')}
+                >{sec.label}</a>
               ))}
             </nav>
           </div>
@@ -705,7 +1090,8 @@ function Docs() {
         <main style={{ flex: 1, minWidth: 0 }}>
 
           <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>Documentation</h1>
-          <p style={{ fontSize: 16, color: 'var(--fg-subtle)', marginBottom: 64, lineHeight: 1.7 }}>Everything you need to integrate AILedger and start logging AI inferences.</p>
+          <p style={{ fontSize: 16, color: 'var(--fg-subtle)', marginBottom: 6, lineHeight: 1.7 }}>Integrate AILedger, log every inference, and verify the record yourself.</p>
+          <p style={{ fontSize: 12, color: 'var(--fg-ultrasubtle)', marginBottom: 64 }}>Last updated: April 22, 2026</p>
 
           {/* Quick start */}
           <section id="quickstart" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
@@ -721,65 +1107,238 @@ function Docs() {
             </ol>
           </section>
 
-          {/* OpenAI */}
-          <section id="openai" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>OpenAI</h2>
-            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install openai</code></p>
-            {codeBlock('openai_example.py', `from openai import OpenAI\n\nclient = OpenAI(\n  api_key="your-openai-key",\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\ncompletion = client.chat.completions.create(\n  model="gpt-4.1-mini",\n  messages=[{"role": "user", "content": "Hello!"}]\n)\nprint(completion.choices[0].message.content)\n`, <>
-              {s(c.kw, 'from')}{s(c.plain, ' openai ')}{s(c.kw, 'import')}{s(c.plain, ' OpenAI\n\n')}
-              {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'OpenAI')}{s(c.plain, '(\n')}
-              {s(c.plain, '  api_key=')}{s(c.str, '"your-openai-key"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/openai"`)}{s(c.plain, ',\n')}
-              {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
-              {s(c.name, 'completion')}{s(c.plain, ' = client.chat.completions.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
-              {s(c.plain, '  model=')}{s(c.str, '"gpt-4.1-mini"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello!"')}{s(c.plain, '}]\n)\n')}
-              {s(c.fn, 'print')}{s(c.plain, '(completion.choices[')}{s(c.str, '0')}{s(c.plain, '].message.content)\n')}
-            </>)}
+          {/* Integration intro */}
+          <section id="integration" style={{ scrollMarginTop: '96px', marginBottom: 32 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Integration snippets</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>
+              Use whatever HTTP client or provider SDK you already have. The pattern is identical in every language: swap the base URL to {chip(`${PROXY_URL}/proxy/<provider>`)}, add one header ({chip('x-ailedger-key')}), keep your provider key in place. Below: cURL for smoke-tests, then the official SDKs in Python, JavaScript / TypeScript, and Go.
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7, marginTop: 8 }}>
+              Anthropic uses {chip('x-api-key')}. OpenAI uses {chip('Authorization: Bearer ...')}. Gemini accepts {chip('?key=')} or {chip('x-goog-api-key')}. The proxy forwards all of these unchanged.
+            </p>
           </section>
 
-          {/* Anthropic */}
-          <section id="anthropic" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Anthropic</h2>
-            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install anthropic</code></p>
-            {codeBlock('anthropic_example.py', `from anthropic import Anthropic\n\nclient = Anthropic(\n  api_key="your-anthropic-key",\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\nmessage = client.messages.create(\n  model="claude-opus-4-6",\n  max_tokens=1024,\n  messages=[{"role": "user", "content": "Hello, Claude"}]\n)\nprint(message.content)\n`, <>
-              {s(c.kw, 'from')}{s(c.plain, ' anthropic ')}{s(c.kw, 'import')}{s(c.plain, ' Anthropic\n\n')}
-              {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'Anthropic')}{s(c.plain, '(\n')}
-              {s(c.plain, '  api_key=')}{s(c.str, '"your-anthropic-key"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/anthropic"`)}{s(c.plain, ',\n')}
-              {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
-              {s(c.name, 'message')}{s(c.plain, ' = client.messages.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
-              {s(c.plain, '  model=')}{s(c.str, '"claude-opus-4-6"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  max_tokens=')}{s(c.str, '1024')}{s(c.plain, ',\n')}
-              {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello, Claude"')}{s(c.plain, '}]\n)\n')}
-              {s(c.fn, 'print')}{s(c.plain, '(message.content)\n')}
-            </>)}
+          {/* cURL */}
+          <section id="curl" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>cURL</h3>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Lingua franca for smoke-testing the proxy without installing anything. Set <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>$AILEDGER_KEY</code> and the relevant provider key in your shell, then run any of the three calls below.</p>
+            {codeBlock('openai.sh', curlOpenAI, hl(curlOpenAI))}
+            {codeBlock('anthropic.sh', curlAnthropic, hl(curlAnthropic))}
+            {codeBlock('gemini.sh', curlGemini, hl(curlGemini))}
           </section>
 
-          {/* Gemini */}
-          <section id="gemini" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Gemini</h2>
-            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install google-genai</code></p>
-            {codeBlock('gemini_example.py', `from google import genai\n\nclient = genai.Client(\n  api_key="your-gemini-key",\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": "alg_sk_..."},\n  }\n)\n\nresponse = client.models.generate_content(\n  model="gemini-2.5-flash",\n  contents="Explain how AI works in a few words"\n)\nprint(response.text)\n`, <>
-              {s(c.kw, 'from')}{s(c.plain, ' google ')}{s(c.kw, 'import')}{s(c.plain, ' genai\n\n')}
-              {s(c.name, 'client')}{s(c.plain, ' = genai.')}{s(c.fn, 'Client')}{s(c.plain, '(\n')}
-              {s(c.plain, '  api_key=')}{s(c.str, '"your-gemini-key"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  http_options={\n')}
-              {s(c.plain, '    ')}{s(c.str, '"base_url"')}{s(c.plain, ': ')}{s(c.str, `"${PROXY_URL}/proxy/gemini"`)}{s(c.plain, ',\n')}
-              {s(c.plain, '    ')}{s(c.str, '"headers"')}{s(c.plain, ': {')}{s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, '},\n')}
-              {s(c.plain, '  }\n)\n\n')}
-              {s(c.name, 'response')}{s(c.plain, ' = client.models.')}{s(c.fn, 'generate_content')}{s(c.plain, '(\n')}
-              {s(c.plain, '  model=')}{s(c.str, '"gemini-2.5-flash"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  contents=')}{s(c.str, '"Explain how AI works in a few words"')}{s(c.plain, '\n)\n')}
-              {s(c.fn, 'print')}{s(c.plain, '(response.text)\n')}
-            </>)}
+          {/* Python */}
+          <section id="python" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 12 }}>Python</h3>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>OpenAI</h4>
+              <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install openai</code></p>
+              {codeBlock('openai_example.py', `from openai import OpenAI\n\nclient = OpenAI(\n  api_key="your-openai-key",\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\ncompletion = client.chat.completions.create(\n  model="gpt-4.1-mini",\n  messages=[{"role": "user", "content": "Hello!"}]\n)\nprint(completion.choices[0].message.content)\n`, <>
+                {s(c.kw, 'from')}{s(c.plain, ' openai ')}{s(c.kw, 'import')}{s(c.plain, ' OpenAI\n\n')}
+                {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'OpenAI')}{s(c.plain, '(\n')}
+                {s(c.plain, '  api_key=')}{s(c.str, '"your-openai-key"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/openai"`)}{s(c.plain, ',\n')}
+                {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
+                {s(c.name, 'completion')}{s(c.plain, ' = client.chat.completions.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
+                {s(c.plain, '  model=')}{s(c.str, '"gpt-4.1-mini"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello!"')}{s(c.plain, '}]\n)\n')}
+                {s(c.fn, 'print')}{s(c.plain, '(completion.choices[')}{s(c.str, '0')}{s(c.plain, '].message.content)\n')}
+              </>)}
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Anthropic</h4>
+              <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install anthropic</code></p>
+              {codeBlock('anthropic_example.py', `from anthropic import Anthropic\n\nclient = Anthropic(\n  api_key="your-anthropic-key",\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\nmessage = client.messages.create(\n  model="claude-opus-4-6",\n  max_tokens=1024,\n  messages=[{"role": "user", "content": "Hello, Claude"}]\n)\nprint(message.content)\n`, <>
+                {s(c.kw, 'from')}{s(c.plain, ' anthropic ')}{s(c.kw, 'import')}{s(c.plain, ' Anthropic\n\n')}
+                {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'Anthropic')}{s(c.plain, '(\n')}
+                {s(c.plain, '  api_key=')}{s(c.str, '"your-anthropic-key"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/anthropic"`)}{s(c.plain, ',\n')}
+                {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
+                {s(c.name, 'message')}{s(c.plain, ' = client.messages.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
+                {s(c.plain, '  model=')}{s(c.str, '"claude-opus-4-6"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  max_tokens=')}{s(c.str, '1024')}{s(c.plain, ',\n')}
+                {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello, Claude"')}{s(c.plain, '}]\n)\n')}
+                {s(c.fn, 'print')}{s(c.plain, '(message.content)\n')}
+              </>)}
+            </div>
+
+            <div>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Gemini</h4>
+              <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install google-genai</code></p>
+              {codeBlock('gemini_example.py', `from google import genai\n\nclient = genai.Client(\n  api_key="your-gemini-key",\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": "alg_sk_..."},\n  }\n)\n\nresponse = client.models.generate_content(\n  model="gemini-2.5-flash",\n  contents="Explain how AI works in a few words"\n)\nprint(response.text)\n`, <>
+                {s(c.kw, 'from')}{s(c.plain, ' google ')}{s(c.kw, 'import')}{s(c.plain, ' genai\n\n')}
+                {s(c.name, 'client')}{s(c.plain, ' = genai.')}{s(c.fn, 'Client')}{s(c.plain, '(\n')}
+                {s(c.plain, '  api_key=')}{s(c.str, '"your-gemini-key"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  http_options={\n')}
+                {s(c.plain, '    ')}{s(c.str, '"base_url"')}{s(c.plain, ': ')}{s(c.str, `"${PROXY_URL}/proxy/gemini"`)}{s(c.plain, ',\n')}
+                {s(c.plain, '    ')}{s(c.str, '"headers"')}{s(c.plain, ': {')}{s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, '},\n')}
+                {s(c.plain, '  }\n)\n\n')}
+                {s(c.name, 'response')}{s(c.plain, ' = client.models.')}{s(c.fn, 'generate_content')}{s(c.plain, '(\n')}
+                {s(c.plain, '  model=')}{s(c.str, '"gemini-2.5-flash"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  contents=')}{s(c.str, '"Explain how AI works in a few words"')}{s(c.plain, '\n)\n')}
+                {s(c.fn, 'print')}{s(c.plain, '(response.text)\n')}
+              </>)}
+            </div>
           </section>
 
-          {/* Test your keys */}
-          <section id="test" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Test your keys</h2>
+          {/* JavaScript / TypeScript */}
+          <section id="javascript" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 12 }}>JavaScript / TypeScript</h3>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>Install whichever provider SDK you already use ({chip('npm i openai')}, {chip('npm i @anthropic-ai/sdk')}, or {chip('npm i @google/genai')}). Each one exposes <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>baseURL</code> and <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>defaultHeaders</code> — that's the only diff.</p>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>OpenAI</h4>
+              {codeBlock('openai.ts', jsOpenAI, hl(jsOpenAI))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Anthropic</h4>
+              {codeBlock('anthropic.ts', jsAnthropic, hl(jsAnthropic))}
+            </div>
+            <div>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Gemini</h4>
+              {codeBlock('gemini.ts', jsGemini, hl(jsGemini))}
+            </div>
+          </section>
+
+          {/* Go */}
+          <section id="go" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 12 }}>Go</h3>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>The provider SDKs are inconsistent across Go, so the most portable pattern is plain {chip('net/http')}: build the request, set two headers, send. Use this as a starter — drop into your preferred client (e.g. {chip('resty')}, {chip('hashicorp/cleanhttp')}) without changing the URL or header names.</p>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>OpenAI</h4>
+              {codeBlock('openai.go', goOpenAI, hl(goOpenAI))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Anthropic</h4>
+              {codeBlock('anthropic.go', goAnthropic, hl(goAnthropic))}
+            </div>
+            <div>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Gemini</h4>
+              {codeBlock('gemini.go', goGemini, hl(goGemini))}
+            </div>
+          </section>
+
+          {/* Streaming / SSE */}
+          <section id="streaming" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Streaming / SSE</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 12 }}>
+              Streaming responses pass through unchanged. Set {chip('stream: true')} on the upstream call exactly as you would directly — the proxy forwards the {chip('text/event-stream')} chunks to your client byte-for-byte and assembles its own copy of the full body in parallel.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 12 }}>
+              Hashing happens once, after the stream ends. We hash the assembled body (the full {chip('data: ...\\n\\n')} concatenation, terminator and all) as raw bytes — there is no JCS canonical form for an SSE stream. That means: <strong style={{ color: 'var(--fg-body)' }}>if you want to recompute the response hash, you must reassemble the same bytes you stored on your side</strong>, in the same order, with the same SSE framing. Per-chunk hashing will not match.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8 }}>
+              For the request body, the JCS rule still applies: a JSON-typed POST body (which is the typical shape for {chip('chat/completions')} or {chip('messages')}) is JCS-canonicalized before hashing, regardless of whether the response was streaming.
+            </p>
+          </section>
+
+          {/* Your audit trail */}
+          <section id="audit-trail" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Your audit trail</h2>
             <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
-              Run this script to verify all three providers are routing through AILedger correctly.
+              Each call writes one row to the {chip('inference_logs')} table. Below: the shape of a row and what each field means.
+            </p>
+
+            <div style={{ marginBottom: 20, padding: '14px 18px', borderRadius: 10, border: '1px solid var(--border-accent-soft)', background: 'var(--accent-tint-bg)' }}>
+              <p style={{ fontSize: 13, color: 'var(--accent-text)', lineHeight: 1.7, fontWeight: 500 }}>
+                We do not store raw inputs or outputs. Only their SHA-256 hashes plus the metadata fields below. The recipe in the next section is what lets you re-prove that a stored hash matches a specific request body you held on your side.
+              </p>
+            </div>
+
+            {codeBlock('inference_logs.row.json', sampleRow, hl(sampleRow))}
+
+            <div style={{ marginTop: 24, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Field', 'Type', 'Description'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {inferenceFields.map(([f, t, d]) => (
+                    <tr key={f} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{f}</code></td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontFamily: 'ui-monospace, monospace', fontSize: 12, verticalAlign: 'top', whiteSpace: 'nowrap' }}>{t}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{d}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{ marginTop: 20, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+              Bulk export of inference rows in CSV / JSONL is on the roadmap and will land alongside SOC 2 Type I (Q3 2026 target). Until then, rows are queryable from the dashboard.
+            </p>
+          </section>
+
+          {/* Verify a record yourself */}
+          <section id="verify" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Verify a record yourself</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
+              The defense in a regulator audit is simple: you produce your server's stored request body + content-type + timestamp, plus our stored hash, plus the recipe below. If the recomputed hash matches our hash, the inference provably happened as logged.
+            </p>
+
+            <div style={{ marginBottom: 24, padding: '20px 24px', borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--surface-tint)' }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-ultrasubtle)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>The recipe — hard contract</p>
+              <ol style={{ fontSize: 14, color: 'var(--fg-body)', lineHeight: 1.9, paddingLeft: 22, margin: 0 }}>
+                <li>Take the {chip('Content-Type')} you stored alongside the raw body.</li>
+                <li>If it starts with {chip('application/json')} or ends with {chip('+json')}:
+                  <ol type="a" style={{ paddingLeft: 22, marginTop: 6, color: 'var(--fg-subtle)', fontSize: 13.5 }}>
+                    <li>Parse the raw body as JSON.</li>
+                    <li>Run the parsed value through RFC 8785 JCS canonicalization.</li>
+                    <li>SHA-256 the canonical UTF-8 bytes.</li>
+                  </ol>
+                </li>
+                <li>Otherwise: SHA-256 the raw bytes unchanged.</li>
+                <li>Compare to our stored {chip('input_hash')} / {chip('output_hash')}. Match = proof the logged inference was exactly that call.</li>
+              </ol>
+              <p style={{ marginTop: 14, fontSize: 12, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+                If the JSON path fails (malformed JSON, invalid UTF-8, JCS-unrepresentable values like NaN / Infinity), the recipe falls through to step 3. The proxy does the same — staying raw keeps the hash stable and ties it to what was actually on the wire.
+              </p>
+            </div>
+
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-primary)', marginTop: 8, marginBottom: 8 }}>RFC 8785 libraries</h3>
+            <ul style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.9, paddingLeft: 22, marginBottom: 24 }}>
+              <li><strong style={{ color: 'var(--fg-body)' }}>JavaScript / TypeScript:</strong> {chip('canonicalize')} on npm (the same package the proxy uses).</li>
+              <li><strong style={{ color: 'var(--fg-body)' }}>Python:</strong> {chip('jcs')} on PyPI (or {chip('rfc8785')}).</li>
+              <li><strong style={{ color: 'var(--fg-body)' }}>Go:</strong> {chip('github.com/cyberphone/json-canonicalization')}.</li>
+              <li><strong style={{ color: 'var(--fg-body)' }}>Ruby:</strong> {chip('json-canonicalization')} gem.</li>
+            </ul>
+
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-primary)', marginTop: 8, marginBottom: 8 }}>Code: end-to-end recipe per language</h3>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>JavaScript / TypeScript</h4>
+              {codeBlock('verify.ts', verifyJS, hl(verifyJS))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Python</h4>
+              {codeBlock('verify.py', verifyPython, hl(verifyPython))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Go</h4>
+              {codeBlock('verify.go', verifyGo, hl(verifyGo))}
+            </div>
+            <div>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Ruby</h4>
+              {codeBlock('verify.rb', verifyRuby, hl(verifyRuby))}
+            </div>
+
+            <p style={{ marginTop: 24, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+              Every implementation above produces the same hex string for the same input — that's the entire point of RFC 8785. If your hash differs from ours, the cause is almost always content-type drift or middleware that re-serialized the body. See <a href="#troubleshooting" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>Troubleshooting</a>.
+            </p>
+          </section>
+
+          {/* Performance (relocated benchmark) */}
+          <section id="performance" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Performance</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
+              Measure the overhead the proxy adds vs. calling the providers directly. Run this script with all three keys filled in to get a side-by-side direct/proxy comparison.
             </p>
             {codeBlock('test_proxy.py', `import time\nfrom openai import OpenAI\nfrom anthropic import Anthropic\nfrom google import genai\n\nAILEDGER_KEY  = "alg_sk_..."\nOPENAI_KEY    = "sk-..."\nANTHROPIC_KEY = "sk-ant-..."\nGEMINI_KEY    = "AIza..."\n\nRUNS = 3\ndef avg(times): return sum(times) / len(times)\n\n# OpenAI\ndirect = OpenAI(api_key=OPENAI_KEY)\nproxy  = OpenAI(\n  api_key=OPENAI_KEY,\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": AILEDGER_KEY},\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.chat.completions.create(model="gpt-4.1-mini", messages=[{"role": "user", "content": "Say: ok"}], max_tokens=5)\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.chat.completions.create(model="gpt-4.1-mini", messages=[{"role": "user", "content": "Say: ok"}], max_tokens=5)\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.choices and r.choices[0].message.content:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [OpenAI]    '{r.choices[0].message.content.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n\n# Anthropic\ndirect = Anthropic(api_key=ANTHROPIC_KEY)\nproxy  = Anthropic(\n  api_key=ANTHROPIC_KEY,\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": AILEDGER_KEY},\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.messages.create(model="claude-opus-4-6", max_tokens=5, messages=[{"role": "user", "content": "Say: ok"}])\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.messages.create(model="claude-opus-4-6", max_tokens=5, messages=[{"role": "user", "content": "Say: ok"}])\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.content and r.content[0].text:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [Anthropic] '{r.content[0].text.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n\n# Gemini\ndirect = genai.Client(api_key=GEMINI_KEY)\nproxy  = genai.Client(\n  api_key=GEMINI_KEY,\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": AILEDGER_KEY},\n  },\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.models.generate_content(model="gemini-2.5-flash", contents="Say: ok")\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.models.generate_content(model="gemini-2.5-flash", contents="Say: ok")\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.text:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [Gemini]    '{r.text.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n`, <>
               {s(c.kw, 'import')}{s(c.plain, ' time\n')}
@@ -880,31 +1439,97 @@ function Docs() {
           <section id="reference" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
             <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 16 }}>API reference</h2>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
-                  {['Header', 'Required', 'Description'].map((h) => (
-                    <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['x-ailedger-key', 'Yes', 'Your AILedger API key (alg_sk_...)'],
-                  ['Authorization', 'Yes', 'Your provider key - forwarded as-is to the upstream API'],
-                ].map(([h, r, d]) => (
-                  <tr key={h} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
-                    <td style={{ padding: '10px 12px' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{h}</code></td>
-                    <td style={{ padding: '10px 12px', color: r === 'Yes' ? 'var(--color-success)' : 'var(--fg-ultrasubtle)' }}>{r}</td>
-                    <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)' }}>{d}</td>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginTop: 8, marginBottom: 10 }}>Endpoints</h3>
+            <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Method', 'Path', 'Purpose'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {([
+                    ['ANY', '/proxy/<provider>/<...path>', 'Forward to the upstream provider, log the call. Provider must be openai, anthropic, or gemini.'],
+                    ['GET', '/health', 'Liveness check. Returns 200 with { "status": "ok" }.'],
+                    ['—', '/audit/export', 'Bulk export of inference rows (CSV / JSONL) — coming soon, ships alongside SOC 2 Type I (Q3 2026 target).'],
+                  ] as Array<[string, string, string]>).map(([m, path, purp]) => (
+                    <tr key={path} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontFamily: 'ui-monospace, monospace', fontSize: 12, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{m}</td>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{path}</code></td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{purp}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-            <p style={{ marginTop: 24, fontSize: 14, color: 'var(--fg-ultrasubtle)', lineHeight: 1.8 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginTop: 8, marginBottom: 10 }}>Headers</h3>
+            <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Header', 'Required', 'Description'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {headersTable.map(([h, r, d]) => (
+                    <tr key={h} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{h}</code></td>
+                      <td style={{ padding: '10px 12px', color: r === 'Yes' ? 'var(--color-success)' : 'var(--fg-ultrasubtle)', verticalAlign: 'top', whiteSpace: 'nowrap' }}>{r}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{d}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginTop: 8, marginBottom: 10 }}>Status codes</h3>
+            <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Status', 'Meaning', 'Detail'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {statusCodes.map(([code, meaning, detail]) => (
+                    <tr key={code} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top', whiteSpace: 'nowrap' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>{code}</code></td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-body)', verticalAlign: 'top', fontSize: 13 }}>{meaning}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{ marginTop: 16, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.8 }}>
               Proxy base URL: <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>{PROXY_URL}/proxy/{'<provider>'}</code>
               <br />Supported providers: <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>openai</code> · <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>anthropic</code> · <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>gemini</code>
+              <br />OpenAI's SDK omits the {chip('/v1')} prefix when {chip('base_url')} is overridden; the proxy normalizes it back, so calls work whether or not your client includes it.
+              <br />Free-tier ceiling is 10,000 requests / calendar month. Higher ceilings are on Pro / Scale / Evidence — see <a href="/pricing" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>pricing</a>.
+            </p>
+          </section>
+
+          {/* Troubleshooting */}
+          <section id="troubleshooting" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 16 }}>Troubleshooting</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {troubles.map(([q, a]) => (
+                <div key={q} style={{ padding: '16px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-tint)' }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 6 }}>{q}</p>
+                  <p style={{ fontSize: 13.5, color: 'var(--fg-subtle)', lineHeight: 1.75 }}>{a}</p>
+                </div>
+              ))}
+            </div>
+            <p style={{ marginTop: 20, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+              Still stuck? Email <a href="mailto:support@ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>support@ailedger.dev</a> with the request ID from your dashboard row and the recipe step that failed — that's enough for us to reproduce in most cases.
             </p>
           </section>
 
