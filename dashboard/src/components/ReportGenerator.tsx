@@ -4,6 +4,47 @@ import autoTable from 'jspdf-autotable'
 import { supabase } from '../supabase'
 import UpgradeModal from './UpgradeModal'
 
+// Supabase PostgREST enforces a default max-rows of 1000 per response. A plain
+// .select('*') silently truncates — catastrophic for a compliance report that
+// must contain EVERY inference. Fetch in 1000-row chunks via .range() until the
+// backend returns a short page.
+interface LogRow {
+  id: number
+  logged_at: string
+  started_at: string | null
+  completed_at: string | null
+  provider: string
+  model_name: string | null
+  path: string
+  input_hash: string | null
+  output_hash: string | null
+  status_code: number
+  latency_ms: number
+  system_id: string | null
+}
+
+const PAGE_SIZE = 1000
+async function fetchAllLogs(customerId: string): Promise<LogRow[]> {
+  const all: LogRow[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('inference_logs')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('logged_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+      .returns<LogRow[]>()
+    if (error) throw error
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return all
+}
+
 interface Props {
   customerId: string
   customerEmail: string
@@ -59,19 +100,16 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
     const formatDate = (d: Date) =>
       d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 
-    // Fetch logs, all systems, profile, subscription, and chain head in parallel
+    // Fetch logs (paginated — ALL rows, not the PostgREST-default 1000),
+    // systems, profile, subscription, and chain head in parallel.
     const [
-      { data: rawLogs },
+      rawLogs,
       { data: allSystems },
       { data: subData },
       { data: profileData },
       { data: chainHeadData },
     ] = await Promise.all([
-      supabase
-        .from('inference_logs')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('logged_at', { ascending: true }),
+      fetchAllLogs(customerId).catch(() => null),
       supabase
         .from('account_settings')
         .select('id, system_name, system_purpose, annex_iii_category')
