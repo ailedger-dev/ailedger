@@ -113,7 +113,11 @@ export default function Home({ session, onLogout }: Props) {
             </span>
           )}
         </button>
-        <JoChat open={joOpen} onClose={() => setJoOpen(false)} />
+        <JoChat
+          open={joOpen}
+          onClose={() => setJoOpen(false)}
+          userId={session.userId ?? "anon"}
+        />
       </main>
     </div>
   );

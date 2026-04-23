@@ -11,16 +11,52 @@ interface Message {
 interface Props {
   open: boolean;
   onClose: () => void;
+  userId: string;
 }
 
-export default function JoChat({ open, onClose }: Props) {
+// localStorage key for persisted chat messages. Scoped per user so a shared
+// browser (devtools across users, unlikely in practice but still correct) or
+// a user-change on the same device doesn't leak transcript. Trimmed to the
+// last N messages to cap localStorage growth.
+const MSG_CACHE_PREFIX = "jo_chat_messages_v1:";
+const MSG_CACHE_MAX = 200;
+
+function loadCachedMessages(userId: string): Message[] {
+  try {
+    const raw = localStorage.getItem(MSG_CACHE_PREFIX + userId);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Message[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(-MSG_CACHE_MAX);
+  } catch {
+    return [];
+  }
+}
+
+function saveCachedMessages(userId: string, messages: Message[]): void {
+  try {
+    const trimmed = messages.slice(-MSG_CACHE_MAX);
+    localStorage.setItem(MSG_CACHE_PREFIX + userId, JSON.stringify(trimmed));
+  } catch {
+    // quota exceeded / private mode — best-effort; drop silently
+  }
+}
+
+export default function JoChat({ open, onClose, userId }: Props) {
   const [session, setSession] = useState<JoSession | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => loadCachedMessages(userId));
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const streamRef = useRef<{ cancel: () => void } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Persist messages to localStorage on every change so panel-toggle /
+  // logout / reload doesn't lose visual history. The backend claude_sid
+  // persistence handles the MODEL's memory; this handles the UI's memory.
+  useEffect(() => {
+    saveCachedMessages(userId, messages);
+  }, [messages, userId]);
 
   useEffect(() => {
     if (!open) return;
@@ -123,6 +159,17 @@ export default function JoChat({ open, onClose }: Props) {
     streamRef.current?.cancel();
     try {
       await closeJoSession(session.id);
+    } catch { /* ignore */ }
+    // Clear both the visual history AND the backend claude_sid pointer so
+    // this is a true fresh start — no recap, no prior memory.
+    try {
+      await fetch("/api/jo/reset-conversation", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch { /* best-effort */ }
+    try {
+      localStorage.removeItem(MSG_CACHE_PREFIX + userId);
     } catch { /* ignore */ }
     setMessages([]);
     setErr(null);
