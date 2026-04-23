@@ -72,6 +72,25 @@ export async function closeJoSession(sessionId: string): Promise<void> {
   });
 }
 
+export async function getJoNotificationsCount(): Promise<number> {
+  const r = await _fetchWithRefresh(`${config.apiBaseUrl}/jo/notifications/count`, {
+    credentials: "include",
+  });
+  if (!r.ok) return 0;
+  const j = (await r.json()) as { count?: number };
+  return typeof j.count === "number" ? j.count : 0;
+}
+
+export async function sendJoPing(to: string, text: string): Promise<void> {
+  const r = await _fetchWithRefresh(`${config.apiBaseUrl}/jo/ping`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ to, text }),
+  });
+  if (!r.ok) throw new Error(`jo_ping_${r.status}`);
+}
+
 export interface JoStreamHandlers {
   onChunk: (text: string) => void;
   onDone: () => void;

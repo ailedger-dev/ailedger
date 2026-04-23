@@ -9,6 +9,7 @@ import DocView from "../components/DocView";
 import JoChat from "../components/JoChat";
 import { config } from "../config";
 import { apiHealth } from "../lib/api";
+import { getJoNotificationsCount } from "../lib/jo";
 import type { SessionState } from "../lib/auth";
 
 interface Props {
@@ -20,6 +21,29 @@ export default function Home({ session, onLogout }: Props) {
   const [apiUp, setApiUp] = useState<boolean | null>(null);
   const [joOpen, setJoOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const n = await getJoNotificationsCount();
+        if (!cancelled) setNotifCount(n);
+      } catch {
+        // ignore — best-effort
+      }
+    }
+    poll();
+    const id = setInterval(poll, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  // Opening Jo drains the notifications server-side on session create; clear
+  // the dot immediately so the UI feels responsive, then let the next poll
+  // confirm.
+  useEffect(() => {
+    if (joOpen && notifCount > 0) setNotifCount(0);
+  }, [joOpen]);
 
   useEffect(() => {
     apiHealth()
@@ -75,11 +99,19 @@ export default function Home({ session, onLogout }: Props) {
         </Routes>
         <button
           onClick={() => setJoOpen((v) => !v)}
-          title="Jo chat (press j)"
-          aria-label="Open Jo chat"
+          title={notifCount > 0 ? `Jo chat (${notifCount} pending)` : "Jo chat (press j)"}
+          aria-label={notifCount > 0 ? `Open Jo chat, ${notifCount} pending` : "Open Jo chat"}
           className="fixed right-4 bottom-4 md:right-6 md:bottom-6 h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg flex items-center justify-center z-10"
         >
           <MessageSquareText className="w-5 h-5" />
+          {notifCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-[18px] text-center shadow ring-2 ring-zinc-950"
+            >
+              {notifCount > 9 ? "9+" : notifCount}
+            </span>
+          )}
         </button>
         <JoChat open={joOpen} onClose={() => setJoOpen(false)} />
       </main>

@@ -45,6 +45,16 @@ JO_PENDING_FIRST_TURN_DIR = os.environ.get(
 JO_PENDING_FIRST_TURN_CONSUME_ON_READ = (
     os.environ.get("JO_PENDING_FIRST_TURN_CONSUME_ON_READ", "0") == "1"
 )
+
+# Per-contractor notification drop directory. Any file dropped at
+# <dir>/<slug>/*.md is consumed on the next Jo session-open and prepended
+# to the first-turn directive. Lets a Mayor (or an inbox watcher) fan
+# messages out to a contractor even when Jo isn't live; they get them on
+# next login. Files are deleted after consumption.
+JO_NOTIFICATIONS_DIR = os.environ.get(
+    "JO_NOTIFICATIONS_DIR",
+    "/srv/town/shared/canonical-jo/notifications",
+)
 # Spawn cwd for claude. Claude has a silent-suppress-output failure mode when
 # launched from a directory containing a .claude/ workspace trust entry in an
 # unexpected state (e.g. %h/contractor-webui-api inherits jjoyner's config into
@@ -162,15 +172,91 @@ class JoSessionManager:
         self._sessions[sess.id] = sess
         log.info("jo.session.create id=%s user=%s", sess.id, user_id)
 
-        # If a pending first-turn file exists for this contractor, schedule
-        # its injection as Jo's first streamed response. The file is read
-        # once, consumed (or not, per JO_PENDING_FIRST_TURN_CONSUME_ON_READ),
-        # and fed to claude as the first --session-id prompt.
-        directive = self._load_first_turn()
-        if directive:
+        # First-turn directive is the union of:
+        #   1. Any pending notifications for this contractor (consumed + deleted)
+        #   2. The Mayor-staged pending-first-turn.md, if present
+        # If either is non-empty, we spawn claude immediately so the contractor
+        # sees a welcome response before typing anything.
+        parts: list[str] = []
+        notif_block = self._drain_notifications()
+        if notif_block:
+            parts.append(notif_block)
+        first_turn = self._load_first_turn()
+        if first_turn:
+            parts.append(first_turn)
+        if parts:
+            directive = "\n\n---\n\n".join(parts)
             asyncio.create_task(self._run_claude(sess, directive))
 
         return sess
+
+    def _drain_notifications(self) -> str | None:
+        """Consume + delete all notification files for this contractor.
+
+        Each file becomes one bullet in an operator directive Jo should deliver
+        in his voice on session-open. Format inside each file is free-form;
+        the filename timestamp (sortable) defines delivery order.
+        """
+        try:
+            from pathlib import Path as _Path
+            from .config import load_config as _load_config
+            cfg = _load_config()
+            slug_dir = _Path(JO_NOTIFICATIONS_DIR) / cfg.slug
+            if not slug_dir.is_dir():
+                return None
+            files = sorted(slug_dir.glob("*.md"))
+            if not files:
+                return None
+            items: list[str] = []
+            for p in files:
+                try:
+                    body = p.read_text(encoding="utf-8", errors="replace").strip()
+                    if body:
+                        items.append(body)
+                    p.unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    log.warning("jo.notifications.skip path=%s err=%s", p, e)
+            if not items:
+                return None
+            log.info("jo.notifications.drained slug=%s count=%d", cfg.slug, len(items))
+            bullets = "\n\n".join(f"- {it}" for it in items)
+            return (
+                "[OPERATOR DIRECTIVE — pending notifications for your contractor]\n"
+                "Deliver the following items as your first response on this "
+                "session, in your voice. Frame them as a quick heads-up digest.\n\n"
+                "---BEGIN NOTIFICATIONS---\n"
+                + bullets +
+                "\n---END NOTIFICATIONS---"
+            )
+        except Exception as err:  # noqa: BLE001
+            log.warning("jo.notifications.load_failed err=%s", err)
+            return None
+
+    def pending_notifications_count(self) -> int:
+        """Count pending notification files for the current contractor."""
+        try:
+            from pathlib import Path as _Path
+            from .config import load_config as _load_config
+            cfg = _load_config()
+            slug_dir = _Path(JO_NOTIFICATIONS_DIR) / cfg.slug
+            if not slug_dir.is_dir():
+                return 0
+            return sum(1 for _ in slug_dir.glob("*.md"))
+        except Exception:  # noqa: BLE001
+            return 0
+
+    def write_notification(self, target_slug: str, text: str, *, source: str) -> str:
+        """Drop a notification file for a given contractor slug. Returns path."""
+        from pathlib import Path as _Path
+        slug_dir = _Path(JO_NOTIFICATIONS_DIR) / target_slug
+        slug_dir.mkdir(parents=True, exist_ok=True)
+        ts = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        fname = f"{ts}-{uuid.uuid4().hex[:8]}.md"
+        p = slug_dir / fname
+        body = f"*from {source} at {ts}*\n\n{text.strip()}\n"
+        p.write_text(body, encoding="utf-8")
+        log.info("jo.notifications.written slug=%s path=%s bytes=%d", target_slug, p, len(body))
+        return str(p)
 
     def _load_first_turn(self) -> str | None:
         try:

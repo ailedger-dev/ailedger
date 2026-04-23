@@ -291,3 +291,46 @@ async def jo_close(session_id: str, user: dict[str, Any] = Depends(current_user)
     except JoSessionNotFound as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "session_not_found") from e
     return Response(status_code=204)
+
+
+@app.get("/jo/notifications/count")
+async def jo_notifications_count(_user: dict[str, Any] = Depends(current_user)):
+    """Number of pending Jo notifications for the current contractor.
+
+    Drives the red dot on the chat bubble. Count decrements to zero when the
+    next Jo session opens (drain happens inside create_session).
+    """
+    _jo_require_enabled()
+    from .jo import get_manager
+    return {"count": get_manager().pending_notifications_count()}
+
+
+@app.post("/jo/ping")
+async def jo_ping(
+    payload: dict[str, Any] = Body(...),
+    _user: dict[str, Any] = Depends(current_user),
+):
+    """Fan a short message to a contractor's Jo.
+
+    MVP auth: any authenticated user of this FastAPI instance can ping any
+    contractor slug reachable on this machine's shared Jo notifications
+    directory. In the single-Mayor / single-Principal setup this is fine
+    (jjoyner is the only principal). Tighten if we ever multi-tenant this
+    FastAPI to arbitrary users.
+
+    Body: { "to": "<slug>", "text": "<message>" }.
+
+    The notification is dropped as a file under
+    /srv/town/shared/canonical-jo/notifications/<slug>/ and consumed on the
+    target contractor's next Jo session-open.
+    """
+    _jo_require_enabled()
+    to = str(payload.get("to", "")).strip()
+    text = str(payload.get("text", "")).strip()
+    if not to or not text:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "missing to or text")
+    if not to.replace("-", "").replace("_", "").isalnum():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid slug")
+    from .jo import get_manager
+    path = get_manager().write_notification(to, text, source=f"{_user.get('sub','?')[:8]}")
+    return {"ok": True, "path": path}
