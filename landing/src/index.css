@@ -38,10 +38,11 @@
   --accent-focus-ring:  rgba(79,70,229,0.55);
   --accent-glow-shadow: rgba(79,70,229,0.35);
 
-  /* Hero gradient stops — shifted darker so gradient reads on white */
-  --gradient-1:         #6366f1;
-  --gradient-2:         #8b5cf6;
-  --gradient-3:         #a78bfa;
+  /* Hero 'every' gradient — light→darker subtle, Cloudflare-style.
+     Starts lighter at top-left, goes mid-darker at bottom-right. Stops at
+     a middle tone (does not hit indigo-800); restraint over flashiness. */
+  --gradient-1:         #a78bfa;  /* violet-400 (light start) */
+  --gradient-2:         #7c3aed;  /* violet-600 (mid-dark stop) */
 
   /* Borders (inverted alpha for light surface) */
   --border-subtle:      rgba(0,0,0,0.05);
@@ -103,9 +104,8 @@
     --accent-focus-ring:  rgba(129,140,248,0.6);
     --accent-glow-shadow: rgba(79,70,229,0.6);
 
-    --gradient-1:         #818cf8;
-    --gradient-2:         #a78bfa;
-    --gradient-3:         #c4b5fd;
+    --gradient-1:         #c4b5fd;  /* violet-300 (light start on dark bg) */
+    --gradient-2:         #818cf8;  /* indigo-400 (mid stop; doesn't hit -600) */
 
     --border-subtle:      rgba(255,255,255,0.05);
     --border:             rgba(255,255,255,0.06);
@@ -314,4 +314,11 @@ details > summary > span:last-child {
 
   /* Code block readability */
   pre { font-size: 11px !important; }
+
+  /* Docs page: stack sidebar above content; hide sticky TOC (takes too much
+     vertical space on small viewports; section anchors still work). */
+  .docs-grid { flex-direction: column !important; gap: 24px !important; padding: 72px 20px 64px !important; }
+  .docs-sidebar { width: 100% !important; }
+  .docs-sidebar > div { position: static !important; }
+  .docs-sidebar nav { flex-direction: row !important; flex-wrap: wrap !important; gap: 12px 16px !important; }
 }

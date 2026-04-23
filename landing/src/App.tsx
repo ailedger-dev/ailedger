@@ -200,7 +200,7 @@ function Hero() {
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Keep a record of</span>
-          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', position: 'relative', top: '-0.065em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI decision.</span>
+          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', position: 'relative', top: '-0.065em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI decision.</span>
         </h1>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
@@ -666,12 +666,15 @@ function Docs() {
     <CodeBlock filename={filename} raw={raw}>{children}</CodeBlock>
   )
 
+  // Code-block text colors. Background is --bg-code (stays dark both themes),
+  // so `plain` + `comment` reference --fg-on-code (light text) not --fg-body
+  // (which is dark in light theme and would vanish on the dark code bg).
   const c = {
-    comment: 'var(--fg-ultrasubtle)',
+    comment: 'rgba(226,232,240,0.55)',  // slate-200 @ 55% — muted-on-dark
     name: '#93c5fd',
     fn: '#fcd34d',
     str: '#86efac',
-    plain: 'var(--fg-body)',
+    plain: 'var(--fg-on-code)',
     kw: '#c084fc',
   }
 
@@ -1331,7 +1334,7 @@ function PricingPage() {
       <section className="section-pad" style={{ padding: '128px 32px 64px', textAlign: 'center' }}>
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
           <h1 className="hero-title" style={{ fontSize: 'clamp(40px, 6vw, 64px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.03em', lineHeight: 1.05, marginBottom: 24 }}>
-            Audit-grade evidence for <span style={{ display: 'inline-block', position: 'relative', top: '-0.065em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.
+            Audit-grade evidence for <span style={{ display: 'inline-block', position: 'relative', top: '-0.065em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.
           </h1>
           <p style={{ fontSize: 19, color: 'var(--fg-muted)', lineHeight: 1.6, marginBottom: 36, maxWidth: 680, margin: '0 auto 36px' }}>
             Three tiers. One chain of custody. Built for the EU AI Act Article&nbsp;12 conformance question your enterprise customers are already asking.
