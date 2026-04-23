@@ -126,6 +126,39 @@
         "directory": "./public",
         "binding": "ASSETS"
       }
+    },
+    "jake": {
+      "name": "contractor-auth-jake",
+      "vars": {
+        "CONTRACTOR_SLUG": "jake",
+        "CONTRACTOR_DISPLAY_NAME": "Jake Joyner (debug)",
+        "RP_ID": "jake-dash.ailedger.dev",
+        "RP_NAME": "AILedger (Jake debug)",
+        "RP_ORIGIN": "https://jake-dash.ailedger.dev",
+        "MAGIC_LINK_FROM": "no-reply@ailedger.dev",
+        "MAGIC_LINK_REDIRECT_BASE": "https://jake-dash.ailedger.dev",
+        "SESSION_TTL_SECONDS": "900",
+        "REFRESH_TTL_SECONDS": "604800",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "jake-dash.ailedger.dev"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "contractor-auth-jake",
+          "database_id": "54cbfeff-1b9c-49ff-a203-51b1c69783eb"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "89e03d5174b24552afe4203132f5d495"
+        }
+      ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      }
     }
   }
 }

@@ -8,9 +8,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:pasha": "vite build --mode pasha",
+    "build:jake": "vite build --mode jake",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy:pasha": "npm run build:pasha && wrangler pages deploy ./dist --project-name pasha-dash"
+    "deploy:pasha": "npm run build:pasha && wrangler pages deploy ./dist --project-name pasha-dash",
+    "deploy:jake": "npm run build:jake && wrangler pages deploy ./dist --project-name jake-dash"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^10.0.0",
