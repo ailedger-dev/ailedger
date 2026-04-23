@@ -140,11 +140,73 @@ class JoSessionManager:
 
     async def _gc_loop(self) -> None:
         try:
+            # Tick at 5s so we can pick up new notification files and live-
+            # inject them into any active Jo session within a few seconds.
+            # Idle reap needs coarser cadence; every 12th tick = 60s.
+            tick = 0
             while True:
-                await asyncio.sleep(60)
-                await self._reap_idle()
+                await asyncio.sleep(5)
+                tick += 1
+                await self._poll_notifications_live_inject()
+                if tick % 12 == 0:
+                    await self._reap_idle()
         except asyncio.CancelledError:
             return
+
+    async def _poll_notifications_live_inject(self) -> None:
+        """If this contractor has a live Jo session AND there are pending
+        notifications in the slug's drop dir, deliver them to the live
+        session as a Jo-voice digest + consume the files.
+
+        Cross-instance path: Jake-on-jake-dash POSTs /jo/ping {to:"pasha"} →
+        file drops in pasha's dir → pasha's FastAPI sees it here within 5s →
+        if Pasha has Jo open right now, Jo delivers it in the active stream.
+        """
+        try:
+            live = [s for s in self._sessions.values() if not s.closed]
+            if not live:
+                return
+            from pathlib import Path as _Path
+            from .config import load_config as _load_config
+            cfg = _load_config()
+            slug_dir = _Path(JO_NOTIFICATIONS_DIR) / cfg.slug
+            if not slug_dir.is_dir():
+                return
+            files = sorted(slug_dir.glob("*.md"))
+            if not files:
+                return
+            items: list[str] = []
+            for p in files:
+                try:
+                    body = p.read_text(encoding="utf-8", errors="replace").strip()
+                    if body:
+                        items.append(body)
+                    p.unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    log.warning("jo.live_inject.skip path=%s err=%s", p, e)
+            if not items:
+                return
+            bullets = "\n\n".join(f"- {it}" for it in items)
+            directive = (
+                "[OPERATOR DIRECTIVE — new in-session notifications for your contractor]\n"
+                "Deliver the following items as a quick heads-up right now, in your "
+                "voice. Keep it brief; don't lecture. Then return control to the "
+                "contractor for whatever they were doing.\n\n"
+                "---BEGIN NOTIFICATIONS---\n"
+                + bullets +
+                "\n---END NOTIFICATIONS---"
+            )
+            # Most recent session per user wins (users typically have 1).
+            by_user: dict[str, JoSession] = {}
+            for s in live:
+                prev = by_user.get(s.user_id)
+                if prev is None or s.last_active_at > prev.last_active_at:
+                    by_user[s.user_id] = s
+            for s in by_user.values():
+                log.info("jo.live_inject.dispatching session=%s items=%d", s.id, len(items))
+                asyncio.create_task(self._run_claude(s, directive))
+        except Exception:  # noqa: BLE001
+            log.exception("jo.live_inject.loop_error")
 
     async def _reap_idle(self) -> None:
         now = time.time()
