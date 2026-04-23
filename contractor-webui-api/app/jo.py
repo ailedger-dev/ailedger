@@ -55,6 +55,18 @@ JO_NOTIFICATIONS_DIR = os.environ.get(
     "JO_NOTIFICATIONS_DIR",
     "/srv/town/shared/canonical-jo/notifications",
 )
+
+# Per-contractor-per-user persistence of claude's conversation id. When a
+# contractor opens Jo again (after SPA reload, after logout, after FastAPI
+# restart), we reuse the prior claude --session-id so claude itself picks up
+# the conversation history via --resume on the next message. The mirror file
+# is FastAPI-owned; UI history doesn't land here (claude's session file
+# lives under sales-agent's home and is strict-confidence per the pin — the
+# FastAPI does NOT read the transcript body, only persists the pointer).
+JO_PERSIST_DIR = os.environ.get(
+    "JO_PERSIST_DIR",
+    os.path.expanduser("~/.cache/contractor-webui-api/jo-conversations"),
+)
 # Spawn cwd for claude. Claude has a silent-suppress-output failure mode when
 # launched from a directory containing a .claude/ workspace trust entry in an
 # unexpected state (e.g. %h/contractor-webui-api inherits jjoyner's config into
@@ -217,6 +229,56 @@ class JoSessionManager:
     def _user_sessions(self, user_id: str) -> list[JoSession]:
         return [s for s in self._sessions.values() if s.user_id == user_id and not s.closed]
 
+    def _persist_path(self, user_id: str) -> "Path":  # type: ignore[name-defined]
+        from pathlib import Path as _Path
+        # user_id is a UUID from the JWT — safe to put in a path; sanitize
+        # defensively anyway.
+        safe = "".join(c for c in user_id if c.isalnum() or c in "-_")[:128]
+        return _Path(JO_PERSIST_DIR) / f"{safe}.txt"
+
+    def _read_persisted_claude_id(self, user_id: str) -> tuple[str | None, bool]:
+        p = self._persist_path(user_id)
+        try:
+            if not p.is_file():
+                return None, False
+            v = p.read_text(encoding="utf-8").strip()
+            if not v:
+                return None, False
+            # Basic UUID shape check — avoid feeding garbage into claude
+            # --resume and burning a real claude call to discover it.
+            try:
+                uuid.UUID(v)
+            except ValueError:
+                log.warning("jo.persist.corrupt path=%s", p)
+                return None, False
+            return v, True
+        except Exception as e:  # noqa: BLE001
+            log.warning("jo.persist.read_failed err=%s", e)
+            return None, False
+
+    def _write_persisted_claude_id(self, user_id: str, claude_sid: str) -> None:
+        p = self._persist_path(user_id)
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(claude_sid + "\n", encoding="utf-8")
+        except Exception as e:  # noqa: BLE001
+            log.warning("jo.persist.write_failed err=%s", e)
+
+    def reset_conversation(self, user_id: str) -> None:
+        """Clear the persisted claude conversation id for this user.
+
+        Next session-open mints a fresh UUID; claude starts over with no
+        prior context. Use when the contractor wants a "new conversation."
+        Does NOT affect the current in-memory session; callers should
+        close() that separately if desired.
+        """
+        p = self._persist_path(user_id)
+        try:
+            p.unlink(missing_ok=True)
+            log.info("jo.persist.reset user=%s", user_id)
+        except Exception as e:  # noqa: BLE001
+            log.warning("jo.persist.reset_failed err=%s", e)
+
     def create_session(self, user_id: str) -> JoSession:
         if not JO_SPAWN_SUDO_USER and shutil.which(JO_CLAUDE_BIN) is None:
             raise JoClaudeMissing(f"claude binary not found (JO_CLAUDE_BIN={JO_CLAUDE_BIN})")
@@ -224,15 +286,27 @@ class JoSessionManager:
         if len(existing) >= JO_MAX_SESSIONS_PER_USER:
             raise JoSessionLimitExceeded(f"max {JO_MAX_SESSIONS_PER_USER} concurrent sessions per user")
 
+        # Resume the persisted claude conversation if one exists for this user;
+        # otherwise mint a new UUID and persist it so future opens resume here.
+        persisted_id, resuming = self._read_persisted_claude_id(user_id)
+        claude_sid = persisted_id or str(uuid.uuid4())
         sess = JoSession(
             id=str(uuid.uuid4()),
             user_id=user_id,
-            claude_session_id=str(uuid.uuid4()),
+            claude_session_id=claude_sid,
             created_at=time.time(),
             last_active_at=time.time(),
+            # If resuming, the very first turn should use --resume, not
+            # --session-id — claude already knows this conversation.
+            first_turn_done=resuming,
         )
+        if not resuming:
+            self._write_persisted_claude_id(user_id, claude_sid)
         self._sessions[sess.id] = sess
-        log.info("jo.session.create id=%s user=%s", sess.id, user_id)
+        log.info(
+            "jo.session.create id=%s user=%s claude_sid=%s resuming=%s",
+            sess.id, user_id, claude_sid, resuming,
+        )
 
         # First-turn directive is the union of:
         #   1. Any pending notifications for this contractor (consumed + deleted)

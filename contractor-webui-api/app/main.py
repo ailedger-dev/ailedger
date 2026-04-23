@@ -305,6 +305,20 @@ async def jo_notifications_count(_user: dict[str, Any] = Depends(current_user)):
     return {"count": get_manager().pending_notifications_count()}
 
 
+@app.post("/jo/reset-conversation")
+async def jo_reset_conversation(user: dict[str, Any] = Depends(current_user)):
+    """Clear the persisted claude --resume pointer for this user.
+
+    Next Jo session-open starts fresh (new claude --session-id, no prior
+    context). Does not kill the current in-memory session; caller should
+    call DELETE /jo/session/<id> separately if they want a clean slate.
+    """
+    _jo_require_enabled()
+    from .jo import get_manager
+    get_manager().reset_conversation(user["sub"])
+    return Response(status_code=204)
+
+
 @app.post("/jo/ping")
 async def jo_ping(
     payload: dict[str, Any] = Body(...),
