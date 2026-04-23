@@ -135,13 +135,13 @@
         {
           "binding": "DB",
           "database_name": "contractor-auth-staging-pasha",
-          "database_id": "REPLACE_WITH_STAGING_PASHA_D1_ID"
+          "database_id": "1117ac24-83b6-4be1-8b23-0f3efee2edcf"
         }
       ],
       "kv_namespaces": [
         {
           "binding": "AUTH_KV",
-          "id": "REPLACE_WITH_STAGING_PASHA_AUTH_KV_ID"
+          "id": "f31b34da60b4442c8c05229b56b5b1bb"
         }
       ],
       "assets": {
