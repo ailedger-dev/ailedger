@@ -52,13 +52,17 @@ JO_PENDING_FIRST_TURN_CONSUME_ON_READ = (
 # Setting this to a neutral dir the target user owns avoids that trap.
 JO_SPAWN_CWD = os.environ.get("JO_SPAWN_CWD", "/tmp")
 
-# Path to the canonical Jo system prompt. When set + readable, its contents
-# are passed via --system-prompt to every claude invocation so Jo boots with
-# her canonical persona (per project_canonical_jo). Empty → no system prompt
-# override; claude runs with its stock behavior.
+# Path to the canonical Jo persona. When set + readable, its contents are
+# passed via --system-prompt to every claude invocation so Jo boots with
+# his canonical voice (per project_canonical_jo). We point at persona.md
+# rather than system-prompt.md — the latter contains a "session-start
+# sequence" that instructs Jo to read relative-path files (persona.md,
+# memory-manifest.yaml, overlay/contractor-context.md) which don't exist
+# in JO_SPAWN_CWD=/tmp, causing Jo to hang for 60s+ on failed Read tool
+# calls. persona.md is pure voice/identity; no file-reading directives.
 JO_SYSTEM_PROMPT_PATH = os.environ.get(
     "JO_SYSTEM_PROMPT_PATH",
-    "/srv/town/shared/canonical-jo/current/system-prompt.md",
+    "/srv/town/shared/canonical-jo/current/persona.md",
 )
 
 _cached_system_prompt: str | None = None
