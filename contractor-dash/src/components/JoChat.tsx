@@ -283,9 +283,10 @@ export default function JoChat({ open, onClose, userId }: Props) {
   if (!open) return null;
   return (
     <aside
+      style={fullscreen ? { background: "#18181b" } : undefined}
       className={
         fullscreen
-          ? "fixed inset-0 bg-zinc-900 shadow-2xl flex flex-col z-50"
+          ? "fixed inset-0 shadow-2xl flex flex-col z-50"
           : "fixed right-0 top-0 bottom-0 w-full sm:w-[36rem] lg:w-[42rem] bg-zinc-900 border-l border-zinc-800 shadow-2xl flex flex-col z-20"
       }
     >
@@ -335,17 +336,47 @@ export default function JoChat({ open, onClose, userId }: Props) {
         {messages.length === 0 && (
           <div className="text-sm text-zinc-500">Ask Jo anything.</div>
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "text-right" : ""}>
-            <div
-              className={`inline-block max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${
-                m.role === "user" ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-100"
-              }`}
-            >
-              {m.text || <Loader2 className="w-3.5 h-3.5 animate-spin inline" />}
+        {messages.map((m, i) => {
+          // Full-screen mode adopts a claude.ai-style register:
+          //   - Jo messages: serif body, no bubble (just text on bg)
+          //   - User messages: light-tint bubble, still visually distinct
+          //   - Generous line-height + reading size
+          // Sidebar mode keeps the existing compact bubble UI.
+          if (fullscreen) {
+            const isUser = m.role === "user";
+            return (
+              <div key={i} className={isUser ? "text-right" : ""}>
+                <div
+                  style={{
+                    fontFamily: isUser
+                      ? "'Styrene A', Inter, -apple-system, BlinkMacSystemFont, sans-serif"
+                      : "'Tiempos', 'Copernicus', Georgia, 'Iowan Old Style', serif",
+                    fontSize: 17,
+                    lineHeight: 1.7,
+                  }}
+                  className={
+                    isUser
+                      ? "inline-block max-w-[85%] px-4 py-2.5 rounded-2xl whitespace-pre-wrap bg-indigo-500/15 text-zinc-100 border border-indigo-400/20"
+                      : "block max-w-full px-1 py-1 whitespace-pre-wrap text-zinc-100"
+                  }
+                >
+                  {m.text || <Loader2 className="w-3.5 h-3.5 animate-spin inline" />}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div key={i} className={m.role === "user" ? "text-right" : ""}>
+              <div
+                className={`inline-block max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${
+                  m.role === "user" ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-100"
+                }`}
+              >
+                {m.text || <Loader2 className="w-3.5 h-3.5 animate-spin inline" />}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {err && <p className="text-xs text-rose-400">{err}</p>}
         </div>
       </div>
