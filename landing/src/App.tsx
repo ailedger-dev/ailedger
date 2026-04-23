@@ -95,7 +95,7 @@ function Nav() {
             padding: '8px 18px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
             fontSize: 14, fontWeight: 500, borderRadius: 10, textDecoration: 'none',
           }}>
-            Get started
+            Log in
           </a>
         </div>
 
@@ -158,7 +158,7 @@ function Nav() {
           fontSize: 15, fontWeight: 500, borderRadius: 10, textDecoration: 'none',
           textAlign: 'center', marginTop: 4,
         }}>
-          Get started
+          Log in
         </a>
       </div>
     </nav>
@@ -200,7 +200,7 @@ function Hero() {
           letterSpacing: '-0.03em', lineHeight: 1.02, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Keep a record of</span>
-          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', position: 'relative', top: '-0.065em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI decision.</span>
+          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', position: 'relative', top: '-0.055em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI decision.</span>
         </h1>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
@@ -384,25 +384,25 @@ function CodeSnippet() {
             <code style={{ fontFamily: 'ui-monospace, monospace' }}>
               <span style={{ color: 'var(--fg-ultrasubtle)' }}># Before{'\n'}</span>
               <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: 'var(--fg-body)' }}> = </span>
+              <span style={{ color: 'var(--fg-on-code)' }}> = </span>
               <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: 'var(--fg-body)' }}>(api_key=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>(api_key=</span>
               <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: 'var(--fg-body)' }}>){'\n\n'}</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>){'\n\n'}</span>
               <span style={{ color: 'var(--fg-ultrasubtle)' }}># After{'\n'}</span>
               <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: 'var(--fg-body)' }}> = </span>
+              <span style={{ color: 'var(--fg-on-code)' }}> = </span>
               <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: 'var(--fg-body)' }}>({'\n'}{'  '}api_key=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>({'\n'}{'  '}api_key=</span>
               <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: 'var(--fg-body)' }}>,{'\n'}{'  '}base_url=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>,{'\n'}{'  '}base_url=</span>
               <span style={{ color: '#86efac' }}>"{PROXY_URL}/proxy/openai"</span>
-              <span style={{ color: 'var(--fg-body)' }}>,{'\n'}{'  '}default_headers=</span>
-              <span style={{ color: 'var(--fg-body)' }}>{'{'}  </span>
+              <span style={{ color: 'var(--fg-on-code)' }}>,{'\n'}{'  '}default_headers=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>{'{'}  </span>
               <span style={{ color: '#86efac' }}>"x-ailedger-key"</span>
-              <span style={{ color: 'var(--fg-body)' }}>: </span>
+              <span style={{ color: 'var(--fg-on-code)' }}>: </span>
               <span style={{ color: '#86efac' }}>"agl_sk_..."</span>
-              <span style={{ color: 'var(--fg-body)' }}> {'}'}{'\n)' }</span>
+              <span style={{ color: 'var(--fg-on-code)' }}> {'}'}{'\n)' }</span>
             </code>
           </pre>
         </div>
@@ -1334,7 +1334,7 @@ function PricingPage() {
       <section className="section-pad" style={{ padding: '128px 32px 64px', textAlign: 'center' }}>
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
           <h1 className="hero-title" style={{ fontSize: 'clamp(40px, 6vw, 64px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.03em', lineHeight: 1.05, marginBottom: 24 }}>
-            Audit-grade evidence for <span style={{ display: 'inline-block', position: 'relative', top: '-0.065em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.
+            Audit-grade evidence for <span style={{ display: 'inline-block', position: 'relative', top: '-0.055em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.
           </h1>
           <p style={{ fontSize: 19, color: 'var(--fg-muted)', lineHeight: 1.6, marginBottom: 36, maxWidth: 680, margin: '0 auto 36px' }}>
             Three tiers. One chain of custody. Built for the EU AI Act Article&nbsp;12 conformance question your enterprise customers are already asking.
