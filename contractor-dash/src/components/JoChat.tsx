@@ -65,7 +65,22 @@ export default function JoChat({ open, onClose }: Props) {
         });
       },
       onDone: () => {},
-      onError: (e) => setErr(e.message),
+      onError: async (e) => {
+        // Stale session id after FastAPI restart — silently recreate +
+        // re-stream. claude_sid persistence makes this a no-op from the
+        // contractor's perspective.
+        if (e.message === "jo_stream_404") {
+          try {
+            const fresh = await createJoSession();
+            setSession(fresh);
+            openStream(fresh.id);
+          } catch (e2) {
+            setErr((e2 as Error).message);
+          }
+        } else {
+          setErr(e.message);
+        }
+      },
     });
   }
 
@@ -79,7 +94,25 @@ export default function JoChat({ open, onClose }: Props) {
     try {
       await sendJoMessage(session.id, text);
     } catch (e) {
-      setErr((e as Error).message);
+      const msg = (e as Error).message;
+      // Server-side JoSession lives in FastAPI in-memory state. When the
+      // FastAPI restarts (deploys, crashes, idle-reap past TTL) our local
+      // session id 404s. Auto-recover: create a fresh session, reopen the
+      // stream, retry the send. Claude --resume on the backend picks up
+      // the same conversation transparently via the persisted claude_sid.
+      if (msg === "jo_send_404") {
+        try {
+          const fresh = await createJoSession();
+          setSession(fresh);
+          openStream(fresh.id);
+          await sendJoMessage(fresh.id, text);
+          setErr(null);
+        } catch (e2) {
+          setErr((e2 as Error).message);
+        }
+      } else {
+        setErr(msg);
+      }
     } finally {
       setBusy(false);
     }
