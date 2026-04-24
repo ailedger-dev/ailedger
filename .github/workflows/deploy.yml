@@ -100,11 +100,15 @@ jobs:
         with:
           node-version: '20'
 
+      # wrangler-action@v3 defaults to wrangler@3.90, which ignores `env:` blocks
+      # in wrangler.jsonc (only wrangler.toml was supported for envs in v3). Every
+      # worker here uses jsonc + env.staging, so pin to wrangler@4.x.
       - name: proxy — wrangler deploy --env staging
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: proxy
           command: deploy --env staging
 
@@ -113,6 +117,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: onboard-auth
           command: deploy --env staging
 
@@ -121,6 +126,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: john-console
           command: deploy --env staging
 
@@ -129,6 +135,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: redirect
           command: deploy --env staging
 
@@ -152,6 +159,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: proxy
           command: deploy
 
@@ -160,6 +168,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: onboard-auth
           command: deploy
 
@@ -168,6 +177,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: john-console
           command: deploy
 
@@ -176,5 +186,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
           workingDirectory: redirect
           command: deploy
