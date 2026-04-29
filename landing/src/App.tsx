@@ -208,7 +208,7 @@ function Hero() {
           letterSpacing: '-2px', lineHeight: 1.05, marginBottom: 28,
         }}>
           <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}><span style={{ background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>Audit-grade</span> evidence for</span>
-          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}>every <span style={{ background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>AI inference</span> your product makes.</span>
+          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}>every AI call your product makes.</span>
         </h1>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
