@@ -52,7 +52,7 @@
 			// No drip-email cron in staging — we never email customers from staging.
 			"triggers": { "crons": [] },
 			"kv_namespaces": [
-				{ "binding": "AILEDGER_CACHE", "id": "REPLACE_WITH_STAGING_AILEDGER_CACHE_KV_ID" }
+				{ "binding": "AILEDGER_CACHE", "id": "51d2b9f238a04bfcb9d765bda41a8b56" }
 			]
 		}
 	}
