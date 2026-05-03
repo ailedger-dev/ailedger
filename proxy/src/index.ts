@@ -359,11 +359,22 @@ async function handleStripeWebhook(request: Request, env: Env, ctx: ExecutionCon
 	const event = await verifyStripeSignature(body, sig, env.STRIPE_WEBHOOK_SECRET);
 	if (!event) return new Response('Invalid signature', { status: 400 });
 
-	ctx.waitUntil(processStripeEvent(event, env));
-
-	return new Response(JSON.stringify({ received: true }), {
-		headers: { 'Content-Type': 'application/json' },
-	});
+	// Synchronous persist BEFORE 200. Stripe takes 200 as "delivered" and does NOT retry —
+	// returning 5xx triggers Stripe's exponential-backoff retry, which is what we want when
+	// our DB is transiently down. Closes threat model §6.5 (correctness C2 / resilience C1).
+	void ctx;
+	try {
+		await processStripeEvent(event, env);
+		return new Response(JSON.stringify({ received: true }), {
+			headers: { 'Content-Type': 'application/json' },
+		});
+	} catch (err) {
+		console.error('stripe-webhook:processStripeEvent-failed', { eventId: event['id'], eventType: event['type'], error: String(err) });
+		return new Response(JSON.stringify({ error: 'processing failed; please retry' }), {
+			status: 500,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
 }
 
 async function verifyStripeSignature(payload: string, sig: string, secret: string): Promise<Record<string, unknown> | null> {
@@ -376,11 +387,9 @@ async function verifyStripeSignature(payload: string, sig: string, secret: strin
 		const signed = `${timestamp}.${payload}`;
 		const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
 		const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signed));
-		const computed = Array.from(new Uint8Array(mac))
-			.map((b) => b.toString(16).padStart(2, '0'))
-			.join('');
 
-		if (computed !== v1) return null;
+		const v1Bytes = hexToBytes(v1);
+		if (!v1Bytes || !timingSafeEqual(new Uint8Array(mac), v1Bytes)) return null;
 
 		// Reject events older than 5 minutes
 		if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return null;
@@ -455,11 +464,35 @@ async function upsertSubscription(
 
 	if (!res.ok) {
 		const body = await res.text();
-		console.error(`Subscription upsert failed: ${res.status} ${body}`);
+		// Throw so handleStripeWebhook returns 5xx and Stripe retries.
+		// Closes threat model §6.5 / correctness C2.
+		throw new Error(`Subscription upsert failed: ${res.status} ${body}`);
 	}
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+// Constant-time byte comparison for HMAC signatures. Closes threat model §6.7.
+// Returns false on length mismatch first (no information leak — length is
+// already public from the signature header). XOR-accumulates over equal-length
+// arrays so total time is independent of where bytes diverge.
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+	if (a.length !== b.length) return false;
+	let diff = 0;
+	for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+	return diff === 0;
+}
+
+function hexToBytes(hex: string): Uint8Array | null {
+	if (hex.length % 2 !== 0) return null;
+	const out = new Uint8Array(hex.length / 2);
+	for (let i = 0; i < out.length; i++) {
+		const byte = parseInt(hex.substr(i * 2, 2), 16);
+		if (Number.isNaN(byte)) return null;
+		out[i] = byte;
+	}
+	return out;
+}
 
 function filterHeaders(headers: Headers, drop: string[]): Headers {
 	const out = new Headers();
@@ -598,7 +631,12 @@ async function verifyStandardWebhook(request: Request, secret: string, bodyText:
 		const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedContent));
 		const computedSig = 'v1,' + btoa(String.fromCharCode(...new Uint8Array(sig)));
 
-		return msgSignature.split(' ').some((s) => s === computedSig);
+		const enc = new TextEncoder();
+		const computedBytes = enc.encode(computedSig);
+		for (const s of msgSignature.split(' ')) {
+			if (timingSafeEqual(enc.encode(s), computedBytes)) return true;
+		}
+		return false;
 	} catch {
 		return false;
 	}
@@ -606,7 +644,6 @@ async function verifyStandardWebhook(request: Request, secret: string, bodyText:
 
 async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 	const bodyText = await request.text();
-	console.log('Signup hook payload:', bodyText);
 
 	const valid = await verifyStandardWebhook(request, env.SUPABASE_HOOK_SECRET, bodyText);
 	if (!valid) {
@@ -614,8 +651,7 @@ async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 	}
 
-	const body = JSON.parse(bodyText) as Record<string, any>;
-	console.log('Signup hook parsed body:', JSON.stringify(body));
+	const body = JSON.parse(bodyText) as Record<string, unknown>;
 
 	const email: string | null = body?.user?.email ?? body?.record?.email ?? body?.email ?? null;
 	const meta = body?.user?.user_metadata ?? body?.record?.raw_user_meta_data ?? {};
@@ -640,7 +676,11 @@ async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 	// Email send paths (welcome / password-reset) removed 2026-04-30 per Jake universal directive
 	// — Google-only email stack. Will be reintroduced via Gmail API once Workspace lands.
 	// See memory/feedback_email_stack_google_only.md.
-	console.log(`signup-hook: email suppressed (action=${actionType}) for ${email}; magicLink=${magicLink}`);
+	// NOTE: do NOT log the magic-link URL or token_hash — workers logs flow to Logpush sinks
+	// and capturing a verification token in logs == account-takeover-via-log-access. Closes
+	// threat model §6.6. Log only non-secret derived fields.
+	void magicLink;
+	console.log('signup-hook', { actionType, hasEmail: !!email, hasToken: !!tokenHash });
 
 	return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
 }
