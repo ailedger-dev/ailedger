@@ -844,20 +844,58 @@ async function logInference({
 		logged_at: new Date().toISOString(),
 	};
 
-	const res = await fetch(`${env.SUPABASE_URL}/rest/v1/inference_logs`, {
-		method: 'POST',
-		headers: {
-			apikey: env.SUPABASE_SERVICE_KEY,
-			Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-			'Content-Type': 'application/json',
-			'Content-Profile': 'ledger',
-			Prefer: 'return=minimal',
-		},
-		body: JSON.stringify(entry),
-	});
+	// Bounded retry + KV durable buffer on persistent failure. Closes threat
+	// model §6.1 (write side). The drain side — a scheduled worker that
+	// replays pending_log:* keys back into Supabase — is tracked separately.
+	// TODO(ai-m9z follow-on): implement drain worker for pending_log:* keys.
+	const maxAttempts = 2;
+	let lastErr: unknown;
+	let lastStatus: number | null = null;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			const res = await fetch(`${env.SUPABASE_URL}/rest/v1/inference_logs`, {
+				method: 'POST',
+				headers: {
+					apikey: env.SUPABASE_SERVICE_KEY,
+					Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+					'Content-Type': 'application/json',
+					'Content-Profile': 'ledger',
+					Prefer: 'return=minimal',
+				},
+				body: JSON.stringify(entry),
+			});
+			if (res.ok) return;
+			lastStatus = res.status;
+			lastErr = new Error(`Supabase insert failed: ${res.status} ${await res.text()}`);
+		} catch (e) {
+			lastErr = e;
+		}
+		if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, 200 * attempt));
+	}
 
-	if (!res.ok) {
-		const body = await res.text();
-		console.error(`Supabase insert failed: ${res.status} ${body}`);
+	// All attempts failed: write to KV durable buffer for later drain.
+	const bufferKey = `pending_log:${crypto.randomUUID()}`;
+	try {
+		await env.AILEDGER_CACHE.put(bufferKey, JSON.stringify(entry), { expirationTtl: 86400 * 7 });
+		console.error(
+			JSON.stringify({
+				event: 'logInference:durable-buffer-write',
+				bufferKey,
+				customerId: supabaseUserId,
+				lastStatus,
+				error: String(lastErr),
+			}),
+		);
+	} catch (kvErr) {
+		// KV itself failed — last-resort log so Logpush captures the dropped entry.
+		console.error(
+			JSON.stringify({
+				event: 'logInference:durable-buffer-failed',
+				customerId: supabaseUserId,
+				lastStatus,
+				supabaseError: String(lastErr),
+				kvError: String(kvErr),
+			}),
+		);
 	}
 }
