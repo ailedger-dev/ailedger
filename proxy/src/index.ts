@@ -721,7 +721,8 @@ async function checkUsageLimit(env: Env, supabaseUserId: string): Promise<boolea
 	});
 	if (subRes.ok) {
 		const subs = (await subRes.json()) as { status: string; plan: string }[];
-		const active = subs.find((s) => s.status === 'active');
+		// past_due intentionally excluded: grace period flips to limit-hit so payment failure surfaces to the customer.
+		const active = subs.find((s) => s.status === 'active' || s.status === 'trialing');
 		if (active) {
 			// Cache paid status for 5 minutes — fire-and-forget
 			env.AILEDGER_CACHE.put(paidCacheKey, 'true', { expirationTtl: 300 });
