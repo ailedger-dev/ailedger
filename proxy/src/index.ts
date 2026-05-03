@@ -568,6 +568,13 @@ export async function sha256jcs(data: ArrayBuffer | null, contentType: string | 
 }
 
 // api_keys.customer_id IS auth.users.id by schema invariant; renamed local var for clarity.
+//
+// Revocation tombstone convention (threat model §6.3): when a key is revoked, the
+// revocation path writes `revoked:${keyHash} = '1'` to KV with a long TTL (≥7 days)
+// BEFORE deleting the api_keys row. The tombstone outlives the positive cache
+// (60s expirationTtl below), so a revoked key is rejected at every PoP even if a
+// stale `key:${keyHash}` entry hasn't expired yet.
+//
 // Exported so tests (see proxy/test/key-rotation.spec.ts) can exercise the
 // cache-vs-DB path directly. Wiring is unchanged.
 export async function resolveApiKey(
@@ -577,6 +584,9 @@ export async function resolveApiKey(
 ): Promise<{ supabaseUserId: string; systemId: string | null } | null> {
 	const keyHash = await sha256hex(apiKey);
 	if (!keyHash) return null;
+
+	const tombstone = await env.AILEDGER_CACHE.get(`revoked:${keyHash}`);
+	if (tombstone) return null;
 
 	// Check KV cache first (~5ms) before hitting Supabase (~150ms)
 	const cacheKey = `key:${keyHash}`;
@@ -598,8 +608,10 @@ export async function resolveApiKey(
 
 	const result = { supabaseUserId: rows[0].customer_id, systemId: rows[0].system_id ?? null };
 
-	// Cache for 5 minutes and update last_used_at — both fire-and-forget
-	ctx.waitUntil(env.AILEDGER_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 300 }));
+	// Cache for 60s (defense-in-depth: faster invalidation than 300s) and update
+	// last_used_at — both fire-and-forget. Revocation tombstone above covers the
+	// window where a key is revoked but a positive cache entry hasn't expired.
+	ctx.waitUntil(env.AILEDGER_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 60 }));
 	ctx.waitUntil(
 		fetch(`${env.SUPABASE_URL}/rest/v1/api_keys?key_hash=eq.${keyHash}`, {
 			method: 'PATCH',
