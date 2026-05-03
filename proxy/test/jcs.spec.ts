@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import fc from "fast-check";
 import canonicalize from "canonicalize";
 import { sha256jcs, isJsonContentType } from "../src";
 
@@ -267,5 +268,42 @@ describe("sha256jcs edge-case guards", () => {
 		const b = await sha256jcs(toAB(reversed), "application/json");
 		expect(a).toBe(b);
 		expect(a).not.toBeNull();
+	});
+});
+
+// ─── PB2: JCS round-trip stability (property-based) ─────────────────────────
+// Property: for any valid JSON value V, JCS(V) === JCS(JSON.parse(JCS(V))).
+// Canonical form is idempotent under parse-and-recanonicalize, so re-encoding
+// a previously canonicalized payload yields byte-identical output. If this
+// ever drifts, downstream chain hashes diverge between encoders.
+
+describe("PB2: JCS round-trip stability (fast-check)", () => {
+	it("canonicalize is idempotent under parse-and-recanonicalize", () => {
+		fc.assert(
+			fc.property(fc.jsonValue(), (v) => {
+				const s1 = canonicalize(v);
+				expect(s1).toBeDefined();
+				const s2 = canonicalize(JSON.parse(s1 as string));
+				expect(s2).toBe(s1);
+			}),
+			{ numRuns: 200 },
+		);
+	});
+
+	it("sha256jcs is stable across one round-trip of canonical text", async () => {
+		// Stronger end-to-end property: hashing the canonical text and hashing
+		// the re-canonicalized form yield identical hashes through the public
+		// sha256jcs entry point (covers the JCS branch and hex encoding).
+		await fc.assert(
+			fc.asyncProperty(fc.jsonValue(), async (v) => {
+				const s1 = canonicalize(v) as string;
+				const s2 = canonicalize(JSON.parse(s1)) as string;
+				const h1 = await sha256jcs(toAB(s1), "application/json");
+				const h2 = await sha256jcs(toAB(s2), "application/json");
+				expect(h1).toBe(h2);
+				expect(h1).not.toBeNull();
+			}),
+			{ numRuns: 100 },
+		);
 	});
 });

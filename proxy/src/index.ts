@@ -461,7 +461,7 @@ async function upsertSubscription(
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function filterHeaders(headers: Headers, drop: string[]): Headers {
+export function filterHeaders(headers: Headers, drop: string[]): Headers {
 	const out = new Headers();
 	headers.forEach((value, key) => {
 		const k = key.toLowerCase();
