@@ -1,0 +1,22 @@
+[Unit]
+Description=AILedger dogfeed drain — ship queued usage events
+Documentation=https://github.com/ailedger-dev/ailedger/blob/main/clients/dogfeed-sidecar/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# %h expands to the user's $HOME.
+ExecStart=%h/gt-lab/bin/dogfeed-drain
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/gt-lab/.dogfeed
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

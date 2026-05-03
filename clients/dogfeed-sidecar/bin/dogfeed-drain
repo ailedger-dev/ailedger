@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+"""dogfeed-drain — ships locally queued usage events to the AILedger proxy.
+
+Reads ~/gt-lab/.dogfeed/queue.jsonl, batches up to 100 events, POSTs each
+batch to ${AILEDGER_PROXY_URL}/v1/events. On success the sent lines are
+truncated. On any failure (5xx, timeout, DNS) the queue is left intact and
+exponential backoff state is updated for the next run.
+
+Sustained failure (>= 24h since last successful POST) fires `notify-phone`
+once with topic `dogfeed-stalled`. The cooldown is recorded so we don't
+re-page on every drain run.
+
+Authority: ai-4vp / ADR-015. Stdlib-only (no pip deps).
+"""
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+QUEUE_DIR = Path(os.environ.get("DOGFEED_QUEUE_DIR", Path.home() / "gt-lab" / ".dogfeed"))
+QUEUE_FILE = QUEUE_DIR / "queue.jsonl"
+STATE_FILE = QUEUE_DIR / "drain.state.json"
+DROPPED_COUNTER = QUEUE_DIR / "dropped.counter"
+SECRETS_FILE = Path(os.environ.get("DOGFEED_SECRETS", Path.home() / "gt-lab" / ".secrets" / "dogfeed.env"))
+
+DEFAULT_PROXY_URL = "https://proxy.ailedger.dev"
+BATCH_SIZE = 100
+QUEUE_HARD_CAP_BYTES = 50 * 1024 * 1024  # 50 MB
+QUEUE_TRIM_BYTES = 10 * 1024 * 1024  # drop oldest 10 MB when over cap
+HTTP_TIMEOUT_S = 20
+NOTIFY_AFTER_S = 24 * 3600
+NOTIFY_COOLDOWN_S = 24 * 3600
+
+
+def _read_secrets() -> dict[str, str]:
+    out: dict[str, str] = {}
+    if not SECRETS_FILE.exists():
+        return out
+    for raw in SECRETS_FILE.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        out[k.strip()] = v.strip().strip('"').strip("'")
+    return out
+
+
+def _load_state() -> dict:
+    if not STATE_FILE.exists():
+        return {}
+    try:
+        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_state(state: dict) -> None:
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = STATE_FILE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(state), encoding="utf-8")
+    tmp.replace(STATE_FILE)
+
+
+def _backoff_active(state: dict) -> bool:
+    next_attempt = state.get("next_attempt_ts", 0)
+    return time.time() < next_attempt
+
+
+def _bump_backoff(state: dict) -> None:
+    delay = min(state.get("backoff_s", 60) * 2, 3600)
+    state["backoff_s"] = max(delay, 60)
+    state["next_attempt_ts"] = time.time() + state["backoff_s"]
+
+
+def _reset_backoff(state: dict) -> None:
+    state["backoff_s"] = 0
+    state["next_attempt_ts"] = 0
+    state["last_success_ts"] = time.time()
+
+
+def _enforce_size_cap() -> None:
+    if not QUEUE_FILE.exists():
+        return
+    size = QUEUE_FILE.stat().st_size
+    if size <= QUEUE_HARD_CAP_BYTES:
+        return
+    # FIFO drop: skip enough leading bytes to bring the file back under
+    # the cap by at least QUEUE_TRIM_BYTES, then realign on the next
+    # newline so we never split a line.
+    drop = max(QUEUE_TRIM_BYTES, size - QUEUE_HARD_CAP_BYTES + QUEUE_TRIM_BYTES)
+    tmp = QUEUE_FILE.with_suffix(".jsonl.trim")
+    dropped_lines = 0
+    with QUEUE_FILE.open("rb") as src:
+        src.seek(drop)
+        # Realign on next newline.
+        rest = src.readline()  # discard partial line
+        if rest:
+            dropped_lines += 1  # the partial line counts as dropped
+        with tmp.open("wb") as dst:
+            shutil.copyfileobj(src, dst)
+    tmp.replace(QUEUE_FILE)
+    # Best-effort dropped counter.
+    try:
+        prev = int(DROPPED_COUNTER.read_text().strip()) if DROPPED_COUNTER.exists() else 0
+    except (OSError, ValueError):
+        prev = 0
+    DROPPED_COUNTER.write_text(str(prev + max(dropped_lines, 1)), encoding="utf-8")
+
+
+def _read_lines() -> list[bytes]:
+    if not QUEUE_FILE.exists():
+        return []
+    with QUEUE_FILE.open("rb") as f:
+        return f.readlines()
+
+
+def _rewrite_lines(lines: list[bytes]) -> None:
+    if not lines:
+        # Truncate.
+        QUEUE_FILE.open("wb").close()
+        return
+    tmp = QUEUE_FILE.with_suffix(".jsonl.write")
+    with tmp.open("wb") as f:
+        f.writelines(lines)
+    tmp.replace(QUEUE_FILE)
+
+
+def _post_batch(url: str, key: str, batch: list[dict]) -> tuple[bool, int | None, str]:
+    body = json.dumps(batch).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "x-ailedger-key": key,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
+            return True, resp.status, resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        # 4xx — schema/auth — client gives up. We treat 4xx as "drop the batch
+        # locally" (do not retry), per bead spec. 5xx — retry.
+        retryable = e.code >= 500
+        return (not retryable), e.code, str(e)
+    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError):
+        return False, None, "network"
+
+
+def _fire_notify_phone() -> None:
+    if shutil.which("notify-phone") is None:
+        return
+    try:
+        subprocess.run(
+            ["notify-phone", "--topic", "dogfeed-stalled", "--message", "dogfeed drain stalled >24h"],
+            check=False,
+            timeout=10,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
+
+
+def _maybe_notify(state: dict) -> None:
+    last_success = state.get("last_success_ts", 0)
+    if last_success == 0:
+        # Never succeeded — start the clock from when this script first ran.
+        state.setdefault("first_attempt_ts", time.time())
+        last_success = state["first_attempt_ts"]
+    if time.time() - last_success < NOTIFY_AFTER_S:
+        return
+    last_notify = state.get("last_notify_ts", 0)
+    if time.time() - last_notify < NOTIFY_COOLDOWN_S:
+        return
+    _fire_notify_phone()
+    state["last_notify_ts"] = time.time()
+
+
+def _alarm_handler(_signum, _frame):  # pragma: no cover
+    raise TimeoutError("global drain timeout")
+
+
+def main() -> int:
+    QUEUE_DIR.mkdir(parents=True, exist_ok=True)
+
+    state = _load_state()
+
+    if _backoff_active(state):
+        return 0
+
+    secrets = _read_secrets()
+    key = os.environ.get("AILEDGER_KEY") or secrets.get("AILEDGER_KEY") or ""
+    base = os.environ.get("AILEDGER_PROXY_URL") or secrets.get("AILEDGER_PROXY_URL") or DEFAULT_PROXY_URL
+    if not key:
+        # Misconfigured — treat as non-fatal. Don't burn backoff budget.
+        return 0
+
+    url = base.rstrip("/") + "/v1/events"
+
+    _enforce_size_cap()
+    lines = _read_lines()
+    if not lines:
+        # Healthy idle: clear backoff.
+        if state.get("backoff_s"):
+            _reset_backoff(state)
+            _save_state(state)
+        return 0
+
+    # Global drain timebox so a misbehaving server can't pin us.
+    if hasattr(signal, "SIGALRM"):
+        signal.signal(signal.SIGALRM, _alarm_handler)
+        signal.alarm(60)
+
+    sent_count = 0
+    try:
+        i = 0
+        while i < len(lines):
+            chunk = lines[i : i + BATCH_SIZE]
+            batch: list[dict] = []
+            for raw in chunk:
+                try:
+                    batch.append(json.loads(raw))
+                except json.JSONDecodeError:
+                    # Drop malformed line — counts as sent so we move past it.
+                    continue
+            if not batch:
+                i += len(chunk)
+                continue
+            ok, status, _detail = _post_batch(url, key, batch)
+            if not ok:
+                # Server problem (5xx / timeout / DNS) — break and rewrite
+                # only the unsent tail.
+                _bump_backoff(state)
+                break
+            # 4xx batches also come back ok=True (we drop them locally per
+            # bead spec) — log via dropped.counter so we can see it.
+            if status is not None and 400 <= status < 500:
+                try:
+                    prev = int(DROPPED_COUNTER.read_text().strip()) if DROPPED_COUNTER.exists() else 0
+                except (OSError, ValueError):
+                    prev = 0
+                DROPPED_COUNTER.write_text(str(prev + len(batch)), encoding="utf-8")
+            sent_count += len(chunk)
+            i += len(chunk)
+        else:
+            # Loop finished without break = full success.
+            _reset_backoff(state)
+    finally:
+        if hasattr(signal, "SIGALRM"):
+            signal.alarm(0)
+
+    remaining = lines[sent_count:]
+    _rewrite_lines(remaining)
+    _maybe_notify(state)
+    _save_state(state)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        rc = main()
+    except Exception:
+        rc = 0
+    sys.exit(rc)

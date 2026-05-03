@@ -66,6 +66,13 @@ export default {
 			return handleSignupHook(request, env);
 		}
 
+		// Route: POST /v1/events — dogfeed sidecar receiver (ai-4vp).
+		// Decoupled from the inference proxy path so a sidecar client outage
+		// can never affect the request-path SLO. See ADR-015.
+		if (url.pathname === '/v1/events') {
+			return handleDogfeedEvents(request, env, ctx);
+		}
+
 		// Route: /proxy/<provider>/<...path>
 		const match = url.pathname.match(/^\/proxy\/([^\/]+)(\/.*)?$/);
 		if (!match) {
@@ -898,4 +905,195 @@ async function logInference({
 			}),
 		);
 	}
+}
+
+// ─── Dogfeed sidecar receiver (ai-4vp / ADR-015) ────────────────────────────
+//
+// Accepts batched usage telemetry from the dogfeed-sidecar client. This is a
+// write-aside path: the client queues events locally and drains here async,
+// so a proxy outage cannot affect Bob's request path. See ADR-015 and
+// memory/feedback_bob_never_on_ailedger_proxy.md.
+
+const DOGFEED_MAX_BATCH = 100;
+const DOGFEED_MAX_BYTES = 256 * 1024;
+const DOGFEED_DEDUPE_TTL_S = 7 * 86400;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Lightweight ISO 8601 check — the canonical Z/+/- form Python isoformat()
+// emits. Strict enough to reject obvious garbage; not a full grammar.
+const ISO8601_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
+
+interface DogfeedEvent {
+	event_id: string;
+	ts: string;
+	model: string;
+	input_tokens: number;
+	output_tokens: number;
+	latency_ms: number;
+	tool_name?: string;
+	source: string;
+}
+
+interface DogfeedRejection {
+	event_id: string | null;
+	reason: string;
+}
+
+function validateDogfeedEvent(raw: unknown): { ok: true; ev: DogfeedEvent } | { ok: false; reason: string; event_id: string | null } {
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+		return { ok: false, reason: 'event must be a JSON object', event_id: null };
+	}
+	const r = raw as Record<string, unknown>;
+	const event_id = typeof r.event_id === 'string' ? r.event_id : null;
+	if (!event_id || !UUID_RE.test(event_id)) return { ok: false, reason: 'event_id must be a uuid', event_id };
+	if (typeof r.ts !== 'string' || !ISO8601_RE.test(r.ts)) return { ok: false, reason: 'ts must be ISO8601', event_id };
+	if (typeof r.model !== 'string' || !r.model) return { ok: false, reason: 'model must be non-empty string', event_id };
+	for (const field of ['input_tokens', 'output_tokens', 'latency_ms'] as const) {
+		const v = r[field];
+		if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) {
+			return { ok: false, reason: `${field} must be non-negative integer`, event_id };
+		}
+	}
+	if (r.tool_name !== undefined && typeof r.tool_name !== 'string') {
+		return { ok: false, reason: 'tool_name must be string when present', event_id };
+	}
+	if (typeof r.source !== 'string' || !r.source) return { ok: false, reason: 'source must be non-empty string', event_id };
+	return {
+		ok: true,
+		ev: {
+			event_id,
+			ts: r.ts,
+			model: r.model,
+			input_tokens: r.input_tokens as number,
+			output_tokens: r.output_tokens as number,
+			latency_ms: r.latency_ms as number,
+			tool_name: r.tool_name as string | undefined,
+			source: r.source,
+		},
+	};
+}
+
+async function handleDogfeedEvents(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	if (request.method !== 'POST') {
+		return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+			status: 405,
+			headers: { 'Content-Type': 'application/json', Allow: 'POST' },
+		});
+	}
+
+	const apiKey = request.headers.get('x-ailedger-key');
+	if (!apiKey) {
+		return new Response(JSON.stringify({ error: 'Missing x-ailedger-key header' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const resolved = await resolveApiKey(env, apiKey, ctx);
+	if (!resolved) {
+		return new Response(JSON.stringify({ error: 'Invalid API key' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	const { supabaseUserId } = resolved;
+
+	const raw = await request.arrayBuffer();
+	if (raw.byteLength > DOGFEED_MAX_BYTES) {
+		return new Response(JSON.stringify({ error: `batch exceeds ${DOGFEED_MAX_BYTES} bytes` }), {
+			status: 413,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(new TextDecoder().decode(raw));
+	} catch {
+		return new Response(JSON.stringify({ error: 'body must be valid JSON' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	if (!Array.isArray(parsed)) {
+		return new Response(JSON.stringify({ error: 'body must be a JSON array of events' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	if (parsed.length > DOGFEED_MAX_BATCH) {
+		return new Response(JSON.stringify({ error: `batch exceeds ${DOGFEED_MAX_BATCH} events` }), {
+			status: 413,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const rejected: DogfeedRejection[] = [];
+	const valid: DogfeedEvent[] = [];
+	for (const item of parsed) {
+		const v = validateDogfeedEvent(item);
+		if (v.ok) valid.push(v.ev);
+		else rejected.push({ event_id: v.event_id, reason: v.reason });
+	}
+
+	// Idempotency: dedupe by (tenant_id, event_id) within last 7 days via KV.
+	// A KV miss → insert. A KV hit → already accepted; skip the storage write
+	// but still report it as accepted so the client's retry succeeds.
+	const toInsert: DogfeedEvent[] = [];
+	for (const ev of valid) {
+		const key = `dogfeed_evt:${supabaseUserId}:${ev.event_id}`;
+		const seen = await env.AILEDGER_CACHE.get(key);
+		if (seen) continue;
+		toInsert.push(ev);
+	}
+
+	if (toInsert.length > 0) {
+		const rows = toInsert.map((ev) => ({
+			tenant_id: supabaseUserId,
+			event_id: ev.event_id,
+			ts: ev.ts,
+			model: ev.model,
+			input_tokens: ev.input_tokens,
+			output_tokens: ev.output_tokens,
+			latency_ms: ev.latency_ms,
+			tool_name: ev.tool_name ?? null,
+			source: ev.source,
+		}));
+
+		const res = await fetch(`${env.SUPABASE_URL}/rest/v1/dogfeed_events`, {
+			method: 'POST',
+			headers: {
+				apikey: env.SUPABASE_SERVICE_KEY,
+				Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+				'Content-Type': 'application/json',
+				'Content-Profile': 'ledger',
+				// ignore-duplicates handles the race where a concurrent batch
+				// got past KV before we wrote the marker — Postgres unique
+				// (tenant_id, event_id) index turns it into a no-op.
+				Prefer: 'resolution=ignore-duplicates,return=minimal',
+			},
+			body: JSON.stringify(rows),
+		});
+
+		if (!res.ok) {
+			const body = await res.text();
+			console.error('dogfeed:storage-failed', { status: res.status, body, attempted: toInsert.length });
+			return new Response(JSON.stringify({ error: 'storage failed; please retry' }), {
+				status: 500,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}
+
+		// Write dedupe markers fire-and-forget. A marker miss just means a
+		// retry hits Postgres' uniqueness check instead of KV — still correct.
+		for (const ev of toInsert) {
+			const key = `dogfeed_evt:${supabaseUserId}:${ev.event_id}`;
+			ctx.waitUntil(env.AILEDGER_CACHE.put(key, '1', { expirationTtl: DOGFEED_DEDUPE_TTL_S }));
+		}
+	}
+
+	return new Response(JSON.stringify({ accepted: valid.length, rejected }), {
+		status: 200,
+		headers: { 'Content-Type': 'application/json' },
+	});
 }
