@@ -659,14 +659,19 @@ async function checkUsageLimit(env: Env, supabaseUserId: string): Promise<boolea
 			'Accept-Profile': 'ledger',
 		},
 	});
-	if (subRes.ok) {
-		const subs = (await subRes.json()) as { status: string; plan: string }[];
-		const active = subs.find((s) => s.status === 'active');
-		if (active) {
-			// Cache paid status for 5 minutes — fire-and-forget
-			env.AILEDGER_CACHE.put(paidCacheKey, 'true', { expirationTtl: 300 });
-			return false;
-		}
+	if (!subRes.ok) {
+		console.error('checkUsageLimit:paid-status-query-failed', { supabaseUserId, status: subRes.status });
+		// Fail in customer's favor: if last-known-good cache had paid status, honor it
+		if ((await env.AILEDGER_CACHE.get(paidCacheKey)) === 'true') return false;
+		// Otherwise, soft-fail: return false (do not block) but log for ops
+		return false;
+	}
+	const subs = (await subRes.json()) as { status: string; plan: string }[];
+	const active = subs.find((s) => s.status === 'active');
+	if (active) {
+		// Cache paid status for 5 minutes — fire-and-forget
+		env.AILEDGER_CACHE.put(paidCacheKey, 'true', { expirationTtl: 300 });
+		return false;
 	}
 
 	// Free tier: count this month's inferences
@@ -688,7 +693,12 @@ async function checkUsageLimit(env: Env, supabaseUserId: string): Promise<boolea
 		},
 	);
 
-	if (!countRes.ok) return false; // fail open
+	if (!countRes.ok) {
+		console.error('checkUsageLimit:count-query-failed', { supabaseUserId, status: countRes.status });
+		// Short-lived KV breaker: write usage_limit_degraded=1 with TTL 60s for ops monitoring
+		env.AILEDGER_CACHE.put('usage_limit_degraded', '1', { expirationTtl: 60 });
+		return false; // still fail open in customer favor; alert path handles ops side
+	}
 
 	const contentRange = countRes.headers.get('content-range');
 	const total = contentRange ? parseInt(contentRange.split('/')[1] ?? '0', 10) : 0;
