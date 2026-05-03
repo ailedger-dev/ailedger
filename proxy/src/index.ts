@@ -723,6 +723,11 @@ async function checkUsageLimit(env: Env, supabaseUserId: string): Promise<boolea
 			env.AILEDGER_CACHE.put(paidCacheKey, 'true', { expirationTtl: 300 });
 			return false;
 		}
+	} else {
+		// Paid-status query failed (Supabase 5xx). Closes threat model §6.4.
+		// Honor last-known-good cache if present; otherwise fall through to free-tier counting.
+		console.error('checkUsageLimit:paid-status-query-failed', { supabaseUserId, status: subRes.status });
+		if ((await env.AILEDGER_CACHE.get(paidCacheKey)) === 'true') return false;
 	}
 
 	// Free tier: count this month's inferences
@@ -744,7 +749,14 @@ async function checkUsageLimit(env: Env, supabaseUserId: string): Promise<boolea
 		},
 	);
 
-	if (!countRes.ok) return false; // fail open
+	if (!countRes.ok) {
+		// Closes threat model §6.4. Still fail-open in customer favor; signal degradation
+		// to ops via console.error + a short-lived KV breaker (`usage_limit_degraded`)
+		// that an external monitor can scrape via /health.
+		console.error('checkUsageLimit:count-query-failed', { supabaseUserId, status: countRes.status });
+		env.AILEDGER_CACHE.put('usage_limit_degraded', '1', { expirationTtl: 60 });
+		return false;
+	}
 
 	const contentRange = countRes.headers.get('content-range');
 	const total = contentRange ? parseInt(contentRange.split('/')[1] ?? '0', 10) : 0;
