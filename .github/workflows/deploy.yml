@@ -103,6 +103,10 @@ jobs:
       # wrangler-action@v3 defaults to wrangler@3.90, which ignores `env:` blocks
       # in wrangler.jsonc (only wrangler.toml was supported for envs in v3). Every
       # worker here uses jsonc + env.staging, so pin to wrangler@4.x.
+      # JCS canary (threat model §6.8): runs in the same install context as
+      # the deploy that follows, so a broken node_modules (the 2026-04-29
+      # outage cause) blocks the deploy instead of shipping a chain that
+      # silently forks future hashes.
       - name: proxy — wrangler deploy --env staging
         uses: cloudflare/wrangler-action@v3
         with:
@@ -110,6 +114,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.84.1'
           workingDirectory: proxy
+          preCommands: npm run canary
           command: deploy --env staging
 
       - name: onboard-auth — wrangler deploy --env staging
@@ -154,6 +159,7 @@ jobs:
         with:
           node-version: '20'
 
+      # JCS canary (threat model §6.8) — see staging job for context.
       - name: proxy — wrangler deploy (prod)
         uses: cloudflare/wrangler-action@v3
         with:
@@ -161,6 +167,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.84.1'
           workingDirectory: proxy
+          preCommands: npm run canary
           command: deploy
 
       - name: onboard-auth — wrangler deploy (prod)
