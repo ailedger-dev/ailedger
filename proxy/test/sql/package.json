@@ -1,0 +1,13 @@
+{
+  "name": "ailedger-proxy-sql-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "T3+T4 SQL-side tests for the tamper-evident chain. Runs against a real Postgres — see README.md.",
+  "scripts": {
+    "test": "node --test --test-reporter=spec ./*.spec.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
