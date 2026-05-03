@@ -155,7 +155,7 @@ afterEach(() => {
 
 describe('T7: checkUsageLimit — paid-tier bypass', () => {
 	it('active subscription → no limit (request reaches upstream)', async () => {
-		const apiKey = 'agl_sk_t7_active';
+		const apiKey = 'test_sk_t7_active';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e1';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
@@ -167,7 +167,7 @@ describe('T7: checkUsageLimit — paid-tier bypass', () => {
 	});
 
 	it('trialing subscription → no limit (regression guard for M1 fix in 12d79c7)', async () => {
-		const apiKey = 'agl_sk_t7_trialing';
+		const apiKey = 'test_sk_t7_trialing';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e2';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
@@ -186,7 +186,7 @@ describe('T7: checkUsageLimit — past_due policy (documented decision)', () => 
 		// flips to free-tier counting. With count < 10k, the customer keeps
 		// service; once they cross 10k the next test path takes over and
 		// they get a 429, which surfaces the payment failure.
-		const apiKey = 'agl_sk_t7_past_due';
+		const apiKey = 'test_sk_t7_past_due';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e3';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
@@ -201,7 +201,7 @@ describe('T7: checkUsageLimit — past_due policy (documented decision)', () => 
 
 describe('T7: checkUsageLimit — free-tier 10k cap', () => {
 	it('free user with usage < 10k → no limit', async () => {
-		const apiKey = 'agl_sk_t7_free_under';
+		const apiKey = 'test_sk_t7_free_under';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e4';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
@@ -214,7 +214,7 @@ describe('T7: checkUsageLimit — free-tier 10k cap', () => {
 	});
 
 	it('free user with usage ≥ 10k → 429 limit hit', async () => {
-		const apiKey = 'agl_sk_t7_free_at';
+		const apiKey = 'test_sk_t7_free_at';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e5';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
@@ -229,7 +229,7 @@ describe('T7: checkUsageLimit — free-tier 10k cap', () => {
 	});
 
 	it('free user with usage well over 10k → 429 limit hit', async () => {
-		const apiKey = 'agl_sk_t7_free_over';
+		const apiKey = 'test_sk_t7_free_over';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e6';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
@@ -248,7 +248,7 @@ describe('T7: checkUsageLimit — Supabase outage fail-open (cost-amp risk)', ()
 		// flips this to fail-closed (return true on Supabase outage), this
 		// assertion will start failing on purpose — that's the signal to
 		// re-baseline the test alongside the policy change.
-		const apiKey = 'agl_sk_t7_supa_5xx';
+		const apiKey = 'test_sk_t7_supa_5xx';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e7';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
@@ -261,7 +261,7 @@ describe('T7: checkUsageLimit — Supabase outage fail-open (cost-amp risk)', ()
 	});
 
 	it('paid-status query 503 + count query 200 with low count → fail open (200)', async () => {
-		const apiKey = 'agl_sk_t7_supa_paid_5xx';
+		const apiKey = 'test_sk_t7_supa_paid_5xx';
 		const supabaseUserId = '00000000-0000-4000-8000-00000000a7e8';
 		await seedKey({ apiKey, supabaseUserId });
 		stubGlobalFetchForUsage({
