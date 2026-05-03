@@ -383,6 +383,10 @@ async function verifyStripeSignature(payload: string, sig: string, secret: strin
 		const timestamp = parts['t'];
 		const v1 = parts['v1'];
 		if (!timestamp || !v1) return null;
+		// Guard against NaN bypass — Number('abc') is NaN, NaN > 300 is false,
+		// so a malformed t= would slip past the freshness check below. Closes
+		// correctness M5 from convoy review 2026-05-03.
+		if (!/^\d+$/.test(timestamp)) return null;
 
 		const signed = `${timestamp}.${payload}`;
 		const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
