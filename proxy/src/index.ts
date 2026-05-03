@@ -99,10 +99,10 @@ export default {
 		// ─── Usage limit check (free tier: 10k/month) ───────────────────────
 		const limitHit = await checkUsageLimit(env, customerId);
 		if (limitHit) {
-			return new Response(
-				JSON.stringify({ error: 'Monthly inference limit reached. Upgrade at https://dash.ailedger.dev/billing' }),
-				{ status: 429, headers: { 'Content-Type': 'application/json' } }
-			);
+			return new Response(JSON.stringify({ error: 'Monthly inference limit reached. Upgrade at https://dash.ailedger.dev/billing' }), {
+				status: 429,
+				headers: { 'Content-Type': 'application/json' },
+			});
 		}
 
 		let upstreamPath = match[2] ?? '/';
@@ -121,9 +121,18 @@ export default {
 		// OpenAI's abuse detection blocks requests that carry the Python/Node SDK
 		// user-agent and x-stainless-* headers from datacenter IPs.
 		const forwardHeaders = filterHeaders(request.headers, [
-			'host', 'cf-connecting-ip', 'cf-ray', 'x-forwarded-for', 'x-ailedger-key',
-			'user-agent', 'x-stainless-lang', 'x-stainless-package-version',
-			'x-stainless-runtime', 'x-stainless-runtime-version', 'x-stainless-os', 'x-stainless-arch',
+			'host',
+			'cf-connecting-ip',
+			'cf-ray',
+			'x-forwarded-for',
+			'x-ailedger-key',
+			'user-agent',
+			'x-stainless-lang',
+			'x-stainless-package-version',
+			'x-stainless-runtime',
+			'x-stainless-runtime-version',
+			'x-stainless-os',
+			'x-stainless-arch',
 		]);
 
 		const upstreamRequest = new Request(upstreamUrl, {
@@ -158,7 +167,7 @@ export default {
 				completedAt,
 				customerId,
 				systemId,
-			})
+			}),
 		);
 
 		return new Response(responseBody, {
@@ -191,7 +200,10 @@ async function handleCreateCheckoutSession(request: Request, env: Env): Promise<
 	// Verify Supabase JWT
 	const authHeader = request.headers.get('Authorization');
 	if (!authHeader?.startsWith('Bearer ')) {
-		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+			status: 401,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
 	const token = authHeader.slice(7);
 
@@ -202,14 +214,20 @@ async function handleCreateCheckoutSession(request: Request, env: Env): Promise<
 		},
 	});
 	if (!userRes.ok) {
-		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+			status: 401,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
-	const user = await userRes.json() as { id: string; email: string };
+	const user = (await userRes.json()) as { id: string; email: string };
 
-	const body = await request.json() as { price_key: string };
+	const body = (await request.json()) as { price_key: string };
 	const priceId = PRICE_IDS[body.price_key];
 	if (!priceId) {
-		return new Response(JSON.stringify({ error: 'Invalid price' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'Invalid price' }), {
+			status: 400,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
 
 	// Create Stripe Checkout session
@@ -238,10 +256,13 @@ async function handleCreateCheckoutSession(request: Request, env: Env): Promise<
 	if (!stripeRes.ok) {
 		const err = await stripeRes.text();
 		console.error(`Stripe checkout error: ${stripeRes.status} ${err}`);
-		return new Response(JSON.stringify({ error: 'Failed to create checkout session' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'Failed to create checkout session' }), {
+			status: 500,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
 
-	const session = await stripeRes.json() as { url: string };
+	const session = (await stripeRes.json()) as { url: string };
 	return new Response(JSON.stringify({ url: session.url }), {
 		headers: { ...cors, 'Content-Type': 'application/json' },
 	});
@@ -259,7 +280,10 @@ async function handleBillingPortal(request: Request, env: Env): Promise<Response
 
 	const authHeader = request.headers.get('Authorization');
 	if (!authHeader?.startsWith('Bearer ')) {
-		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+			status: 401,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
 	const token = authHeader.slice(7);
 
@@ -270,25 +294,28 @@ async function handleBillingPortal(request: Request, env: Env): Promise<Response
 		},
 	});
 	if (!userRes.ok) {
-		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+			status: 401,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
-	const user = await userRes.json() as { id: string };
+	const user = (await userRes.json()) as { id: string };
 
 	// Look up stripe_customer_id from subscriptions table
-	const subRes = await fetch(
-		`${env.SUPABASE_URL}/rest/v1/subscriptions?supabase_user_id=eq.${user.id}&select=stripe_customer_id`,
-		{
-			headers: {
-				apikey: env.SUPABASE_SERVICE_KEY,
-				Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-				'Accept-Profile': 'ledger',
-			},
-		}
-	);
+	const subRes = await fetch(`${env.SUPABASE_URL}/rest/v1/subscriptions?supabase_user_id=eq.${user.id}&select=stripe_customer_id`, {
+		headers: {
+			apikey: env.SUPABASE_SERVICE_KEY,
+			Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+			'Accept-Profile': 'ledger',
+		},
+	});
 
-	const rows = await subRes.json() as { stripe_customer_id: string }[];
+	const rows = (await subRes.json()) as { stripe_customer_id: string }[];
 	if (!rows.length) {
-		return new Response(JSON.stringify({ error: 'No subscription found' }), { status: 404, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'No subscription found' }), {
+			status: 404,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
 
 	const params = new URLSearchParams({
@@ -308,10 +335,13 @@ async function handleBillingPortal(request: Request, env: Env): Promise<Response
 	if (!portalRes.ok) {
 		const err = await portalRes.text();
 		console.error(`Stripe portal error: ${portalRes.status} ${err}`);
-		return new Response(JSON.stringify({ error: 'Failed to create portal session' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } });
+		return new Response(JSON.stringify({ error: 'Failed to create portal session' }), {
+			status: 500,
+			headers: { ...cors, 'Content-Type': 'application/json' },
+		});
 	}
 
-	const session = await portalRes.json() as { url: string };
+	const session = (await portalRes.json()) as { url: string };
 	return new Response(JSON.stringify({ url: session.url }), {
 		headers: { ...cors, 'Content-Type': 'application/json' },
 	});
@@ -336,11 +366,7 @@ async function handleStripeWebhook(request: Request, env: Env, ctx: ExecutionCon
 	});
 }
 
-async function verifyStripeSignature(
-	payload: string,
-	sig: string,
-	secret: string,
-): Promise<Record<string, unknown> | null> {
+async function verifyStripeSignature(payload: string, sig: string, secret: string): Promise<Record<string, unknown> | null> {
 	try {
 		const parts = Object.fromEntries(sig.split(',').map((p) => p.split('=')));
 		const timestamp = parts['t'];
@@ -348,13 +374,7 @@ async function verifyStripeSignature(
 		if (!timestamp || !v1) return null;
 
 		const signed = `${timestamp}.${payload}`;
-		const key = await crypto.subtle.importKey(
-			'raw',
-			new TextEncoder().encode(secret),
-			{ name: 'HMAC', hash: 'SHA-256' },
-			false,
-			['sign'],
-		);
+		const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
 		const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signed));
 		const computed = Array.from(new Uint8Array(mac))
 			.map((b) => b.toString(16).padStart(2, '0'))
@@ -454,9 +474,7 @@ function filterHeaders(headers: Headers, drop: string[]): Headers {
 
 async function sha256hex(data: ArrayBuffer | null | string): Promise<string | null> {
 	if (!data) return null;
-	const buf = typeof data === 'string'
-		? new TextEncoder().encode(data)
-		: new Uint8Array(data);
+	const buf = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
 	if (buf.byteLength === 0) return null;
 	const hashBuffer = await crypto.subtle.digest('SHA-256', buf);
 	return Array.from(new Uint8Array(hashBuffer))
@@ -492,10 +510,7 @@ export function isJsonContentType(contentType: string | null | undefined): boole
 	return ct === 'application/json' || ct.endsWith('+json');
 }
 
-export async function sha256jcs(
-	data: ArrayBuffer | null,
-	contentType: string | null,
-): Promise<string | null> {
+export async function sha256jcs(data: ArrayBuffer | null, contentType: string | null): Promise<string | null> {
 	if (!data) return null;
 	const buf = new Uint8Array(data);
 	if (buf.byteLength === 0) return null;
@@ -519,29 +534,30 @@ export async function sha256jcs(
 	return sha256hex(data);
 }
 
-async function resolveApiKey(env: Env, apiKey: string, ctx: ExecutionContext): Promise<{ customerId: string; systemId: string | null } | null> {
+async function resolveApiKey(
+	env: Env,
+	apiKey: string,
+	ctx: ExecutionContext,
+): Promise<{ customerId: string; systemId: string | null } | null> {
 	const keyHash = await sha256hex(apiKey);
 	if (!keyHash) return null;
 
 	// Check KV cache first (~5ms) before hitting Supabase (~150ms)
 	const cacheKey = `key:${keyHash}`;
-	const cached = await env.AILEDGER_CACHE.get(cacheKey, 'json') as { customerId: string; systemId: string | null } | null;
+	const cached = (await env.AILEDGER_CACHE.get(cacheKey, 'json')) as { customerId: string; systemId: string | null } | null;
 	if (cached) return cached;
 
-	const res = await fetch(
-		`${env.SUPABASE_URL}/rest/v1/api_keys?key_hash=eq.${keyHash}&select=customer_id,system_id`,
-		{
-			headers: {
-				apikey: env.SUPABASE_SERVICE_KEY,
-				Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-				'Accept-Profile': 'ledger',
-			},
-		}
-	);
+	const res = await fetch(`${env.SUPABASE_URL}/rest/v1/api_keys?key_hash=eq.${keyHash}&select=customer_id,system_id`, {
+		headers: {
+			apikey: env.SUPABASE_SERVICE_KEY,
+			Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+			'Accept-Profile': 'ledger',
+		},
+	});
 
 	if (!res.ok) return null;
 
-	const rows = await res.json() as { customer_id: string; system_id: string | null }[];
+	const rows = (await res.json()) as { customer_id: string; system_id: string | null }[];
 	if (!rows.length) return null;
 
 	const result = { customerId: rows[0].customer_id, systemId: rows[0].system_id ?? null };
@@ -559,7 +575,7 @@ async function resolveApiKey(env: Env, apiKey: string, ctx: ExecutionContext): P
 				Prefer: 'return=minimal',
 			},
 			body: JSON.stringify({ last_used_at: new Date().toISOString() }),
-		})
+		}),
 	);
 
 	return result;
@@ -575,15 +591,13 @@ async function verifyStandardWebhook(request: Request, secret: string, bodyText:
 
 		// Secret is "v1,whsec_<base64>" — extract the base64 part
 		const base64Secret = secret.replace(/^v1,whsec_/, '');
-		const secretBytes = Uint8Array.from(atob(base64Secret), c => c.charCodeAt(0));
+		const secretBytes = Uint8Array.from(atob(base64Secret), (c) => c.charCodeAt(0));
 
-		const key = await crypto.subtle.importKey(
-			'raw', secretBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-		);
+		const key = await crypto.subtle.importKey('raw', secretBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
 		const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedContent));
 		const computedSig = 'v1,' + btoa(String.fromCharCode(...new Uint8Array(sig)));
 
-		return msgSignature.split(' ').some(s => s === computedSig);
+		return msgSignature.split(' ').some((s) => s === computedSig);
 	} catch {
 		return false;
 	}
@@ -591,7 +605,6 @@ async function verifyStandardWebhook(request: Request, secret: string, bodyText:
 
 async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 	const bodyText = await request.text();
-	console.log('Signup hook payload:', bodyText);
 
 	const valid = await verifyStandardWebhook(request, env.SUPABASE_HOOK_SECRET, bodyText);
 	if (!valid) {
@@ -600,7 +613,6 @@ async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 	}
 
 	const body = JSON.parse(bodyText) as Record<string, any>;
-	console.log('Signup hook parsed body:', JSON.stringify(body));
 
 	const email: string | null = body?.user?.email ?? body?.record?.email ?? body?.email ?? null;
 	const meta = body?.user?.user_metadata ?? body?.record?.raw_user_meta_data ?? {};
@@ -625,7 +637,7 @@ async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 	// Email send paths (welcome / password-reset) removed 2026-04-30 per Jake universal directive
 	// — Google-only email stack. Will be reintroduced via Gmail API once Workspace lands.
 	// See memory/feedback_email_stack_google_only.md.
-	console.log(`signup-hook: email suppressed (action=${actionType}) for ${email}; magicLink=${magicLink}`);
+	console.log('signup-hook', { actionType, hasEmail: !!email, hasToken: !!tokenHash });
 
 	return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
 }
@@ -637,18 +649,15 @@ async function checkUsageLimit(env: Env, customerId: string): Promise<boolean> {
 	if (isPaidCached === 'true') return false;
 
 	// Check subscription plan
-	const subRes = await fetch(
-		`${env.SUPABASE_URL}/rest/v1/subscriptions?supabase_user_id=eq.${customerId}&select=status,plan`,
-		{
-			headers: {
-				apikey: env.SUPABASE_SERVICE_KEY,
-				Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-				'Accept-Profile': 'ledger',
-			},
-		}
-	);
+	const subRes = await fetch(`${env.SUPABASE_URL}/rest/v1/subscriptions?supabase_user_id=eq.${customerId}&select=status,plan`, {
+		headers: {
+			apikey: env.SUPABASE_SERVICE_KEY,
+			Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+			'Accept-Profile': 'ledger',
+		},
+	});
 	if (subRes.ok) {
-		const subs = await subRes.json() as { status: string; plan: string }[];
+		const subs = (await subRes.json()) as { status: string; plan: string }[];
 		const active = subs.find((s) => s.status === 'active');
 		if (active) {
 			// Cache paid status for 5 minutes — fire-and-forget
@@ -673,7 +682,7 @@ async function checkUsageLimit(env: Env, customerId: string): Promise<boolean> {
 				'Range-Unit': 'items',
 				Range: '0-0',
 			},
-		}
+		},
 	);
 
 	if (!countRes.ok) return false; // fail open
