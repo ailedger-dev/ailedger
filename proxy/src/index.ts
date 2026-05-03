@@ -651,7 +651,7 @@ async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 	}
 
-	const body = JSON.parse(bodyText) as Record<string, unknown>;
+	const body = JSON.parse(bodyText) as Record<string, any>;
 
 	const email: string | null = body?.user?.email ?? body?.record?.email ?? body?.email ?? null;
 	const meta = body?.user?.user_metadata ?? body?.record?.raw_user_meta_data ?? {};
