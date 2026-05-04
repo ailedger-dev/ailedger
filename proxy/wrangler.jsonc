@@ -30,7 +30,7 @@
 		// (no pending entries) cost ~1 KV list op = negligible.
 		"crons": ["*/5 * * * *"]
 	},
-	"placement": { "mode": "smart" },
+	// "placement": { "mode": "smart" },  // TEMP DISABLED 2026-05-04 — testing 1101 hypothesis on custom-domain. Restore if test inconclusive.
 	"kv_namespaces": [
 		{ "binding": "AILEDGER_CACHE", "id": "993c05bf26ef4ac8a7f1d11b557d2d80" }
 	],
