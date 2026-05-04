@@ -521,7 +521,7 @@ function FAQ() {
     },
     {
       q: 'Does AILedger add latency to my AI calls?',
-      a: 'The proxy hop adds 150-300ms on average via Cloudflare\'s global edge network — within the variance LLM responses already produce. Database writes happen asynchronously after your response returns; your application never waits on logging to finish.',
+      a: 'The proxy hop adds 150-300ms on average via Cloudflare\'s global edge network — within the variance LLM responses already produce. The audit record is durably committed to a write-buffer before your response returns (sub-20ms KV write); the database ingest then happens asynchronously. Your application never waits on database logging to finish, and the audit record cannot be lost if the database is briefly unavailable.',
     },
     {
       q: 'Which AI providers are supported?',
@@ -1060,7 +1060,7 @@ puts(computed == stored_hash ? 'verified ✓' : 'MISMATCH ✗')
     ],
     [
       'Rows missing from the dashboard',
-      "Logging is fire-and-forget on a Cloudflare waitUntil() background task — usually visible within a second or two of the response. If a row is missing for more than a minute, it almost always means the upstream call itself errored before reaching us (DNS failure on your end, SDK retry without going through the proxy URL).",
+      "Audit records are durably committed to an edge write-buffer before your response returns, then drained to the queryable ledger asynchronously. Most rows are visible within a second or two; in the rare case of transient database unavailability, the scheduled drain (every 5 min) catches stragglers. If a row is missing for more than 10 minutes, the upstream call itself almost certainly errored before reaching us (DNS failure on your end, SDK retry bypassing the proxy URL).",
     ],
   ]
 
