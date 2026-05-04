@@ -30,10 +30,16 @@ const PROVIDERS: Record<string, string> = {
 };
 
 export default {
-	async scheduled(_event: ScheduledEvent, _env: Env, _ctx: ExecutionContext): Promise<void> {
-		// Drip email sequences removed 2026-04-30 (Jake universal directive — Google-only email stack).
-		// Will be reintroduced via Gmail API once Google Workspace is provisioned for ailedger.dev.
-		// See memory/feedback_email_stack_google_only.md.
+	async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+		// Drain stale pending_log:* entries from KV durable buffer back into
+		// Supabase. Closes the worker-crash-mid-flight gap (whiteboard 2026-04-27
+		// side B "FORWARD-BEFORE-DUR-WRITE unmitigated"; threat model §6.1).
+		//
+		// Entries land in KV when (a) the inline drain attempt failed, OR
+		// (b) the worker isolate was evicted between persistDurable() and
+		// the ctx.waitUntil(tryDrainOne) completing. Either way the entry is
+		// safe in KV with a 7-day TTL and this scheduled handler retries.
+		ctx.waitUntil(drainPendingLogs(env));
 	},
 
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -157,25 +163,37 @@ export default {
 		const responseBody = await upstreamResponse.arrayBuffer();
 		const responseContentType = upstreamResponse.headers.get('content-type');
 
-		// Log async — never block the response
-		ctx.waitUntil(
-			logInference({
-				env,
-				provider: providerKey,
-				method: request.method,
-				path: upstreamPath,
-				requestBody,
-				requestContentType,
-				responseBody,
-				responseContentType,
-				statusCode: upstreamResponse.status,
-				latencyMs,
-				startedAt,
-				completedAt,
-				supabaseUserId,
-				systemId,
-			}),
-		);
+		// Build the log entry and synchronously persist to the KV durable
+		// buffer BEFORE returning the response to the customer. This closes
+		// the "forward-before-durable-write" failure mode (whiteboard
+		// 2026-04-27 side B; threat model §6.1) — by the time the customer
+		// sees a response, the audit intent is committed to KV with a 7-day
+		// TTL, and survives worker isolate eviction or crash.
+		//
+		// KV.put to the local edge typically completes in single-digit ms;
+		// the trade is a small latency add for an absolute durability
+		// guarantee on the audit trail.
+		//
+		// The Supabase insert itself remains fire-and-forget via waitUntil:
+		// success deletes the KV entry, failure leaves it for the scheduled
+		// drain (every 5 min, see wrangler.jsonc cron + scheduled handler).
+		const entry = await buildLogEntry({
+			provider: providerKey,
+			method: request.method,
+			path: upstreamPath,
+			requestBody,
+			requestContentType,
+			responseBody,
+			responseContentType,
+			statusCode: upstreamResponse.status,
+			latencyMs,
+			startedAt,
+			completedAt,
+			supabaseUserId,
+			systemId,
+		});
+		const bufferKey = await persistDurable(env, entry);
+		ctx.waitUntil(tryDrainOne(env, bufferKey, entry));
 
 		return new Response(responseBody, {
 			status: upstreamResponse.status,
@@ -780,8 +798,50 @@ async function checkUsageLimit(env: Env, supabaseUserId: string): Promise<boolea
 // Prior implementation: runDripEmails (paginated user fetch + day-3/day-7 windowing + Resend send).
 // See memory/feedback_email_stack_google_only.md and feedback_jake_ailedger_send_as_broken.md.
 
-async function logInference({
-	env,
+// ─── Audit-record path: buildLogEntry → persistDurable → tryDrainOne ────────
+//
+// Architecture (whiteboard 2026-04-27 side B fix; threat model §6.1):
+//
+//   1. fetch handler builds the entry and synchronously persists it to the
+//      KV durable buffer BEFORE returning the response. By the time the
+//      customer sees a response, the audit intent is durably committed.
+//   2. fetch handler dispatches an immediate drain attempt via waitUntil.
+//      On success, the KV entry is deleted; on failure it stays in KV.
+//   3. Scheduled worker (every 5 min, see wrangler.jsonc) drains stale
+//      pending_log:* entries with bounded retry + age-threshold alerting.
+//
+// Failure-mode coverage:
+//   - Supabase 5xx during inline drain: entry stays in KV → scheduled drain.
+//   - Worker isolate evicted between persistDurable and waitUntil completing:
+//     entry stays in KV → scheduled drain.
+//   - KV itself fails: last-resort console.error so Logpush captures the
+//     intent + content for manual recovery. Customer still gets the response;
+//     audit-record loss is the catastrophic-but-bounded fallback.
+//
+// Idempotency note: if Supabase insert succeeds but KV.delete fails, the
+// scheduled drain may re-insert. Result is a duplicate audit row (detectable
+// in audit; chain remains internally consistent because the BEFORE INSERT
+// trigger constructs chain_prev_hash from whatever the actual predecessor
+// is at insert time). False-positive (duplicate) is far less harmful than
+// false-negative (missing entry) for tamper-evidence guarantees.
+
+interface LogEntry {
+	customer_id: string;
+	system_id: string | null;
+	provider: string;
+	model_name: string | null;
+	method: string;
+	path: string;
+	input_hash: string | null;
+	output_hash: string | null;
+	status_code: number;
+	latency_ms: number;
+	started_at: string;
+	completed_at: string;
+	logged_at: string;
+}
+
+async function buildLogEntry({
 	provider,
 	method,
 	path,
@@ -796,7 +856,6 @@ async function logInference({
 	supabaseUserId,
 	systemId,
 }: {
-	env: Env;
 	provider: string;
 	method: string;
 	path: string;
@@ -810,7 +869,7 @@ async function logInference({
 	completedAt: string;
 	supabaseUserId: string;
 	systemId: string | null;
-}): Promise<void> {
+}): Promise<LogEntry> {
 	const [inputHash, outputHash] = await Promise.all([
 		sha256jcs(requestBody, requestContentType),
 		sha256jcs(responseBody, responseContentType),
@@ -835,7 +894,7 @@ async function logInference({
 	// trigger (migrations/20260418_tamper_evident_chain.sql). Computing the
 	// hash worker-side would race under concurrent inserts for the same
 	// customer; the trigger serializes via a per-customer advisory lock.
-	const entry = {
+	return {
 		customer_id: supabaseUserId,
 		system_id: systemId,
 		provider,
@@ -850,11 +909,38 @@ async function logInference({
 		completed_at: completedAt,
 		logged_at: new Date().toISOString(),
 	};
+}
 
-	// Bounded retry + KV durable buffer on persistent failure. Closes threat
-	// model §6.1 (write side). The drain side — a scheduled worker that
-	// replays pending_log:* keys back into Supabase — is tracked separately.
-	// TODO(ai-m9z follow-on): implement drain worker for pending_log:* keys.
+const PENDING_LOG_PREFIX = 'pending_log:';
+const PENDING_LOG_TTL_S = 86400 * 7;
+
+async function persistDurable(env: Env, entry: LogEntry): Promise<string> {
+	const bufferKey = `${PENDING_LOG_PREFIX}${crypto.randomUUID()}`;
+	try {
+		await env.AILEDGER_CACHE.put(bufferKey, JSON.stringify(entry), {
+			expirationTtl: PENDING_LOG_TTL_S,
+		});
+		return bufferKey;
+	} catch (kvErr) {
+		// Last-resort: log the entry inline so Logpush captures it. We still
+		// return the bufferKey (now unbacked) to keep the call-site shape
+		// uniform; tryDrainOne will then attempt Supabase directly.
+		console.error(
+			JSON.stringify({
+				event: 'persistDurable:kv-put-failed',
+				bufferKey,
+				customerId: entry.customer_id,
+				error: String(kvErr),
+				// Inline entry so a human can recover the audit record from logs
+				// in the catastrophic case where KV is also down.
+				entry,
+			}),
+		);
+		return bufferKey;
+	}
+}
+
+async function tryDrainOne(env: Env, bufferKey: string, entry: LogEntry): Promise<boolean> {
 	const maxAttempts = 2;
 	let lastErr: unknown;
 	let lastStatus: number | null = null;
@@ -871,7 +957,24 @@ async function logInference({
 				},
 				body: JSON.stringify(entry),
 			});
-			if (res.ok) return;
+			if (res.ok) {
+				try {
+					await env.AILEDGER_CACHE.delete(bufferKey);
+				} catch (delErr) {
+					// KV delete failed; scheduled drain will likely re-attempt.
+					// Risk: duplicate insert on next scheduled drain. Detectable
+					// in audit; chain remains internally consistent.
+					console.error(
+						JSON.stringify({
+							event: 'tryDrainOne:kv-delete-after-drain-failed',
+							bufferKey,
+							customerId: entry.customer_id,
+							error: String(delErr),
+						}),
+					);
+				}
+				return true;
+			}
 			lastStatus = res.status;
 			lastErr = new Error(`Supabase insert failed: ${res.status} ${await res.text()}`);
 		} catch (e) {
@@ -880,31 +983,74 @@ async function logInference({
 		if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, 200 * attempt));
 	}
 
-	// All attempts failed: write to KV durable buffer for later drain.
-	const bufferKey = `pending_log:${crypto.randomUUID()}`;
-	try {
-		await env.AILEDGER_CACHE.put(bufferKey, JSON.stringify(entry), { expirationTtl: 86400 * 7 });
-		console.error(
-			JSON.stringify({
-				event: 'logInference:durable-buffer-write',
-				bufferKey,
-				customerId: supabaseUserId,
-				lastStatus,
-				error: String(lastErr),
-			}),
-		);
-	} catch (kvErr) {
-		// KV itself failed — last-resort log so Logpush captures the dropped entry.
-		console.error(
-			JSON.stringify({
-				event: 'logInference:durable-buffer-failed',
-				customerId: supabaseUserId,
-				lastStatus,
-				supabaseError: String(lastErr),
-				kvError: String(kvErr),
-			}),
-		);
-	}
+	console.error(
+		JSON.stringify({
+			event: 'tryDrainOne:drain-attempts-exhausted',
+			bufferKey,
+			customerId: entry.customer_id,
+			lastStatus,
+			error: String(lastErr),
+		}),
+	);
+	return false;
+}
+
+const STALE_ENTRY_ALERT_AGE_MS = 60 * 60 * 1000; // 1 hour
+
+async function drainPendingLogs(env: Env): Promise<void> {
+	let cursor: string | undefined;
+	const stats = { listed: 0, drained: 0, failed: 0, alerted: 0, corrupt: 0 };
+	const startedAt = Date.now();
+	do {
+		const list: KVNamespaceListResult<unknown, string> = await env.AILEDGER_CACHE.list({
+			prefix: PENDING_LOG_PREFIX,
+			cursor,
+		});
+		for (const key of list.keys) {
+			stats.listed++;
+			const raw = await env.AILEDGER_CACHE.get(key.name);
+			if (!raw) continue; // deleted between list and get; benign
+			let entry: LogEntry;
+			try {
+				entry = JSON.parse(raw) as LogEntry;
+			} catch {
+				stats.corrupt++;
+				console.error(
+					JSON.stringify({
+						event: 'drainPendingLogs:corrupt-entry',
+						bufferKey: key.name,
+					}),
+				);
+				// Drop corrupt entries to avoid replaying forever.
+				await env.AILEDGER_CACHE.delete(key.name).catch(() => {});
+				continue;
+			}
+			const ageMs = Date.now() - new Date(entry.started_at).getTime();
+			if (ageMs > STALE_ENTRY_ALERT_AGE_MS) {
+				stats.alerted++;
+				console.error(
+					JSON.stringify({
+						event: 'drainPendingLogs:stale-entry',
+						bufferKey: key.name,
+						customerId: entry.customer_id,
+						ageMs,
+					}),
+				);
+			}
+			const ok = await tryDrainOne(env, key.name, entry);
+			if (ok) stats.drained++;
+			else stats.failed++;
+		}
+		cursor = list.list_complete ? undefined : list.cursor;
+	} while (cursor);
+
+	console.log(
+		JSON.stringify({
+			event: 'drainPendingLogs:cycle-complete',
+			elapsedMs: Date.now() - startedAt,
+			...stats,
+		}),
+	);
 }
 
 // ─── Dogfeed sidecar receiver (ai-4vp / ADR-015) ────────────────────────────

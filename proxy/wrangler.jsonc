@@ -24,13 +24,11 @@
 		{ "pattern": "proxy.ailedger.dev", "custom_domain": true }
 	],
 	"triggers": {
-		// 07:13 UTC = 09:13 CEST (summer) / 08:13 CET (winter) = EU morning
-		// commute / coffee window. AILedger ICP = EU AI Act compliance
-		// officers per ADR-042; morning-inbox-in-CET is the optimized
-		// send-slot. For US customers this lands at 00:13 PDT / 23:13 PST —
-		// fine (emails queue overnight and surface with their morning
-		// inbox anyway). Minute 13 avoids stacking with :00 / :30 cohorts.
-		"crons": ["13 7 * * *"]
+		// Drain pending_log:* entries from KV durable buffer back into
+		// Supabase every 5 min. Closes the worker-crash-mid-flight gap
+		// (whiteboard 2026-04-27 side B; threat model §6.1). Empty drains
+		// (no pending entries) cost ~1 KV list op = negligible.
+		"crons": ["*/5 * * * *"]
 	},
 	"placement": { "mode": "smart" },
 	"kv_namespaces": [
@@ -49,8 +47,9 @@
 			// "routes": [
 			//   { "pattern": "staging.proxy.ailedger.dev", "custom_domain": true }
 			// ],
-			// No drip-email cron in staging — we never email customers from staging.
-			"triggers": { "crons": [] },
+			// Staging gets the same drain cadence as prod so the durable-buffer
+			// drain path is exercised on every deploy.
+			"triggers": { "crons": ["*/5 * * * *"] },
 			"kv_namespaces": [
 				{ "binding": "AILEDGER_CACHE", "id": "51d2b9f238a04bfcb9d765bda41a8b56" }
 			]
