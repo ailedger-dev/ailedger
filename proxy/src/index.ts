@@ -63,6 +63,14 @@ export default {
 			return handleSignupHook(request, env);
 		}
 
+		// Route: POST /log — sidecar log-only ingest (no upstream forward)
+		// Vernier (Mayor) calls Anthropic direct, then fires-and-forgets here
+		// to record an audit-chain entry without coupling Vernier reliability
+		// to the proxy's forward path.
+		if (url.pathname === '/log') {
+			return handleSidecarLog(request, env, ctx);
+		}
+
 		// Route: /proxy/<provider>/<...path>
 		const match = url.pathname.match(/^\/proxy\/([^\/]+)(\/.*)?$/);
 		if (!match) {
@@ -842,6 +850,88 @@ async function sendDripEmail(env: Env, to: string, firstName: string | null, day
 	if (!res.ok) {
 		console.error(`Drip email error: ${res.status}`, await res.text());
 	}
+}
+
+async function handleSidecarLog(
+	request: Request,
+	env: Env,
+	ctx: ExecutionContext,
+): Promise<Response> {
+	if (request.method !== 'POST') {
+		return new Response('Method Not Allowed', { status: 405 });
+	}
+
+	const apiKey = request.headers.get('x-ailedger-key');
+	if (!apiKey) {
+		return new Response(JSON.stringify({ error: 'Missing x-ailedger-key header' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const resolved = await resolveApiKey(env, apiKey, ctx);
+	if (!resolved) {
+		return new Response(JSON.stringify({ error: 'Invalid API key' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	const { customerId, systemId } = resolved;
+
+	let payload: {
+		provider?: string;
+		model?: string;
+		method?: string;
+		path?: string;
+		request_body?: string;
+		response_body?: string;
+		status_code?: number;
+		latency_ms?: number;
+		started_at?: string;
+		completed_at?: string;
+	};
+	try {
+		payload = await request.json();
+	} catch {
+		return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const provider = payload.provider ?? 'anthropic';
+	const method = payload.method ?? 'POST';
+	const path = payload.path ?? '/v1/messages';
+	const requestBuf = payload.request_body
+		? (new TextEncoder().encode(payload.request_body).buffer as ArrayBuffer)
+		: null;
+	const responseBuf = new TextEncoder().encode(payload.response_body ?? '').buffer as ArrayBuffer;
+	const statusCode = payload.status_code ?? 200;
+	const latencyMs = payload.latency_ms ?? 0;
+	const now = new Date().toISOString();
+	const startedAt = payload.started_at ?? now;
+	const completedAt = payload.completed_at ?? now;
+
+	// Fire-and-forget: schedule the Supabase write but return 204 immediately
+	// so sidecar callers never block on chain-trigger latency.
+	ctx.waitUntil(
+		logInference({
+			env,
+			provider,
+			method,
+			path,
+			requestBody: requestBuf,
+			responseBody: responseBuf,
+			statusCode,
+			latencyMs,
+			startedAt,
+			completedAt,
+			customerId,
+			systemId,
+		}),
+	);
+
+	return new Response(null, { status: 204 });
 }
 
 async function logInference({
