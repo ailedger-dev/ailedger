@@ -18,6 +18,18 @@ type VerifyChain = {
 
 type Status = 'idle' | 'verifying' | 'verified-ok' | 'verified-broken' | 'stale' | 'error'
 
+type ChainHealth = {
+  customer_id: string
+  last_verified_at: string | null
+  last_status: 'ok' | 'broken' | 'never'
+  last_row_count: number
+  chain_head_hash: string | null
+  broken_at_id: number | null
+  expected_hash: string | null
+  actual_hash: string | null
+  last_alerted_at: string | null
+}
+
 const VERIFY_THROTTLE_MS = 60_000
 
 function shortHash(hash: string | null | undefined, prefixLen = 8) {
@@ -42,6 +54,7 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
   onHeadUpdate?: (head: ChainHead) => void
 }) {
   const [head, setHead] = useState<ChainHead | null>(null)
+  const [health, setHealth] = useState<ChainHealth | null>(null)
   const [status, setStatus] = useState<Status>('idle')
   const [verifyResult, setVerifyResult] = useState<VerifyChain | null>(null)
   const [verifiedAt, setVerifiedAt] = useState<string | null>(null)
@@ -106,6 +119,39 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
       const headData = data as ChainHead
       setHead(headData)
       if (onHeadUpdate) onHeadUpdate(headData)
+
+      // Read server-side chain_health (populated by the scheduled chain
+      // monitor every cron tick). Surfaces last-known integrity status +
+      // last-alerted-at without requiring the user to click Verify.
+      const { data: healthRows } = await supabase
+        .from('chain_health')
+        .select('*')
+        .eq('customer_id', customerId)
+        .limit(1)
+      if (cancelled) return
+      const healthRow = healthRows?.[0] as ChainHealth | undefined
+      if (healthRow) {
+        setHealth(healthRow)
+        // If server-side monitor saw broken AND we don't already have a
+        // local manually-verified state, surface broken status from server.
+        if (
+          healthRow.last_status === 'broken' &&
+          status !== 'verified-broken' &&
+          status !== 'verified-ok'
+        ) {
+          setVerifyResult({
+            ok: false,
+            broken_at_id: healthRow.broken_at_id,
+            expected_hash: healthRow.expected_hash,
+            actual_hash: healthRow.actual_hash,
+            chain_head_hash: healthRow.chain_head_hash,
+            row_count: headData.row_count,
+          })
+          setVerifiedAt(healthRow.last_verified_at)
+          setStatus('verified-broken')
+        }
+      }
+
       // Only auto-stale a previously verified-OK chain after rows have
       // been added. A previously verified-BROKEN chain must NEVER be
       // downgraded to "stale" on reload — a break is a load-bearing
@@ -204,6 +250,14 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-white">Chain Integrity</span>
           <StatusBadge status={status} />
+          {health && health.last_status !== 'never' && (
+            <span
+              title={`Server-side cryptographic chain monitor — last verified ${formatRelative(health.last_verified_at)}`}
+              className="text-[10px] font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-800/60 rounded-full px-2 py-0.5"
+            >
+              ● 24/7 monitored
+            </span>
+          )}
         </div>
         <button
           onClick={handleVerify}
@@ -264,8 +318,18 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
                   <span className="font-mono text-red-300">{shortHash(verifyResult.actual_hash, 12)}</span>
                 </div>
                 <div className="mt-2 text-red-300">
-                  The cryptographic chain has detected a row whose stored data no longer matches its locked-in predecessor hash. This is tamper-evidence working as designed: any change to a chained row breaks the hash linkage and surfaces here. Contact <a href="mailto:support@ailedger.dev" className="underline">support@ailedger.dev</a> for forensic analysis of the affected record.
+                  The cryptographic chain has detected a row whose stored data no longer matches its locked-in predecessor hash. This is tamper-evidence working as designed: any change to a chained row breaks the hash linkage and surfaces here.
                 </div>
+                {health?.last_alerted_at && (
+                  <div className="mt-2 text-amber-300">
+                    Our team has been automatically notified ({formatRelative(health.last_alerted_at)}) and is investigating. You can also reach us at <a href="mailto:support@ailedger.dev" className="underline">support@ailedger.dev</a>.
+                  </div>
+                )}
+                {!health?.last_alerted_at && (
+                  <div className="mt-2 text-red-300">
+                    Contact <a href="mailto:support@ailedger.dev" className="underline">support@ailedger.dev</a> for forensic analysis of the affected record.
+                  </div>
+                )}
               </div>
             </div>
           )}

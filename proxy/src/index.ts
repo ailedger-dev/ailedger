@@ -20,6 +20,10 @@ export interface Env {
 	STRIPE_WEBHOOK_SECRET: string;
 	SUPABASE_HOOK_SECRET: string;
 	AILEDGER_CACHE: KVNamespace;
+	// Postmark transactional-email API. Used by the scheduled chain-monitor
+	// to send a break-detected alert to support@ailedger.dev (and the
+	// affected customer's email, if available). Per anti-Resend memory.
+	POSTMARK_API_KEY?: string;
 }
 
 // Supported upstream providers
@@ -40,6 +44,13 @@ export default {
 		// the ctx.waitUntil(tryDrainOne) completing. Either way the entry is
 		// safe in KV with a 7-day TTL and this scheduled handler retries.
 		ctx.waitUntil(drainPendingLogs(env));
+		// 24/7 chain monitor: every cron tick, run verify_chain for each
+		// customer that's had inserts since the last verify. On any newly-
+		// detected break, write a chain_alerts row (dedup by unique index)
+		// and email support + customer via Postmark. The dashboard reads
+		// chain_health for the "monitored" badge regardless of whether the
+		// customer ever clicks Verify.
+		ctx.waitUntil(monitorChains(env));
 	},
 
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -1017,6 +1028,286 @@ async function tryDrainOne(env: Env, bufferKey: string, entry: LogEntry): Promis
 }
 
 const STALE_ENTRY_ALERT_AGE_MS = 60 * 60 * 1000; // 1 hour
+
+// ─── Chain monitor: periodic verify + email alert on detected break ────────
+//
+// Runs from the scheduled handler. For each distinct customer in api_keys:
+//   1. Read chain_health (last_verified_at, last_status, last_row_count).
+//   2. If chain has not extended since last verify, skip (cheap shortcut).
+//   3. Call ledger.verify_chain(customer_id) via service-role.
+//   4. Upsert chain_health with the latest result.
+//   5. If status flipped to broken AND we haven't already alerted on this
+//      specific (broken_at_id, actual_hash): insert chain_alerts row +
+//      send Postmark email. Insert is dedup-protected by unique index.
+//
+// Volume: chain breaks are mathematically impossible without explicit row
+// tampering, so emails fire only on actual integrity events. Postmark's
+// 100/mo free tier is structurally sufficient.
+async function monitorChains(env: Env): Promise<void> {
+	const stats = { customers: 0, verified: 0, broken: 0, alerted: 0, errors: 0 };
+	const startedAt = Date.now();
+
+	// Distinct customer_ids that have any api_keys row. We don't iterate
+	// auth.users directly because not every Supabase user is an AILedger
+	// customer (e.g., support staff). Customers = api-key holders.
+	const custRes = await fetch(
+		`${env.SUPABASE_URL}/rest/v1/api_keys?select=customer_id`,
+		{
+			headers: {
+				apikey: env.SUPABASE_SERVICE_KEY,
+				Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+				'Content-Profile': 'ledger',
+			},
+		},
+	);
+	if (!custRes.ok) {
+		console.error('monitorChains:list-customers-failed', { status: custRes.status });
+		return;
+	}
+	let rows: Array<{ customer_id: string }> = [];
+	try {
+		rows = (await custRes.json()) as Array<{ customer_id: string }>;
+	} catch (e) {
+		// Non-JSON response (e.g., test stub returning empty body). Treat as
+		// "no customers to monitor this tick" rather than crashing the
+		// scheduled handler.
+		console.error('monitorChains:list-customers-non-json', { error: String(e) });
+		return;
+	}
+	if (!Array.isArray(rows)) return;
+	const seen = new Set<string>();
+	const customerIds = rows
+		.map((r) => r.customer_id)
+		.filter((id) => (seen.has(id) ? false : (seen.add(id), true)));
+	stats.customers = customerIds.length;
+
+	for (const customerId of customerIds) {
+		try {
+			// Cheap shortcut: skip if last verify covered the current head.
+			const healthRes = await fetch(
+				`${env.SUPABASE_URL}/rest/v1/chain_health?customer_id=eq.${customerId}&select=*`,
+				{
+					headers: {
+						apikey: env.SUPABASE_SERVICE_KEY,
+						Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+						'Content-Profile': 'ledger',
+					},
+				},
+			);
+			const healthRows = healthRes.ok ? ((await healthRes.json()) as Array<{
+				last_row_count: number;
+				last_status: string;
+			}>) : [];
+			const prior = healthRows[0];
+
+			// Get current row_count via chain_head; if same as last verify AND
+			// last status was 'ok', skip — chain hasn't extended.
+			const headRes = await fetch(
+				`${env.SUPABASE_URL}/rest/v1/rpc/chain_head`,
+				{
+					method: 'POST',
+					headers: {
+						apikey: env.SUPABASE_SERVICE_KEY,
+						Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+						'Content-Type': 'application/json',
+						'Content-Profile': 'ledger',
+					},
+					body: JSON.stringify({ p_customer_id: customerId }),
+				},
+			);
+			if (!headRes.ok) {
+				stats.errors += 1;
+				continue;
+			}
+			const headData = (await headRes.json()) as {
+				chain_head_hash: string | null;
+				row_count: number;
+			};
+			if (
+				prior &&
+				prior.last_status === 'ok' &&
+				prior.last_row_count === headData.row_count
+			) {
+				continue; // Chain hasn't extended since last clean verify.
+			}
+
+			// Run verify_chain.
+			const verifyRes = await fetch(
+				`${env.SUPABASE_URL}/rest/v1/rpc/verify_chain`,
+				{
+					method: 'POST',
+					headers: {
+						apikey: env.SUPABASE_SERVICE_KEY,
+						Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+						'Content-Type': 'application/json',
+						'Content-Profile': 'ledger',
+					},
+					body: JSON.stringify({ p_customer_id: customerId }),
+				},
+			);
+			if (!verifyRes.ok) {
+				stats.errors += 1;
+				continue;
+			}
+			const verify = (await verifyRes.json()) as {
+				ok: boolean;
+				broken_at_id: number | null;
+				expected_hash: string | null;
+				actual_hash: string | null;
+				chain_head_hash: string | null;
+				row_count: number;
+			};
+			stats.verified += 1;
+
+			// Upsert chain_health.
+			const healthBody = {
+				customer_id: customerId,
+				last_verified_at: new Date().toISOString(),
+				last_status: verify.ok ? 'ok' : 'broken',
+				last_row_count: headData.row_count,
+				chain_head_hash: verify.chain_head_hash ?? headData.chain_head_hash,
+				broken_at_id: verify.broken_at_id,
+				expected_hash: verify.expected_hash,
+				actual_hash: verify.actual_hash,
+				updated_at: new Date().toISOString(),
+			};
+			await fetch(`${env.SUPABASE_URL}/rest/v1/chain_health`, {
+				method: 'POST',
+				headers: {
+					apikey: env.SUPABASE_SERVICE_KEY,
+					Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+					'Content-Type': 'application/json',
+					'Content-Profile': 'ledger',
+					Prefer: 'resolution=merge-duplicates,return=minimal',
+				},
+				body: JSON.stringify(healthBody),
+			});
+
+			// On break: log + email (dedupe via unique index on chain_alerts).
+			if (!verify.ok && verify.broken_at_id !== null && verify.actual_hash) {
+				stats.broken += 1;
+				const alertRes = await fetch(`${env.SUPABASE_URL}/rest/v1/chain_alerts`, {
+					method: 'POST',
+					headers: {
+						apikey: env.SUPABASE_SERVICE_KEY,
+						Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+						'Content-Type': 'application/json',
+						'Content-Profile': 'ledger',
+						// resolution=ignore-duplicates: already-alerted breaks no-op.
+						Prefer: 'resolution=ignore-duplicates,return=representation',
+					},
+					body: JSON.stringify({
+						customer_id: customerId,
+						broken_at_id: verify.broken_at_id,
+						actual_hash: verify.actual_hash,
+						expected_hash: verify.expected_hash ?? '',
+						row_count: verify.row_count,
+					}),
+				});
+				if (alertRes.ok) {
+					const inserted = (await alertRes.json()) as Array<unknown>;
+					if (inserted.length > 0) {
+						// New (non-dupe) alert. Send email + bump last_alerted_at.
+						stats.alerted += 1;
+						await sendChainBreakEmail(env, customerId, verify);
+						await fetch(
+							`${env.SUPABASE_URL}/rest/v1/chain_health?customer_id=eq.${customerId}`,
+							{
+								method: 'PATCH',
+								headers: {
+									apikey: env.SUPABASE_SERVICE_KEY,
+									Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+									'Content-Type': 'application/json',
+									'Content-Profile': 'ledger',
+								},
+								body: JSON.stringify({ last_alerted_at: new Date().toISOString() }),
+							},
+						);
+					}
+				}
+			}
+		} catch (e) {  // noqa: per-customer error must not abort the whole run
+			stats.errors += 1;
+			console.error('monitorChains:per-customer-error', {
+				customerId,
+				error: String(e),
+			});
+		}
+	}
+
+	console.log(
+		JSON.stringify({
+			event: 'monitorChains:complete',
+			elapsed_ms: Date.now() - startedAt,
+			...stats,
+		}),
+	);
+}
+
+// Send a chain-break alert via Postmark. Recipient: support@ailedger.dev
+// for now (customer-specific routing can land in a follow-up). No-op if
+// POSTMARK_API_KEY is unset (dev/preview environments).
+async function sendChainBreakEmail(
+	env: Env,
+	customerId: string,
+	verify: {
+		broken_at_id: number | null;
+		expected_hash: string | null;
+		actual_hash: string | null;
+		row_count: number;
+	},
+): Promise<void> {
+	if (!env.POSTMARK_API_KEY) {
+		console.log('sendChainBreakEmail:skipped-no-api-key', { customerId });
+		return;
+	}
+	const subject = `[AILedger] Chain integrity break detected — customer ${customerId.slice(0, 8)}`;
+	const body = [
+		'Chain integrity verification has detected a break.',
+		'',
+		`Customer ID:   ${customerId}`,
+		`Broken at row: #${verify.broken_at_id} (record ${verify.row_count})`,
+		`Expected hash: ${verify.expected_hash}`,
+		`Actual hash:   ${verify.actual_hash}`,
+		'',
+		'This means a chained inference_logs row\'s data no longer matches its',
+		'locked-in predecessor hash. Investigate via Supabase: select * from',
+		`ledger.inference_logs where id = ${verify.broken_at_id};`,
+		'',
+		'The dashboard ChainIntegrityPanel will surface this state to the',
+		'customer on next load.',
+	].join('\n');
+
+	try {
+		const res = await fetch('https://api.postmarkapp.com/email', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+				'X-Postmark-Server-Token': env.POSTMARK_API_KEY,
+			},
+			body: JSON.stringify({
+				From: 'alerts@ailedger.dev',
+				To: 'support@ailedger.dev',
+				Subject: subject,
+				TextBody: body,
+				MessageStream: 'outbound',
+			}),
+		});
+		if (!res.ok) {
+			console.error('sendChainBreakEmail:postmark-failed', {
+				customerId,
+				status: res.status,
+				body: await res.text().catch(() => ''),
+			});
+		}
+	} catch (e) {
+		console.error('sendChainBreakEmail:exception', {
+			customerId,
+			error: String(e),
+		});
+	}
+}
 
 async function drainPendingLogs(env: Env): Promise<void> {
 	let cursor: string | undefined;
