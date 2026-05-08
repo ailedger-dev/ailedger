@@ -79,6 +79,18 @@ export default {
 			return handleDogfeedEvents(request, env, ctx);
 		}
 
+		// Route: POST /log — sidecar log-only ingest for Vernier.
+		// Distinct from /v1/events (which writes dogfeed batched usage telemetry
+		// to the dogfeed_events table). This endpoint extends the cryptographic
+		// audit chain by writing to inference_logs via the same buildLogEntry →
+		// persistDurable → tryDrainOne path as the in-line /proxy/* route.
+		// Vernier (Mayor) calls Anthropic direct, then fires-and-forgets here
+		// so its reliability is decoupled from AILedger uptime. Per [PINNED]
+		// feedback_bob_never_on_ailedger_proxy.md sidecar clause.
+		if (url.pathname === '/log') {
+			return handleSidecarLog(request, env, ctx);
+		}
+
 		// Route: /proxy/<provider>/<...path>
 		const match = url.pathname.match(/^\/proxy\/([^\/]+)(\/.*)?$/);
 		if (!match) {
@@ -1116,6 +1128,129 @@ function validateDogfeedEvent(raw: unknown): { ok: true; ev: DogfeedEvent } | { 
 			source: r.source,
 		},
 	};
+}
+
+// ─── Sidecar log-only ingest for Vernier (extends inference_logs chain) ─────
+//
+// Distinct from the dogfeed sidecar (handleDogfeedEvents → dogfeed_events
+// table). This endpoint writes to inference_logs via the same audit-chain
+// path as the in-line proxy: buildLogEntry → persistDurable → tryDrainOne.
+//
+// Caller flow:
+//   1. Vernier sends primary call direct to api.anthropic.com (uncoupled
+//      from AILedger uptime).
+//   2. After response received, fire-and-forget POST to /log with
+//      (request_body, response_body, model, ...).
+//   3. /log auths via x-ailedger-key (same as /proxy/<provider> path),
+//      builds LogEntry, persists to KV durable buffer, returns 204.
+//   4. Async drain to Supabase via ctx.waitUntil(tryDrainOne).
+//
+// Body shape (JSON):
+//   {
+//     provider: string,                  // default "anthropic"
+//     model?: string,                    // optional, also extractable from request_body.model
+//     method?: string,                   // default "POST"
+//     path?: string,                     // default "/v1/messages"
+//     request_body?: string,             // JSON-stringified or raw text
+//     response_body?: string,            // JSON-stringified or raw text
+//     request_content_type?: string,     // default "application/json"
+//     response_content_type?: string,    // default "application/json"
+//     status_code?: number,              // default 200
+//     latency_ms?: number,               // default 0
+//     started_at?: string,               // ISO; default now
+//     completed_at?: string,             // ISO; default now
+//   }
+async function handleSidecarLog(
+	request: Request,
+	env: Env,
+	ctx: ExecutionContext,
+): Promise<Response> {
+	if (request.method !== 'POST') {
+		return new Response('Method Not Allowed', { status: 405 });
+	}
+
+	const apiKey = request.headers.get('x-ailedger-key');
+	if (!apiKey) {
+		return new Response(JSON.stringify({ error: 'Missing x-ailedger-key header' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const resolved = await resolveApiKey(env, apiKey, ctx);
+	if (!resolved) {
+		return new Response(JSON.stringify({ error: 'Invalid API key' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	const { supabaseUserId, systemId } = resolved;
+
+	let payload: {
+		provider?: string;
+		model?: string;
+		method?: string;
+		path?: string;
+		request_body?: string;
+		response_body?: string;
+		request_content_type?: string;
+		response_content_type?: string;
+		status_code?: number;
+		latency_ms?: number;
+		started_at?: string;
+		completed_at?: string;
+	};
+	try {
+		payload = await request.json();
+	} catch {
+		return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const provider = payload.provider ?? 'anthropic';
+	const method = payload.method ?? 'POST';
+	const path = payload.path ?? '/v1/messages';
+	const requestContentType = payload.request_content_type ?? 'application/json';
+	const responseContentType = payload.response_content_type ?? 'application/json';
+	const requestBuf: ArrayBuffer | null = payload.request_body
+		? (new TextEncoder().encode(payload.request_body).buffer as ArrayBuffer)
+		: null;
+	const responseBuf: ArrayBuffer = new TextEncoder().encode(payload.response_body ?? '').buffer as ArrayBuffer;
+	const statusCode = payload.status_code ?? 200;
+	const latencyMs = payload.latency_ms ?? 0;
+	const now = new Date().toISOString();
+	const startedAt = payload.started_at ?? now;
+	const completedAt = payload.completed_at ?? now;
+
+	const entry = await buildLogEntry({
+		provider,
+		method,
+		path,
+		requestBody: requestBuf,
+		requestContentType,
+		responseBody: responseBuf,
+		responseContentType,
+		statusCode,
+		latencyMs,
+		startedAt,
+		completedAt,
+		supabaseUserId,
+		systemId,
+	});
+
+	// If the caller passed an explicit model name, override the auto-extracted
+	// one (sidecar callers may know the model better than what's parseable
+	// from the canonicalized request body).
+	if (payload.model) {
+		entry.model_name = payload.model;
+	}
+
+	const bufferKey = await persistDurable(env, entry);
+	ctx.waitUntil(tryDrainOne(env, bufferKey, entry));
+
+	return new Response(null, { status: 204 });
 }
 
 async function handleDogfeedEvents(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
