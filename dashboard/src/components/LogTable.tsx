@@ -87,6 +87,14 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
   const [lastInsertAt, setLastInsertAt] = useState<string | null>(null)
   const [chainRowCount, setChainRowCount] = useState<number>(0)
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
+  // Freeze-on-scroll: once the user scrolls past the first viewport, new
+  // realtime INSERT rows accumulate in `pendingLogs` instead of prepending.
+  // Scrolling back to the top flushes pendingLogs into logs. Counters
+  // (total, monthlyCount, lastInsertAt) keep updating regardless.
+  const [frozen, setFrozen] = useState(false)
+  const [pendingLogs, setPendingLogs] = useState<LogEntry[]>([])
+  const frozenRef = useRef(false)
+  frozenRef.current = frozen
   const PAGE = 250
   const sentinelRef = useRef<HTMLTableRowElement | null>(null)
   // Ref mirror of logs so fetchMore can read the latest tail without re-binding
@@ -158,7 +166,13 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
         filter: `customer_id=eq.${customerId}`,
       }, (payload) => {
         const row = payload.new as LogEntry
-        setLogs((prev) => (prev.some((r) => r.id === row.id) ? prev : [row, ...prev]))
+        if (frozenRef.current) {
+          // User is browsing history — buffer the new row; don't disrupt
+          // their scroll position by prepending.
+          setPendingLogs((prev) => (prev.some((r) => r.id === row.id) ? prev : [row, ...prev]))
+        } else {
+          setLogs((prev) => (prev.some((r) => r.id === row.id) ? prev : [row, ...prev]))
+        }
         setTotal((t) => t + 1)
         setLastInsertAt(new Date().toISOString())
         setMonthlyCount((m) => m + 1)
@@ -167,6 +181,42 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
 
     return () => { supabase.removeChannel(channel) }
   }, [customerId])
+
+  // Scroll watcher — set `frozen` true once the user has scrolled past
+  // the first viewport, false when they return near the top. We use the
+  // window scrollY because the table is rendered in the page flow, not
+  // inside a fixed-height scroll container.
+  useEffect(() => {
+    const FREEZE_AT = 200    // px below top — start buffering
+    const UNFREEZE_AT = 50   // px below top — flush buffer
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        const y = window.scrollY
+        setFrozen((current) => (current ? y > UNFREEZE_AT : y > FREEZE_AT))
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+
+  // When unfrozen, flush any pending realtime rows back into the visible
+  // log list.
+  useEffect(() => {
+    if (frozen) return
+    if (pendingLogs.length === 0) return
+    setLogs((prev) => {
+      const known = new Set(prev.map((r) => r.id))
+      const toAdd = pendingLogs.filter((r) => !known.has(r.id))
+      return toAdd.length > 0 ? [...toAdd, ...prev] : prev
+    })
+    setPendingLogs([])
+  }, [frozen, pendingLogs])
 
   // Cursor pagination — load older rows when the sentinel scrolls into view.
   useEffect(() => {
@@ -212,6 +262,19 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
 
   return (
     <div>
+      {/* Floating "N new logs ↑" pill, visible only while scrolled past the
+          freeze threshold AND new rows have buffered. Click smooth-scrolls
+          to top, which fires the unfreeze + flush. */}
+      {frozen && pendingLogs.length > 0 && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{ cursor: 'pointer' }}
+          className="fixed left-1/2 -translate-x-1/2 top-4 z-50 px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-lg"
+          aria-live="polite"
+        >
+          ↑ {pendingLogs.length} new log{pendingLogs.length === 1 ? '' : 's'}
+        </button>
+      )}
       {showUpgradeModal && (
         <UpgradeModal
           feature="usage"
