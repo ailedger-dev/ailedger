@@ -64,11 +64,11 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
     return () => clearInterval(interval)
   }, [verifiedAt])
 
-  // Initial load + auto-verify if any rows are chained. The auto-verify is
-  // intentional UX — users land on the page and immediately know "I'm
-  // verified" without a click. Performance note: verify_chain is O(n) over
-  // chained rows; for very large customers we throttle on visibility-change
-  // and rely on the 60s lockout to prevent re-spam on tab focus.
+  // Initial load: fetch the chain head only. Verification is manual-only
+  // per Jake — users click "Verify" when they want a fresh integrity check.
+  // Auto-verifying on load was wrong: it consumes Postgres CPU on every
+  // dashboard mount, hides the explicit "I checked" affordance, and at
+  // scale (large customer chains) blocks the panel render.
   useEffect(() => {
     let cancelled = false
     async function loadHead() {
@@ -82,33 +82,6 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
       const headData = data as ChainHead
       setHead(headData)
       if (onHeadUpdate) onHeadUpdate(headData)
-
-      // Auto-verify on initial load if there's anything to verify.
-      if (headData.row_count > 0) {
-        const { data: verifyData, error: verifyError } = await supabase.rpc(
-          'verify_chain',
-          { p_customer_id: customerId },
-        )
-        if (cancelled) return
-        if (verifyError) {
-          setErrorMsg(verifyError.message)
-          setStatus('error')
-          return
-        }
-        const result = verifyData as VerifyChain
-        setVerifyResult(result)
-        setVerifiedAt(new Date().toISOString())
-        setStatus(result.ok ? 'verified-ok' : 'verified-broken')
-        if (result.chain_head_hash) {
-          const updated: ChainHead = {
-            chain_head_hash: result.chain_head_hash,
-            last_id: headData.last_id,
-            row_count: result.row_count,
-          }
-          setHead(updated)
-          if (onHeadUpdate) onHeadUpdate(updated)
-        }
-      }
     }
     loadHead()
     return () => { cancelled = true }
