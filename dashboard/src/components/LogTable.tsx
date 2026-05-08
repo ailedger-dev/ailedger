@@ -87,7 +87,7 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
   const [lastInsertAt, setLastInsertAt] = useState<string | null>(null)
   const [chainRowCount, setChainRowCount] = useState<number>(0)
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
-  const PAGE = 50
+  const PAGE = 250
   const sentinelRef = useRef<HTMLTableRowElement | null>(null)
   // Ref mirror of logs so fetchMore can read the latest tail without re-binding
   // the IntersectionObserver every render.
