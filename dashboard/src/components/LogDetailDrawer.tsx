@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 interface LogDetail {
   id: number
@@ -133,7 +133,7 @@ export default function LogDetailDrawer({
   )
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">{label}</div>
