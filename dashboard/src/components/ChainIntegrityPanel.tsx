@@ -264,7 +264,7 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
                   <span className="font-mono text-red-300">{shortHash(verifyResult.actual_hash, 12)}</span>
                 </div>
                 <div className="mt-2 text-red-300">
-                  Contact support@ailedger.dev immediately. Do not modify or delete this evidence — the break itself is part of the audit record.
+                  The cryptographic chain has detected a row whose stored data no longer matches its locked-in predecessor hash. This is tamper-evidence working as designed: any change to a chained row breaks the hash linkage and surfaces here. Contact <a href="mailto:support@ailedger.dev" className="underline">support@ailedger.dev</a> for forensic analysis of the affected record.
                 </div>
               </div>
             </div>
