@@ -1,2 +1,25 @@
 name = "ailedger-landing"
 pages_build_output_dir = "dist"
+
+# Cloudflare Pages env model
+# ---------------------------
+# Pages projects expose two fixed environments via the CF Git integration:
+#   production  — auto-deployed on push to the project's production branch (main)
+#   preview     — auto-deployed on every other branch / PR (acts as staging)
+#
+# This is an asymmetry with Workers (which use an `env.staging` block). For
+# Pages, "staging" IS the preview environment — there is no separate
+# `env.staging` named environment. The `[env.preview]` block below is the
+# staging override. Keeping this file explicit so the env separation is
+# discoverable in the same place as the Worker wranglers.
+#
+# See docs/deploy-runbook.md and docs/staging-provisioning.md.
+
+[env.production]
+# No Pages-level overrides today — landing is a static SPA. Add vars /
+# bindings here if prod ever needs a KV, D1, or env var separate from preview.
+
+[env.preview]
+# Staging == preview for Pages. No overrides needed today; add preview-only
+# vars here if landing ever consumes runtime env (e.g. a `VITE_API_ORIGIN`
+# pinned to a staging proxy).

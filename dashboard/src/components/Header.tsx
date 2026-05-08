@@ -20,7 +20,7 @@ export default function Header({ session, theme, onToggleTheme, onLogoClick }: P
         >
           <img src="/favicon.svg" alt="AILedger" className="w-5 h-5" style={{ marginTop: '-1.5px' }} />
           <span className="text-white font-semibold tracking-tight leading-none inline-block text-lg">AILedger</span>
-          <span className="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-1 rounded-full leading-none">beta</span>
+          <span className="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-1 rounded-full leading-none">Early Access</span>
         </button>
         <div className="flex items-center gap-4">
           <button

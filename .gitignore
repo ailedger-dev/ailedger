@@ -45,3 +45,15 @@ pnpm-debug.log*
 ~/Downloads/ailedger-*.mp4
 demo_script.py
 test_proxy.py
+
+# Gas Town / polecat session artifacts (not project files)
+/.runtime/
+/.beads/
+/.claude/
+/.logs/
+/state.json
+/CLAUDE.md
+/CLAUDE.local.md
+
+# Python editable-install artifacts
+*.egg-info/

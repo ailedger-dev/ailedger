@@ -1,7 +1,59 @@
 import { useState } from 'react'
 
-const DASHBOARD_URL = 'https://dash.ailedger.dev?view=sign-up'
+// Sign-up vs log-in URLs are split so the nav "Log in" CTA lands
+// returning users on the sign-in view, while primary CTAs (hero "Set it
+// up", pricing tier buttons, etc.) keep pushing toward sign-up for
+// first-time visitors.
+const SIGNUP_URL = 'https://dash.ailedger.dev?view=sign-up'
+const LOGIN_URL = 'https://dash.ailedger.dev?view=sign-in'
+// Kept as an alias for broader references (e.g. "open the dashboard")
+// where either view is fine.
+const DASHBOARD_URL = SIGNUP_URL
 const PROXY_URL = 'https://proxy.ailedger.dev'
+
+// Per-route canonical fix (2026-04-20). index.html ships a static canonical
+// pointing at the homepage; GSC flagged every sub-page as "duplicate without
+// user-selected canonical" because the SPA serves the same HTML for /docs,
+// /guide/*, /contact, /legal — each claiming the homepage is its canonical,
+// which instructed Google to de-index everything except /. This runs once per
+// full page load and rewrites the canonical + og:url to match the actual
+// route before Googlebot's DOM-snapshot pass (modern Googlebot executes JS).
+const CANONICAL_BASE = 'https://ailedger.dev'
+const CANONICAL_PATHS: Record<string, string> = {
+  '/': '/',
+  '/docs': '/docs',
+  '/guide/annex-iii': '/guide/annex-iii',
+  '/contact': '/contact',
+  '/legal': '/legal',
+  '/terms': '/legal',   // /terms + /privacy collapse to /legal (same component)
+  '/privacy': '/legal',
+  '/pricing': '/pricing',
+}
+if (typeof window !== 'undefined') {
+  const raw = window.location.pathname
+  const canon = CANONICAL_PATHS[raw] ?? raw
+  const href = CANONICAL_BASE + canon
+  let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'canonical'
+    document.head.appendChild(link)
+  }
+  link.href = href
+  const og = document.querySelector('meta[property="og:url"]') as HTMLMetaElement | null
+  if (og) og.content = href
+}
+
+// Resolve hero-entry-animation state exactly once per page load (survives strict-mode
+// double-render; gated so returning-from-internal-route users don't re-watch the reveal).
+const heroAnimClass = ((): string => {
+  if (typeof window === 'undefined') return ''
+  try {
+    if (window.sessionStorage.getItem('hero-played') === '1') return 'no-anim'
+    window.sessionStorage.setItem('hero-played', '1')
+  } catch { /* sessionStorage unavailable — play the animation */ }
+  return ''
+})()
 
 function App() {
   const path = window.location.pathname
@@ -9,16 +61,12 @@ function App() {
   if (path === '/contact') return <Contact />
   if (path === '/guide/annex-iii') return <AnnexIIIGuide />
   if (path === '/docs') return <Docs />
-  if (path === '/pricing') {
-    history.replaceState(null, '', '/')
-    setTimeout(() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }), 0)
-  }
+  if (path === '/pricing') return <PricingPage />
   return (
-    <div className="min-h-screen bg-[#0a0b0f] text-slate-300" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-page)", color: "var(--fg-body)", fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
       <Hero />
       <TrustBar />
-      <Stats />
       <HowItWorks />
       <Compliance />
       <CodeSnippet />
@@ -33,35 +81,29 @@ function App() {
 function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const handlePricing = (e: React.MouseEvent) => {
-    setMenuOpen(false)
-    if (window.location.pathname === '/') {
-      e.preventDefault()
-      document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
+  const closeMenu = () => setMenuOpen(false)
 
   return (
     <nav style={{
       position: 'fixed', top: 0, width: '100%', zIndex: 50,
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(10,11,15,0.85)', backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid var(--border)',
+      background: 'var(--bg-nav)', backdropFilter: 'blur(12px)',
     }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', cursor: 'pointer' }}>
           <img src="/favicon.svg" alt="AILedger" style={{ width: 20, height: 20, marginTop: -1 }} />
-          <span style={{ color: '#fff', fontWeight: 600, fontSize: 16, letterSpacing: '-0.3px' }}>AILedger</span>
+          <span style={{ color: 'var(--fg-primary)', fontWeight: 600, fontSize: 16, letterSpacing: '-0.3px' }}>AILedger</span>
         </a>
 
         {/* Desktop nav */}
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <a href="/pricing" onClick={handlePricing} style={{ color: '#64748b', fontSize: 14, textDecoration: 'none', fontWeight: 500, cursor: 'pointer' }}>Pricing</a>
-          <a href="/docs" style={{ color: '#64748b', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
-          <a href={DASHBOARD_URL} style={{
-            padding: '8px 18px', background: '#4f46e5', color: '#fff',
+          <a href="/pricing" style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500, cursor: 'pointer' }}>Pricing</a>
+          <a href="/docs" style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
+          <a href={LOGIN_URL} style={{
+            padding: '8px 18px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
             fontSize: 14, fontWeight: 500, borderRadius: 10, textDecoration: 'none',
           }}>
-            Get started
+            Log in
           </a>
         </div>
 
@@ -85,15 +127,15 @@ function Nav() {
           }}
         >
           <span className="hamburger-line" style={{
-            display: 'block', width: 22, height: 2, background: '#e2e8f0', borderRadius: 2,
+            display: 'block', width: 22, height: 2, background: 'var(--fg-body)', borderRadius: 2,
             transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none',
           }} />
           <span className="hamburger-line" style={{
-            display: 'block', width: 22, height: 2, background: '#e2e8f0', borderRadius: 2,
+            display: 'block', width: 22, height: 2, background: 'var(--fg-body)', borderRadius: 2,
             opacity: menuOpen ? 0 : 1,
           }} />
           <span className="hamburger-line" style={{
-            display: 'block', width: 22, height: 2, background: '#e2e8f0', borderRadius: 2,
+            display: 'block', width: 22, height: 2, background: 'var(--fg-body)', borderRadius: 2,
             transform: menuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none',
           }} />
         </button>
@@ -107,24 +149,24 @@ function Nav() {
           top: 64,
           left: 0,
           right: 0,
-          background: 'rgba(10,11,15,0.98)',
+          background: 'var(--bg-nav-solid)',
           backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid var(--border-strong)',
           padding: '24px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: 20,
         }}
       >
-        <a href="/pricing" onClick={handlePricing} style={{ color: '#e2e8f0', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Pricing</a>
-        <a href="/docs" onClick={() => setMenuOpen(false)} style={{ color: '#e2e8f0', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
-        <a href="/legal" onClick={() => setMenuOpen(false)} style={{ color: '#64748b', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Legal</a>
-        <a href={DASHBOARD_URL} onClick={() => setMenuOpen(false)} style={{
-          padding: '12px 18px', background: '#4f46e5', color: '#fff',
+        <a href="/pricing" onClick={closeMenu} style={{ color: 'var(--fg-body)', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Pricing</a>
+        <a href="/docs" onClick={() => setMenuOpen(false)} style={{ color: 'var(--fg-body)', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
+        <a href="/legal" onClick={() => setMenuOpen(false)} style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Legal</a>
+        <a href={LOGIN_URL} onClick={() => setMenuOpen(false)} style={{
+          padding: '12px 18px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
           fontSize: 15, fontWeight: 500, borderRadius: 10, textDecoration: 'none',
           textAlign: 'center', marginTop: 4,
         }}>
-          Get started
+          Log in
         </a>
       </div>
     </nav>
@@ -132,6 +174,10 @@ function Nav() {
 }
 
 function Hero() {
+  // Play the staggered entry once per tab, then skip on re-renders / internal nav.
+  // Resolved once at module scope below, so strict-mode double-render doesn't swallow it.
+  const anim = heroAnimClass
+
   return (
     <section className="hero-section" style={{
       textAlign: 'center',
@@ -143,47 +189,47 @@ function Hero() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* Ambient glow behind hero */}
-      <div aria-hidden="true" style={{
+      {/* Ambient glow behind hero — quieter, wider spread */}
+      <div aria-hidden="true" className="hero-glow" style={{
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: 900, height: 900,
-        background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0.05) 35%, transparent 70%)',
+        width: 1100, height: 1100,
+        background: 'radial-gradient(circle, var(--hero-glow-inner) 0%, var(--hero-glow-mid) 40%, transparent 72%)',
         pointerEvents: 'none',
         zIndex: 0,
       }} />
-      <div style={{ maxWidth: 780, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <div className="fade-in fade-1" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          fontSize: 13, fontWeight: 500, color: '#818cf8',
-          background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)',
-          borderRadius: 999, padding: '5px 14px', marginBottom: 36,
-        }}>
-          EU AI Act enforcement begins August 2, 2026
+      <div style={{ maxWidth: 'min(92vw, 1280px)', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        <div className={`hero-eyebrow fade-in fade-1 ${anim}`}>
+          <span className="hero-eyebrow-dot" aria-hidden="true" />
+          August 2, 2026 — EU AI Act enforcement
         </div>
-        <h1 className="hero-title fade-in fade-2" style={{
-          fontSize: 72, fontWeight: 700, color: '#fff',
-          letterSpacing: '-2.5px', lineHeight: 1.02, marginBottom: 28,
+        <h1 className="hero-title" style={{
+          fontSize: 'clamp(44px, 6.5vw, 76px)', fontWeight: 700, color: 'var(--fg-primary)',
+          letterSpacing: '-2px', lineHeight: 1.05, marginBottom: 28,
         }}>
-          You built the AI.<br />
-          <span style={{ color: '#818cf8' }}>We prove it behaved.</span>
+          <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Audit-grade evidence for</span>
+          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', position: 'relative', top: '-0.055em', fontSize: '1.05em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.</span>
         </h1>
-        <p className="hero-subtitle fade-in fade-3" style={{ fontSize: 20, color: '#94a3b8', lineHeight: 1.7, marginBottom: 44, maxWidth: 560, margin: '0 auto 44px' }}>
-          Drop-in integration that logs every AI inference as an immutable, tamper-evident legal record - ready for EU AI Act compliance.
+        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
+          AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
         </p>
-        <div className="hero-cta-group fade-in fade-4" style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href={DASHBOARD_URL} style={{
-            padding: '14px 28px', background: '#4f46e5', color: '#fff',
+        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
+          No prompts are stored. No outputs are stored. Only SHA-256 fingerprints + metadata — the evidence a regulator or auditor can verify, without AILedger holding your customers' data.
+        </p>
+        <div className={`hero-cta-group fade-in fade-4 ${anim}`} style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <a className="hero-cta-primary" href={DASHBOARD_URL} style={{
+            padding: '14px 28px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
             fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none',
+            letterSpacing: '-0.005em',
           }}>
-            Start for free
+            Set it up
           </a>
-          <a href="#how-it-works" style={{
-            padding: '14px 28px', color: '#94a3b8', fontSize: 15,
+          <a className="hero-cta-secondary" href="#how-it-works" style={{
+            padding: '14px 28px', color: 'var(--fg-muted)', fontSize: 15,
             textDecoration: 'none', borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: '1px solid var(--border-strong)',
           }}>
-            How it works →
+            Read how it works
           </a>
         </div>
       </div>
@@ -192,105 +238,20 @@ function Hero() {
 }
 
 function TrustBar() {
-  const items = [
-    {
-      icon: (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-      ),
-      label: 'GDPR Compatible',
-    },
-    {
-      icon: (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M2 12h20" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-      ),
-      label: 'EU AI Act Article\u00a012',
-    },
-    {
-      icon: (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-      ),
-      label: 'No PII stored',
-    },
-    {
-      icon: (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-        </svg>
-      ),
-      label: 'SHA-256 hashed',
-    },
-    {
-      icon: (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-        </svg>
-      ),
-      label: 'Append-only records',
-    },
-    {
-      icon: (
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          <path d="M2 12h20" />
-        </svg>
-      ),
-      label: 'EU data residency',
-    },
-  ]
-
   return (
-    <div className="trust-bar" style={{
-      borderTop: '1px solid rgba(255,255,255,0.05)',
-      borderBottom: '1px solid rgba(255,255,255,0.05)',
-      padding: '18px 32px',
+    <section className="section-pad trust-bar" style={{
+      borderTop: '1px solid var(--border-subtle)',
+      borderBottom: '1px solid var(--border)',
+      background: 'var(--surface-tint-soft)',
+      padding: '96px 32px',
     }}>
-      <div style={{
-        maxWidth: 1100, margin: '0 auto',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexWrap: 'wrap', gap: '28px 40px',
-      }}>
-        {items.map((item) => (
-          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#475569' }}>
-            <span style={{ color: '#4f46e5', display: 'flex', alignItems: 'center' }}>{item.icon}</span>
-            <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>{item.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function Stats() {
-  const stats = [
-    { value: '70%', label: 'of companies using AI in the EU have taken zero compliance steps' },
-    { value: '€35M', label: 'maximum penalty for high-risk AI Act violations' },
-    { value: 'Aug 2026', label: 'full enforcement deadline for Annex III high-risk AI systems' },
-  ]
-  return (
-    <section className="section-pad" style={{
-      borderTop: '1px solid rgba(255,255,255,0.06)',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(255,255,255,0.015)',
-      padding: '72px 32px',
-    }}>
-      <div className="three-col-grid" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, textAlign: 'center' }}>
-        {stats.map((s) => (
-          <div key={s.value}>
-            <div style={{ fontSize: 48, fontWeight: 700, color: '#fff', letterSpacing: '-1.5px', marginBottom: 12 }}>{s.value}</div>
-            <div style={{ fontSize: 15, color: '#64748b', lineHeight: 1.6 }}>{s.label}</div>
-          </div>
-        ))}
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 20 }}>
+          What AILedger stores: SHA-256 fingerprints of inputs and outputs, plus metadata (timestamp, model, latency, status). What it doesn't store: the raw prompts or responses themselves. Records are hash-chained and append-only; data resides in EU-central-1 (Frankfurt).
+        </p>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
+          The EU AI Act enters full enforcement on August 2, 2026. High-risk AI systems face up to €35M in administrative fines for Article 12 violations. Industry estimates put compliance readiness at under 30% across EU AI operators today.
+        </p>
       </div>
     </section>
   )
@@ -300,39 +261,37 @@ function HowItWorks() {
   const steps = [
     {
       n: '01',
-      title: 'Point your API calls at AILedger',
-      body: 'Set your base URL to our proxy and pass your AILedger key as a header. Your existing code stays intact. Logging happens asynchronously with minimal overhead.',
+      title: 'Point your API calls at AILedger.',
+      body: 'Change your base URL to our proxy; pass your AILedger key as a header. Your application code stays intact. The proxy forwards your request to the upstream provider (OpenAI, Anthropic, Gemini) and returns the response unchanged. Logging happens asynchronously and does not block your response.',
     },
     {
       n: '02',
-      title: 'Every inference is logged',
-      body: 'Inputs and outputs are SHA-256 hashed and stored as append-only records. No personal data retained. Fully GDPR compatible.',
+      title: 'Every inference becomes an entry.',
+      body: 'Inputs and outputs are hashed (SHA-256), and the hash plus metadata — timestamp, model name, latency, status — are written to an append-only log in EU-central-1 (Frankfurt). Raw prompts and outputs are never stored. GDPR-compatible by construction.',
     },
     {
       n: '03',
-      title: 'Export your compliance report',
-      body: 'One click generates a formatted EU AI Act Article 12 audit report with full inference history, ready for regulators.',
+      title: 'Export the Article 12 audit trail.',
+      body: "Your compliance team clicks once. AILedger generates a formatted audit report — every inference hashed, timestamped, ordered, hash-chained — ready for a regulator's review.",
     },
   ]
   return (
-    <section id="how-it-works" className="section-pad" style={{ padding: '100px 32px' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
-          <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>Drop-in. Fully compliant.</h2>
-          <p style={{ fontSize: 17, color: '#64748b', maxWidth: 480, margin: '0 auto' }}>
-            AILedger sits transparently between your app and your AI provider.
+    <section id="how-it-works" className="section-pad" style={{ padding: '96px 32px' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        <div style={{ marginBottom: 48 }}>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>How it works</h2>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
+            Three steps, each reversible: point, log, export.
           </p>
         </div>
-        <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {steps.map((s) => (
-            <div key={s.n} style={{
-              padding: '32px 28px', borderRadius: 16,
-              border: '1px solid rgba(255,255,255,0.07)',
-              background: 'rgba(255,255,255,0.02)',
-            }}>
-              <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#818cf8', fontWeight: 600, marginBottom: 20, letterSpacing: 1 }}>{s.n}</div>
-              <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f1f5f9', marginBottom: 12, lineHeight: 1.4 }}>{s.title}</h3>
-              <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.75 }}>{s.body}</p>
+            <div key={s.n} style={{ display: 'flex', gap: 20 }}>
+              <div style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--accent-text)', fontWeight: 600, letterSpacing: 1, flexShrink: 0, paddingTop: 4, width: 32 }}>{s.n}</div>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 10, lineHeight: 1.4 }}>{s.title}</h3>
+                <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75 }}>{s.body}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -342,50 +301,68 @@ function HowItWorks() {
 }
 
 function Compliance() {
-  const items = [
-    { label: 'EU AI Act Article 12', desc: 'Automatic event logging for high-risk AI systems' },
-    { label: 'GDPR compatible', desc: 'Hashed inputs/outputs - no personal data stored' },
-    { label: 'Immutable records', desc: 'Append-only - records cannot be modified or deleted' },
-    { label: 'Tamper-evident', desc: 'SHA-256 cryptographic hashing on every inference' },
-    { label: 'Audit reports', desc: 'One-click PDF export formatted for regulators' },
-    { label: 'Real-time dashboard', desc: 'Live view of all inference activity per customer' },
-    { label: 'Multiple AI systems', desc: 'Track and report across multiple AI systems - available on Pro and Scale' },
+  const paragraphs = [
+    {
+      title: 'Article 12, specifically.',
+      body: "AILedger doesn't attempt to certify your compliance — that's not something any vendor can do. It produces the logs Article 12 calls for: every inference from a high-risk AI system, logged throughout the system's lifetime, in a form an auditor can verify.",
+    },
+    {
+      title: 'GDPR by construction.',
+      body: "Raw prompts and outputs never enter AILedger's storage. Only SHA-256 fingerprints plus metadata. No personal data collected means no personal data to leak, subpoena, or subject-access.",
+    },
+    {
+      title: 'Append-only by enforcement.',
+      body: 'Records cannot be modified or deleted — not by you, not by us, not by a root DB user. Append-only is a DB-trigger-level guarantee, not a UI checkbox.',
+    },
+    {
+      title: 'Hash-chained, exportable, auditor-reviewable.',
+      body: "Every record links to the prior one by hash. A tamper-detection pass traces the chain end-to-end. Your compliance team exports the full chain — with metadata, timestamps, and hash-verification — for a regulator's review.",
+    },
+    {
+      title: 'SOC 2 Type II on track for Q3 2027.',
+      body: "We're auditing toward SOC 2 Type II with Q3 2027 as the realistic — not aspirational — delivery window. The logging + access-control substrate a SOC 2 audit examines has been in place since v1; the audit engagement is what's scheduled. SOC 2 Type I ships ahead of it in Q3 2026.",
+    },
   ]
   return (
     <section className="section-pad" style={{
-      padding: '100px 32px',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(255,255,255,0.015)',
+      padding: '96px 32px',
+      borderTop: '1px solid var(--border)',
+      borderBottom: '1px solid var(--border)',
+      background: 'var(--surface-tint-soft)',
     }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
-          <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>Built for compliance from the ground up</h2>
-          <p style={{ fontSize: 17, color: '#64748b', maxWidth: 480, margin: '0 auto' }}>
-            Not just a dashboard - infrastructure designed specifically to satisfy regulators.
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        <div style={{ marginBottom: 48 }}>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 20 }}>
+            Built as infrastructure for auditing AI, not a dashboard with logging bolted on.
+          </h2>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
+            The whole system is designed to produce records regulators will accept — and to be incapable of producing records regulators won't.
           </p>
         </div>
-        <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-          {items.map((item) => (
-            <div key={item.label} style={{
-              display: 'flex', gap: 14, padding: '22px 20px',
-              borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)',
-              background: 'rgba(255,255,255,0.02)',
-            }}>
-              <div style={{
-                marginTop: 2, width: 18, height: 18, borderRadius: '50%',
-                background: 'rgba(52,211,153,0.15)', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#34d399' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9', marginBottom: 4 }}>{item.label}</div>
-                <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{item.desc}</div>
-              </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+          {paragraphs.map((p) => (
+            <div key={p.title}>
+              <h3 style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8, lineHeight: 1.4 }}>{p.title}</h3>
+              <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75 }}>{p.body}</p>
             </div>
           ))}
         </div>
+        <figure style={{
+          marginTop: 48, marginBottom: 0,
+          padding: '28px 32px', borderRadius: 12,
+          border: '1px solid var(--border-accent)',
+          background: 'var(--accent-tint-bg-soft)',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+            Customer question
+          </div>
+          <p style={{ fontSize: 17, color: 'var(--fg-body)', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 14 }}>
+            Why can't we just hash ourselves?
+          </p>
+          <blockquote style={{ fontSize: 17, color: 'var(--fg-body)', lineHeight: 1.7, margin: 0, borderLeft: '2px solid var(--border-accent)', paddingLeft: 18 }}>
+            "A customer could hash themselves. But then their audit defense is 'trust our internal log.' Our chain is externally verifiable by a regulator in SQL. That's the product."
+          </blockquote>
+        </figure>
       </div>
     </section>
   )
@@ -393,180 +370,136 @@ function Compliance() {
 
 function CodeSnippet() {
   return (
-    <section className="section-pad" style={{ padding: '100px 32px' }}>
+    <section className="section-pad" style={{ padding: '96px 32px' }}>
       <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
-        <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>Integration in 60 seconds</h2>
-        <p style={{ fontSize: 17, color: '#64748b', marginBottom: 44 }}>Works with OpenAI, Anthropic, Gemini, and any OpenAI-compatible API.</p>
+        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16, lineHeight: 1.15 }}>Integration is one URL and one header.</h2>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 44, lineHeight: 1.7 }}>Two lines change. The rest of your application code stays intact.</p>
         <div style={{
-          textAlign: 'left', borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
-          background: '#0d1017', overflow: 'hidden',
+          textAlign: 'left', borderRadius: 12,
+          border: '1px solid var(--border-prominent)',
+          background: 'var(--bg-code)', overflow: 'hidden',
         }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+            padding: '12px 18px', borderBottom: '1px solid var(--border)',
           }}>
             {['#ef4444','#f59e0b','#22c55e'].map((c) => (
               <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, opacity: 0.6 }} />
             ))}
-            <span style={{ fontSize: 12, color: '#475569', marginLeft: 8, fontFamily: 'monospace' }}>your_app.py</span>
+            <span style={{ fontSize: 12, color: 'var(--fg-ultrasubtle)', marginLeft: 8, fontFamily: 'monospace' }}>your_app.py</span>
           </div>
           <pre style={{ padding: '28px 24px', fontSize: 13.5, lineHeight: 2, overflowX: 'auto', margin: 0 }}>
             <code style={{ fontFamily: 'ui-monospace, monospace' }}>
-              <span style={{ color: '#475569' }}># Before{'\n'}</span>
+              <span style={{ color: 'var(--fg-ultrasubtle)' }}># Before{'\n'}</span>
               <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: '#e2e8f0' }}> = </span>
+              <span style={{ color: 'var(--fg-on-code)' }}> = </span>
               <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: '#e2e8f0' }}>(api_key=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>(api_key=</span>
               <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: '#e2e8f0' }}>){'\n\n'}</span>
-              <span style={{ color: '#475569' }}># After - drop-in, fully logged{'\n'}</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>){'\n\n'}</span>
+              <span style={{ color: 'var(--fg-ultrasubtle)' }}># After{'\n'}</span>
               <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: '#e2e8f0' }}> = </span>
+              <span style={{ color: 'var(--fg-on-code)' }}> = </span>
               <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: '#e2e8f0' }}>({'\n'}{'  '}api_key=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>({'\n'}{'  '}api_key=</span>
               <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: '#e2e8f0' }}>,{'\n'}{'  '}base_url=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>,{'\n'}{'  '}base_url=</span>
               <span style={{ color: '#86efac' }}>"{PROXY_URL}/proxy/openai"</span>
-              <span style={{ color: '#e2e8f0' }}>,{'\n'}{'  '}default_headers=</span>
-              <span style={{ color: '#e2e8f0' }}>{'{'}  </span>
+              <span style={{ color: 'var(--fg-on-code)' }}>,{'\n'}{'  '}default_headers=</span>
+              <span style={{ color: 'var(--fg-on-code)' }}>{'{'}  </span>
               <span style={{ color: '#86efac' }}>"x-ailedger-key"</span>
-              <span style={{ color: '#e2e8f0' }}>: </span>
+              <span style={{ color: 'var(--fg-on-code)' }}>: </span>
               <span style={{ color: '#86efac' }}>"agl_sk_..."</span>
-              <span style={{ color: '#e2e8f0' }}> {'}'}{'\n)' }</span>
+              <span style={{ color: 'var(--fg-on-code)' }}> {'}'}{'\n)' }</span>
             </code>
           </pre>
         </div>
+        <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75, marginTop: 32, textAlign: 'left' }}>
+          Works with OpenAI, Anthropic, Gemini, and any OpenAI-compatible API. From the moment the base URL switches, every request flows through AILedger and produces a record. If you remove AILedger tomorrow, your application goes back to calling the provider directly — no lock-in, no migration, no ceremony.
+        </p>
       </div>
     </section>
   )
 }
 
 function Pricing() {
-  const plans = [
+  const tiers = [
     {
-      name: 'Free',
-      price: '$0',
-      sub: 'forever',
-      description: 'Get started with no commitment. Free forever.',
-      features: [
-        '10,000 inferences / month',
-        '1 API key',
-        'Real-time inference dashboard',
-        'SHA-256 tamper-evident logs',
-        'EU data residency (Frankfurt)',
-      ],
-      cta: 'Start for free',
+      name: 'Ledger',
+      band: 'Free · $149/mo · $499/mo',
+      body: "For engineering teams shipping LLM features that will need audit evidence before they need an auditor. Free covers up to 10,000 inferences per month; Pro at $149/month extends to 100,000; Scale at $499/month to 1,000,000. Usage-based above. All plans include the Article 12 audit trail, SHA-256 fingerprinted records, and EU data residency (Frankfurt).",
+      cta: 'Start free',
       href: DASHBOARD_URL,
       highlight: false,
     },
     {
-      name: 'Pro',
-      price: '$149',
-      sub: '/ month',
-      description: 'For teams shipping AI in production.',
-      features: [
-        '500,000 inferences / month',
-        '5 API keys',
-        'PDF compliance reports',
-        'Multiple AI systems',
-        'EU data residency (Frankfurt)',
-        'Priority email support',
-      ],
-      cta: 'Upgrade to Pro',
-      href: DASHBOARD_URL,
+      name: 'Evidence',
+      band: '$40,000 / year · annual contract',
+      body: 'For the DPO, counsel, and engineering lead who need to hand an auditor a defensible artifact — not a screenshot. Ships alongside SOC 2 Type I (Q3 2026 target). Design-partner pricing available for the first cohort.',
+      cta: 'Apply for design partnership',
+      href: '/contact',
       highlight: true,
     },
     {
-      name: 'Scale',
-      price: '$499',
-      sub: '/ month',
-      description: 'For high-volume and regulated workloads.',
-      features: [
-        'Unlimited inferences',
-        'Unlimited API keys',
-        'Unlimited AI systems',
-        'EU data residency (Frankfurt)',
-        'Priority support',
-        'SLA available',
-      ],
-      cta: 'Upgrade to Scale',
-      href: DASHBOARD_URL,
+      name: 'Audit',
+      band: 'From $80,000 / year · custom-scoped',
+      body: 'For regulated verticals (BaFin MaRisk, FCA SYSC, AMF RG, Solvency II, MiCA) approaching the August 2026 deadline. Sectoral overlays configured to your binding retention floor; MSA with custom order form.',
+      cta: 'Talk to us',
+      href: '/contact',
       highlight: false,
     },
   ]
 
   return (
-    <section id="pricing" className="section-pad" style={{ padding: '100px 32px', borderTop: '1px solid rgba(255,255,255,0.06)', scrollMarginTop: '120px' }}>
+    <section id="pricing" className="section-pad" style={{ padding: '96px 32px', borderTop: '1px solid var(--border)', scrollMarginTop: '120px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
-          <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>
-            Simple, transparent pricing
+        <div style={{ marginBottom: 48, maxWidth: 720 }}>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>
+            Pricing.
           </h2>
-          <p style={{ fontSize: 17, color: '#64748b', maxWidth: 440, margin: '0 auto' }}>
-            Start free. Upgrade when you need more inferences or compliance reports.
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
+            Three tiers, priced by where you are in the compliance journey.
           </p>
         </div>
         <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'stretch' }}>
-          {plans.map((plan) => (
-            <div key={plan.name} style={{
-              borderRadius: 16,
-              border: plan.highlight ? '1px solid rgba(99,102,241,0.5)' : '1px solid rgba(255,255,255,0.07)',
-              background: plan.highlight ? 'rgba(99,102,241,0.07)' : 'rgba(255,255,255,0.02)',
+          {tiers.map((tier) => (
+            <div key={tier.name} className="tier-card" style={{
+              borderRadius: 12,
+              border: tier.highlight ? '1px solid var(--border-accent)' : '1px solid var(--border)',
+              background: tier.highlight ? 'var(--accent-tint-bg-soft)' : 'var(--surface-tint)',
               padding: '32px 28px',
-              position: 'relative',
               display: 'flex', flexDirection: 'column',
             }}>
-              {plan.highlight && (
-                <div style={{
-                  position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
-                  background: '#4f46e5', color: '#fff', fontSize: 11, fontWeight: 600,
-                  padding: '4px 12px', borderRadius: 999, letterSpacing: '0.05em', whiteSpace: 'nowrap',
-                }}>
-                  MOST POPULAR
-                </div>
-              )}
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: plan.highlight ? '#818cf8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>
-                  {plan.name}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{plan.price}</span>
-                  <span style={{ fontSize: 14, color: '#64748b' }}>{plan.sub}</span>
-                </div>
-                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{plan.description}</p>
+              <div style={{ fontSize: 13, fontWeight: 600, color: tier.highlight ? 'var(--accent-text)' : 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+                {tier.name}
               </div>
-              <a href={plan.href} style={{
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 16, lineHeight: 1.4 }}>
+                {tier.band}
+              </div>
+              <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 24, flex: 1 }}>
+                {tier.body}
+              </p>
+              <a href={tier.href} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '11px 20px', borderRadius: 10, marginBottom: 28,
+                padding: '12px 20px', borderRadius: 10,
                 fontSize: 14, fontWeight: 600, textDecoration: 'none',
-                background: plan.highlight ? '#4f46e5' : 'rgba(255,255,255,0.06)',
-                color: plan.highlight ? '#fff' : '#e2e8f0',
-                border: plan.highlight ? 'none' : plan.name === 'Scale' ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                background: tier.highlight ? 'var(--accent)' : 'var(--border)',
+                color: tier.highlight ? 'var(--fg-on-accent)' : 'var(--fg-body)',
+                border: tier.highlight ? 'none' : '1px solid var(--border-prominent)',
               }}>
-                {plan.cta}
+                {tier.cta}
               </a>
-              <div style={{ flex: 1 }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {plan.features.map((f) => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                      background: 'rgba(52,211,153,0.15)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
-                    </div>
-                    <span style={{ fontSize: 13, color: '#94a3b8' }}>{f}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           ))}
         </div>
-        <p style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: '#475569' }}>
-          Annual plans available - save 2 months. Contact us for enterprise pricing.
-        </p>
+        <div style={{ textAlign: 'center', marginTop: 40 }}>
+          <a href="/pricing" style={{
+            fontSize: 15, color: 'var(--accent-text)', fontWeight: 500, textDecoration: 'none',
+            borderBottom: '1px solid var(--hero-glow-dot)', paddingBottom: 2,
+          }}>
+            See full pricing →
+          </a>
+        </div>
       </div>
     </section>
   )
@@ -576,45 +509,49 @@ function FAQ() {
   const items = [
     {
       q: 'What is the EU AI Act Article 12?',
-      a: 'Article 12 of the EU AI Act (Regulation 2024/1689) requires operators of high-risk AI systems to maintain automatic logging of events throughout the system\'s lifetime. These logs must be tamper-evident and sufficient to enable post-hoc auditing. AILedger is purpose-built to satisfy this requirement.',
+      a: 'The EU AI Act — the regulation formally cited as 2024/1689 — requires operators of high-risk AI systems to maintain automatic logging of events throughout the system\'s lifetime. Article 12 is the specific provision that sets those logging requirements. AILedger is purpose-built to give you the audit trail Article 12 calls for: hash-chained entries in an append-only log, exportable for regulator review.',
     },
     {
       q: 'Does AILedger store my prompts or AI outputs?',
-      a: 'No. AILedger never stores raw inputs or outputs. It stores only SHA-256 cryptographic hashes - one-way fingerprints that prove a specific exchange occurred without retaining any content. This makes AILedger fully GDPR compatible.',
+      a: 'No. AILedger stores SHA-256 fingerprints of inputs and outputs, plus metadata (timestamp, model, latency, status). The raw content never enters our systems. One-way fingerprints let you prove a specific inference happened without anyone — including us — retaining the content. This is what makes AILedger GDPR-compatible by construction.',
     },
     {
       q: 'How long does integration take?',
-      a: 'For OpenAI, Anthropic, Gemini, or any OpenAI-compatible API, integration means pointing your client at our proxy and adding our API key as a header. Most teams are logging within 60 seconds of creating an account.',
+      a: 'One URL change, one header addition. For OpenAI, Anthropic, Gemini, or any OpenAI-compatible API, integration means pointing your existing client at our proxy and passing your AILedger key as a header. Teams are typically logging their first inference within a minute of account creation.',
     },
     {
       q: 'Does AILedger add latency to my AI calls?',
-      a: 'Logging is fully asynchronous - the database write happens after your response is returned. The proxy hop through Cloudflare\'s global edge network adds minimal overhead (typically 150-300ms, well within normal LLM inference variance).',
+      a: 'The proxy hop adds 150-300ms on average via Cloudflare\'s global edge network — within the variance LLM responses already produce. The audit record is durably committed to a write-buffer before your response returns (sub-20ms KV write); the database ingest then happens asynchronously. Your application never waits on database logging to finish, and the audit record cannot be lost if the database is briefly unavailable.',
     },
     {
       q: 'Which AI providers are supported?',
-      a: 'OpenAI, Anthropic, and Google Gemini are natively supported. Any API that follows the OpenAI-compatible format also works without any additional configuration.',
+      a: 'OpenAI, Anthropic, and Google Gemini natively. Any API that follows the OpenAI-compatible format works unchanged.',
     },
     {
       q: 'Is AILedger sufficient for EU AI Act compliance on its own?',
-      a: 'AILedger satisfies the logging and record-keeping requirements of Article 12. Full EU AI Act compliance for high-risk systems also involves conformity assessments, transparency obligations, and human oversight measures. AILedger handles the audit trail piece - the part that regulators will ask for first.',
+      a: 'No — and no single tool is. AILedger produces the logging and record-keeping infrastructure Article 12 requires. Full EU AI Act compliance also involves conformity assessments, transparency obligations, and human oversight — none of which AILedger provides. We handle the audit trail piece: the specific part a regulator asks for first.',
     },
     {
       q: 'Where is data stored?',
-      a: 'All data is stored in the EU, namely AWS eu-central-1 (Frankfurt, Germany) via Supabase. This applies to all plans, free and paid. No data ever leaves the EU.',
+      a: 'All data — fingerprints and metadata, never raw content — lives in AWS eu-central-1 (Frankfurt), via Supabase. Applies to every plan including Free. Nothing leaves the EU.',
+    },
+    {
+      q: 'Is AILedger an "AI audit" tool or an "audit of AI" tool?',
+      a: 'The second. "AI audit" platforms typically use AI to help auditors process evidence for general security/quality certifications (ISO 27001, NIS-2, DORA). AILedger is different: we build the infrastructure that lets regulators audit your AI system itself — every inference your application makes becomes a fingerprinted, hash-chained record. If you\'re shipping AI and need an Article 12 audit trail, AILedger. If you\'re going through ISO 27001 and want AI-assisted auditing, that\'s a different category of product.',
     },
   ]
 
   return (
     <section className="section-pad" style={{
-      padding: '100px 32px',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      padding: '96px 32px',
+      borderTop: '1px solid var(--border)',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <h2 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.75px', marginBottom: 12 }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 12 }}>
             Frequently asked questions
           </h2>
-          <p style={{ fontSize: 16, color: '#64748b' }}>
+          <p style={{ fontSize: 16, color: 'var(--fg-subtle)' }}>
             Everything you need to know before integrating.
           </p>
         </div>
@@ -622,15 +559,15 @@ function FAQ() {
           {items.map((item) => (
             <details key={item.q} style={{
               borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.07)',
-              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-tint)',
               overflow: 'hidden',
             }}>
               <summary style={{
                 padding: '18px 22px',
                 fontSize: 15,
                 fontWeight: 500,
-                color: '#f1f5f9',
+                color: 'var(--fg-secondary)',
                 cursor: 'pointer',
                 listStyle: 'none',
                 display: 'flex',
@@ -639,12 +576,12 @@ function FAQ() {
                 gap: 16,
               }}>
                 {item.q}
-                <span style={{ color: '#475569', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
+                <span style={{ color: 'var(--fg-ultrasubtle)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
               </summary>
               <div style={{
                 padding: '0 22px 18px',
                 fontSize: 14,
-                color: '#64748b',
+                color: 'var(--fg-subtle)',
                 lineHeight: 1.8,
               }}>
                 {item.a}
@@ -660,22 +597,23 @@ function FAQ() {
 function CTA() {
   return (
     <section className="section-pad" style={{
-      padding: '100px 32px', textAlign: 'center',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      padding: '96px 32px', textAlign: 'center',
+      borderTop: '1px solid var(--border)',
     }}>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        <h2 className="section-title" style={{ fontSize: 40, fontWeight: 700, color: '#fff', letterSpacing: '-1px', marginBottom: 16 }}>
-          Start logging before the deadline.
+        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>
+          Start before the deadline.
         </h2>
-        <p style={{ fontSize: 17, color: '#64748b', marginBottom: 40, lineHeight: 1.7 }}>
-          Free to start. No credit card. Takes 60 seconds to integrate.
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 40, lineHeight: 1.7 }}>
+          Free to start. No credit card required. Integration takes about a minute: one URL, one header, one account.
         </p>
-        <a href={DASHBOARD_URL} style={{
-          display: 'inline-block', padding: '16px 36px',
-          background: '#4f46e5', color: '#fff',
-          fontWeight: 600, fontSize: 16, borderRadius: 12, textDecoration: 'none',
+        <a className="hero-cta-primary" href={DASHBOARD_URL} style={{
+          display: 'inline-block', padding: '14px 28px',
+          background: 'var(--accent)', color: 'var(--fg-on-accent)',
+          fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none',
+          letterSpacing: '-0.005em',
         }}>
-          Create free account
+          Create your account
         </a>
       </div>
     </section>
@@ -685,15 +623,16 @@ function CTA() {
 function Footer() {
   return (
     <footer style={{
-      borderTop: '1px solid rgba(255,255,255,0.06)',
-      padding: '28px 32px',
+      borderTop: '1px solid var(--border)',
+      padding: '28px 0',
     }}>
-      <div className="footer-row" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ color: '#334155', fontSize: 14 }}>AILedger</span>
+      <div className="footer-row" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>AILedger</span>
         <div className="footer-links" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <a href="/legal" style={{ color: '#334155', fontSize: 14, textDecoration: 'none' }}>Legal</a>
-          <a href="/contact" style={{ color: '#334155', fontSize: 14, textDecoration: 'none' }}>Contact</a>
-          <span className="footer-tagline" style={{ color: '#334155', fontSize: 14 }}>Built for EU AI Act compliance</span>
+          <a href="/legal" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Legal</a>
+          <a href="/contact" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Contact</a>
+          <a href="/docs" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Docs</a>
+          <span className="footer-tagline" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>EU AI Act record-keeping infrastructure</span>
         </div>
       </div>
     </footer>
@@ -703,15 +642,15 @@ function Footer() {
 function CodeBlock({ filename, raw, children }: { filename: string; raw: string; children: React.ReactNode }) {
   const [copied, setCopied] = useState(false)
   return (
-    <div style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)', background: '#0d1017', overflow: 'hidden', marginTop: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+    <div style={{ borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--bg-code)', overflow: 'hidden', marginTop: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
         {['#ef4444','#f59e0b','#22c55e'].map((col) => (
           <div key={col} style={{ width: 10, height: 10, borderRadius: '50%', background: col, opacity: 0.5 }} />
         ))}
-        <span style={{ fontSize: 12, color: '#475569', marginLeft: 6, fontFamily: 'monospace', flex: 1 }}>{filename}</span>
+        <span style={{ fontSize: 12, color: 'var(--fg-ultrasubtle)', marginLeft: 6, fontFamily: 'monospace', flex: 1 }}>{filename}</span>
         <button
           onClick={() => { navigator.clipboard.writeText(raw); setCopied(true); setTimeout(() => setCopied(false), 1800) }}
-          style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '3px 10px', fontSize: 11, color: copied ? '#86efac' : '#64748b', transition: 'color 0.15s' }}
+          style={{ cursor: 'pointer', background: 'var(--border)', border: '1px solid var(--border-strong)', borderRadius: 6, padding: '3px 10px', fontSize: 11, color: copied ? '#86efac' : 'var(--fg-subtle)', transition: 'color 0.15s' }}
         >{copied ? '✓' : '📋'}</button>
       </div>
       <pre style={{ padding: '22px 22px', fontSize: 13, lineHeight: 1.9, overflowX: 'auto', margin: 0 }}>
@@ -722,46 +661,434 @@ function CodeBlock({ filename, raw, children }: { filename: string; raw: string;
 }
 
 function Docs() {
-  const sections = [
+  type Section = { id: string; label: string; sub?: boolean }
+  const sections: Section[] = [
     { id: 'quickstart', label: 'Quick start' },
-    { id: 'openai', label: 'OpenAI' },
-    { id: 'anthropic', label: 'Anthropic' },
-    { id: 'gemini', label: 'Gemini' },
-    { id: 'test', label: 'Test your keys' },
+    { id: 'integration', label: 'Integration snippets' },
+    { id: 'curl', label: 'cURL', sub: true },
+    { id: 'python', label: 'Python', sub: true },
+    { id: 'javascript', label: 'JavaScript', sub: true },
+    { id: 'go', label: 'Go', sub: true },
+    { id: 'streaming', label: 'Streaming / SSE' },
+    { id: 'audit-trail', label: 'Your audit trail' },
+    { id: 'verify', label: 'Verify a record' },
+    { id: 'performance', label: 'Performance' },
     { id: 'reference', label: 'API reference' },
+    { id: 'troubleshooting', label: 'Troubleshooting' },
   ]
 
   const codeBlock = (filename: string, raw: string, children: React.ReactNode) => (
     <CodeBlock filename={filename} raw={raw}>{children}</CodeBlock>
   )
 
+  // Code-block text colors. Background is --bg-code (stays dark both themes),
+  // so `plain` + `comment` reference --fg-on-code (light text) not --fg-body
+  // (which is dark in light theme and would vanish on the dark code bg).
   const c = {
-    comment: '#475569',
+    comment: 'rgba(226,232,240,0.55)',  // slate-200 @ 55% — muted-on-dark
     name: '#93c5fd',
     fn: '#fcd34d',
     str: '#86efac',
-    plain: '#e2e8f0',
+    plain: 'var(--fg-on-code)',
     kw: '#c084fc',
   }
 
   const s = (color: string, text: string) => <span style={{ color }}>{text}</span>
 
+  // hl: lightweight string + line-comment highlighter for the new code samples
+  // (cURL, JavaScript, Go, verify recipes). The Python integration snippets and
+  // the benchmark below are preserved with their hand-tuned per-token coloring.
+  const hl = (raw: string): React.ReactNode => {
+    const out: React.ReactNode[] = []
+    let buf = ''
+    let i = 0
+    let k = 0
+    const flush = () => { if (buf) { out.push(buf); buf = '' } }
+    while (i < raw.length) {
+      const ch = raw[i]
+      const isJsComment = ch === '/' && raw[i + 1] === '/'
+      const isShellComment = ch === '#' && (i === 0 || raw[i - 1] === '\n' || raw[i - 1] === ' ' || raw[i - 1] === '\t')
+      if (ch === '"' || ch === "'" || ch === '`') {
+        flush()
+        const q = ch
+        let j = i + 1
+        while (j < raw.length && raw[j] !== q) {
+          if (raw[j] === '\\' && j + 1 < raw.length) j += 2
+          else j++
+        }
+        const end = Math.min(j + 1, raw.length)
+        out.push(<span key={k++} style={{ color: c.str }}>{raw.slice(i, end)}</span>)
+        i = end
+      } else if (isJsComment || isShellComment) {
+        flush()
+        let j = i
+        while (j < raw.length && raw[j] !== '\n') j++
+        out.push(<span key={k++} style={{ color: c.comment }}>{raw.slice(i, j)}</span>)
+        i = j
+      } else {
+        buf += ch
+        i++
+      }
+    }
+    flush()
+    return <>{out}</>
+  }
+
+  // Inline-code chip used in body copy
+  const chip = (text: string) => (
+    <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>{text}</code>
+  )
+
+  // Curl samples — provider-specific auth header is the only thing that changes.
+  const curlOpenAI = `# OpenAI: Authorization: Bearer <your-openai-key>
+curl ${PROXY_URL}/proxy/openai/chat/completions \\
+  -H "Authorization: Bearer $OPENAI_API_KEY" \\
+  -H "x-ailedger-key: $AILEDGER_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "gpt-4.1-mini",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+`
+  const curlAnthropic = `# Anthropic: x-api-key + anthropic-version
+curl ${PROXY_URL}/proxy/anthropic/v1/messages \\
+  -H "x-api-key: $ANTHROPIC_API_KEY" \\
+  -H "anthropic-version: 2023-06-01" \\
+  -H "x-ailedger-key: $AILEDGER_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "claude-opus-4-6",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Hello, Claude"}]
+  }'
+`
+  const curlGemini = `# Gemini: ?key= query param OR x-goog-api-key header
+curl "${PROXY_URL}/proxy/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY" \\
+  -H "x-ailedger-key: $AILEDGER_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contents": [{"parts": [{"text": "Explain how AI works in a few words"}]}]
+  }'
+`
+
+  // JavaScript / TypeScript samples — official provider SDKs all expose
+  // baseURL + defaultHeaders, so the diff vs a direct call is two lines.
+  const jsOpenAI = `import OpenAI from 'openai';
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: '${PROXY_URL}/proxy/openai',
+  defaultHeaders: { 'x-ailedger-key': process.env.AILEDGER_KEY },
+});
+
+const completion = await client.chat.completions.create({
+  model: 'gpt-4.1-mini',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+console.log(completion.choices[0].message.content);
+`
+  const jsAnthropic = `import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  baseURL: '${PROXY_URL}/proxy/anthropic',
+  defaultHeaders: { 'x-ailedger-key': process.env.AILEDGER_KEY },
+});
+
+const message = await client.messages.create({
+  model: 'claude-opus-4-6',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: 'Hello, Claude' }],
+});
+console.log(message.content);
+`
+  const jsGemini = `import { GoogleGenAI } from '@google/genai';
+
+const client = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    baseUrl: '${PROXY_URL}/proxy/gemini',
+    headers: { 'x-ailedger-key': process.env.AILEDGER_KEY },
+  },
+});
+
+const response = await client.models.generateContent({
+  model: 'gemini-2.5-flash',
+  contents: 'Explain how AI works in a few words',
+});
+console.log(response.text);
+`
+
+  // Go samples — net/http stays close to the wire so the swap is unambiguous.
+  const goOpenAI = `package main
+
+import (
+  "bytes"
+  "fmt"
+  "io"
+  "net/http"
+  "os"
+)
+
+func main() {
+  body := []byte(\`{"model":"gpt-4.1-mini","messages":[{"role":"user","content":"Hello!"}]}\`)
+  req, _ := http.NewRequest("POST",
+    "${PROXY_URL}/proxy/openai/chat/completions",
+    bytes.NewReader(body))
+  req.Header.Set("Authorization", "Bearer "+os.Getenv("OPENAI_API_KEY"))
+  req.Header.Set("x-ailedger-key", os.Getenv("AILEDGER_KEY"))
+  req.Header.Set("Content-Type", "application/json")
+  resp, _ := http.DefaultClient.Do(req)
+  defer resp.Body.Close()
+  out, _ := io.ReadAll(resp.Body)
+  fmt.Println(string(out))
+}
+`
+  const goAnthropic = `package main
+
+import (
+  "bytes"
+  "fmt"
+  "io"
+  "net/http"
+  "os"
+)
+
+func main() {
+  body := []byte(\`{"model":"claude-opus-4-6","max_tokens":1024,"messages":[{"role":"user","content":"Hello, Claude"}]}\`)
+  req, _ := http.NewRequest("POST",
+    "${PROXY_URL}/proxy/anthropic/v1/messages",
+    bytes.NewReader(body))
+  req.Header.Set("x-api-key", os.Getenv("ANTHROPIC_API_KEY"))
+  req.Header.Set("anthropic-version", "2023-06-01")
+  req.Header.Set("x-ailedger-key", os.Getenv("AILEDGER_KEY"))
+  req.Header.Set("Content-Type", "application/json")
+  resp, _ := http.DefaultClient.Do(req)
+  defer resp.Body.Close()
+  out, _ := io.ReadAll(resp.Body)
+  fmt.Println(string(out))
+}
+`
+  const goGemini = `package main
+
+import (
+  "bytes"
+  "fmt"
+  "io"
+  "net/http"
+  "os"
+)
+
+func main() {
+  body := []byte(\`{"contents":[{"parts":[{"text":"Explain how AI works in a few words"}]}]}\`)
+  url := "${PROXY_URL}/proxy/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=" + os.Getenv("GEMINI_API_KEY")
+  req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+  req.Header.Set("x-ailedger-key", os.Getenv("AILEDGER_KEY"))
+  req.Header.Set("Content-Type", "application/json")
+  resp, _ := http.DefaultClient.Do(req)
+  defer resp.Body.Close()
+  out, _ := io.ReadAll(resp.Body)
+  fmt.Println(string(out))
+}
+`
+
+  // Verify recipes — the recomputed hash must equal what we stored.
+  const verifyJS = `import { createHash } from 'node:crypto';
+import canonicalize from 'canonicalize'; // npm i canonicalize  (RFC 8785)
+
+// Mirrors the proxy's sha256jcs(): JCS-canonicalize JSON, otherwise raw bytes.
+function ailedgerHash(rawBody, contentType) {
+  const ct = (contentType || '').toLowerCase().split(';')[0].trim();
+  const isJson = ct === 'application/json' || ct.endsWith('+json');
+  if (isJson) {
+    try {
+      const parsed = JSON.parse(rawBody.toString('utf8'));
+      const canonical = canonicalize(parsed);
+      if (canonical !== undefined) {
+        return createHash('sha256').update(canonical, 'utf8').digest('hex');
+      }
+    } catch { /* malformed JSON — fall through to raw-byte hash */ }
+  }
+  return createHash('sha256').update(rawBody).digest('hex');
+}
+
+// Compare against input_hash / output_hash from your AILedger record.
+const computed = ailedgerHash(yourRawBodyBytes, yourStoredContentType);
+console.log(computed === storedHashFromAiledger ? 'verified ✓' : 'MISMATCH ✗');
+`
+  const verifyPython = `import hashlib, json
+from jcs import canonicalize  # pip install jcs  (RFC 8785)
+
+def ailedger_hash(raw: bytes, content_type: str | None) -> str:
+    ct = (content_type or '').lower().split(';')[0].strip()
+    is_json = ct == 'application/json' or ct.endswith('+json')
+    if is_json:
+        try:
+            canonical = canonicalize(json.loads(raw.decode('utf-8')))
+            return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            pass  # fall through to raw-byte hash
+    return hashlib.sha256(raw).hexdigest()
+
+# Compare against input_hash / output_hash from your AILedger record.
+computed = ailedger_hash(your_raw_body_bytes, your_stored_content_type)
+print('verified ✓' if computed == stored_hash_from_ailedger else 'MISMATCH ✗')
+`
+  const verifyGo = `package verify
+
+import (
+  "crypto/sha256"
+  "encoding/hex"
+  "strings"
+
+  jcs "webpki.org/jsoncanonicalizer" // github.com/cyberphone/json-canonicalization
+)
+
+// Mirrors the proxy's sha256jcs().
+func AILedgerHash(raw []byte, contentType string) string {
+  ct := strings.TrimSpace(strings.ToLower(strings.SplitN(contentType, ";", 2)[0]))
+  isJSON := ct == "application/json" || strings.HasSuffix(ct, "+json")
+  if isJSON {
+    if canonical, err := jcs.Transform(raw); err == nil {
+      sum := sha256.Sum256(canonical)
+      return hex.EncodeToString(sum[:])
+    }
+    // malformed JSON — fall through to raw-byte hash
+  }
+  sum := sha256.Sum256(raw)
+  return hex.EncodeToString(sum[:])
+}
+`
+  const verifyRuby = `require 'digest'
+require 'json'
+require 'json/canonicalization' # gem install json-canonicalization (RFC 8785)
+
+def ailedger_hash(raw_body, content_type)
+  ct = (content_type || '').downcase.split(';').first.to_s.strip
+  is_json = ct == 'application/json' || ct.end_with?('+json')
+  if is_json
+    begin
+      canonical = JSON.parse(raw_body).to_json_c14n
+      return Digest::SHA256.hexdigest(canonical)
+    rescue JSON::ParserError, Encoding::UndefinedConversionError
+      # fall through to raw-byte hash
+    end
+  end
+  Digest::SHA256.hexdigest(raw_body)
+end
+
+computed = ailedger_hash(stored_body, stored_content_type)
+puts(computed == stored_hash ? 'verified ✓' : 'MISMATCH ✗')
+`
+
+  // Sample inference_logs row — fields documented in the table below.
+  const sampleRow = `{
+  "id":               "01HKZ8VX9R8C3T...",
+  "customer_id":      "cus_2nQ7vXk...",
+  "system_id":        "sys_7xPq3aR...",
+  "provider":         "openai",
+  "model_name":       "gpt-4.1-mini",
+  "method":           "POST",
+  "path":             "/v1/chat/completions",
+  "status_code":      200,
+  "input_hash":       "a3f5b2e8c91d4f7a6b...",
+  "output_hash":      "9e1c8d4a2f5b6c0d3e...",
+  "latency_ms":       412,
+  "started_at":       "2026-04-22T10:23:11.041Z",
+  "completed_at":     "2026-04-22T10:23:11.453Z",
+  "logged_at":        "2026-04-22T10:23:11.498Z",
+  "chain_prev_hash":  "f0a8b3c2d1e4f5a6...",
+  "chain_genesis_at": "2026-04-15T00:00:00Z"
+}
+`
+
+  const inferenceFields: Array<[string, string, string]> = [
+    ['id', 'uuid', 'Unique row identifier.'],
+    ['customer_id', 'string', 'Your AILedger customer ID. Scopes the row to your account.'],
+    ['system_id', 'string | null', 'Optional AI-system tag tied to the API key (configure in the dashboard).'],
+    ['provider', 'string', 'Upstream provider this call routed to: openai, anthropic, or gemini.'],
+    ['model_name', 'string | null', 'Model name parsed from the request body (or path, for Gemini).'],
+    ['method', 'string', 'HTTP method of the upstream call (POST, GET, ...).'],
+    ['path', 'string', 'Upstream path forwarded after /proxy/<provider>/.'],
+    ['status_code', 'integer', 'HTTP status returned by the upstream provider.'],
+    ['input_hash', 'string | null', 'SHA-256 of the request body — JCS-canonicalized when JSON, raw bytes otherwise.'],
+    ['output_hash', 'string | null', 'SHA-256 of the response body, computed the same way.'],
+    ['latency_ms', 'integer', 'Wall-clock time spent on the upstream call (excludes our overhead).'],
+    ['started_at', 'timestamp', 'ISO-8601 instant the upstream request was dispatched.'],
+    ['completed_at', 'timestamp', 'ISO-8601 instant the upstream response was received.'],
+    ['logged_at', 'timestamp', 'ISO-8601 instant the row was persisted to the ledger.'],
+    ['chain_prev_hash', 'string', 'Hash of the previous row in your tamper-evident chain (set by trigger).'],
+    ['chain_genesis_at', 'timestamp', 'Start of the chain segment this row belongs to (set by trigger).'],
+  ]
+
+  const headersTable: Array<[string, string, string]> = [
+    ['x-ailedger-key', 'Yes', 'Your AILedger API key (alg_sk_...). Identifies the customer and any system_id.'],
+    ['Content-Type', 'Yes (for JSON paths)', "Forwarded as-is. Drives whether the body is hashed via JCS or raw-bytes — getting this right is what makes your hash reproducible."],
+    ['Authorization', 'Conditional', "Provider key for OpenAI (Bearer ...) — forwarded unchanged. Anthropic uses x-api-key instead. Gemini accepts ?key=... or x-goog-api-key."],
+    ['anthropic-version', 'Anthropic only', 'Standard Anthropic API version header — pass through as you would directly.'],
+  ]
+
+  const statusCodes: Array<[string, string, string]> = [
+    ['200 / 2xx', 'Pass-through', "Whatever the upstream provider returned. Body is forwarded byte-for-byte."],
+    ['400', 'Unknown provider', "Path was /proxy/<X>/... where X isn't one of openai, anthropic, gemini."],
+    ['401', 'Missing or invalid x-ailedger-key', 'Header is absent, malformed, or the key has been revoked.'],
+    ['404', 'Unknown route', 'Path did not match /proxy/<provider>/... or any documented endpoint.'],
+    ['429', 'Monthly inference limit reached', 'Free-tier ceiling hit. Upgrade in the dashboard to keep going.'],
+    ['4xx / 5xx (upstream)', 'Forwarded upstream error', "The upstream provider returned an error (auth, rate-limit, model unavailable, etc.). Body and status are passed through unchanged."],
+  ]
+
+  const troubles: Array<[string, string]> = [
+    [
+      '401 — missing or invalid x-ailedger-key',
+      "Either you didn't send the header, or the key is wrong / revoked. Confirm in the dashboard that the key is active and that you're sending the header literally (no quotes, no Bearer prefix). The proxy expects the raw alg_sk_... value.",
+    ],
+    [
+      '400 — unknown provider',
+      "The path is /proxy/<provider>/... and <provider> must be openai, anthropic, or gemini (lowercase). A typo here is the most common cause of a 400 on a brand-new integration.",
+    ],
+    [
+      '429 — monthly inference limit reached',
+      "You've crossed the free-tier ceiling for the current calendar month. Upgrade in the dashboard; usage resets on the first of the next month.",
+    ],
+    [
+      'Hash mismatch when verifying a record',
+      "Your recomputed hash doesn't match input_hash / output_hash. The cause is almost always one of: (a) the wrong content-type — the JCS path only fires for application/json or +json; anything else hashes raw bytes, (b) middleware between your code and us re-serialized the body (a body-parser, a logging proxy, gzip-on-the-wire), so the bytes you stored aren't the bytes we hashed, (c) for streaming responses, you're hashing per-chunk instead of the reassembled body.",
+    ],
+    [
+      'High latency vs. direct calls',
+      "Expected: 150–300ms p50 overhead — one extra network hop through Cloudflare's edge. This is well within natural LLM-inference variance and has no meaningful end-user impact. If you're seeing more, run the benchmark in the Performance section and share results with support.",
+    ],
+    [
+      'Rows missing from the dashboard',
+      "Audit records are durably committed to an edge write-buffer before your response returns, then drained to the queryable ledger asynchronously. Most rows are visible within a second or two; in the rare case of transient database unavailability, the scheduled drain (every 5 min) catches stragglers. If a row is missing for more than 10 minutes, the upstream call itself almost certainly errored before reaching us (DNS failure on your end, SDK retry bypassing the proxy URL).",
+    ],
+  ]
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', color: '#e2e8f0', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', color: 'var(--fg-body)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '100px 32px 80px', display: 'flex', gap: 64 }}>
 
         {/* Sidebar */}
-        <aside style={{ width: 180, flexShrink: 0 }}>
+        <aside style={{ width: 200, flexShrink: 0 }}>
           <div style={{ position: 'sticky', top: 96 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>On this page</p>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {sections.map((s) => (
-                <a key={s.id} href={`#${s.id}`} style={{ fontSize: 14, color: '#64748b', textDecoration: 'none', padding: '4px 0', transition: 'color 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = '#e2e8f0')}
-                  onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
-                >{s.label}</a>
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-ultrasubtle)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>On this page</p>
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {sections.map((sec) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  style={{
+                    fontSize: sec.sub ? 13 : 14,
+                    color: sec.sub ? 'var(--fg-ultrasubtle)' : 'var(--fg-subtle)',
+                    textDecoration: 'none',
+                    padding: sec.sub ? '3px 0 3px 14px' : '4px 0',
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--fg-body)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = sec.sub ? 'var(--fg-ultrasubtle)' : 'var(--fg-subtle)')}
+                >{sec.label}</a>
               ))}
             </nav>
           </div>
@@ -770,82 +1097,256 @@ function Docs() {
         {/* Content */}
         <main style={{ flex: 1, minWidth: 0 }}>
 
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>Documentation</h1>
-          <p style={{ fontSize: 16, color: '#64748b', marginBottom: 64, lineHeight: 1.7 }}>Everything you need to integrate AILedger and start logging AI inferences.</p>
+          <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>Documentation</h1>
+          <p style={{ fontSize: 16, color: 'var(--fg-subtle)', marginBottom: 6, lineHeight: 1.7 }}>Integrate AILedger, log every inference, and verify the record yourself.</p>
+          <p style={{ fontSize: 12, color: 'var(--fg-ultrasubtle)', marginBottom: 64 }}>Last updated: April 22, 2026</p>
 
           {/* Quick start */}
           <section id="quickstart" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Quick start</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 16 }}>
-              Two steps: create an API key in the <a href={DASHBOARD_URL} style={{ color: '#818cf8', textDecoration: 'none' }}>dashboard</a>, then add it to your existing AI client.
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Quick start</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
+              Two steps: create an API key in the <a href={DASHBOARD_URL} style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>dashboard</a>, then add it to your existing AI client.
             </p>
-            <ol style={{ fontSize: 14, color: '#94a3b8', lineHeight: 2, paddingLeft: 20 }}>
-              <li>Sign up at <a href={DASHBOARD_URL} style={{ color: '#818cf8', textDecoration: 'none' }}>dash.ailedger.dev</a></li>
-              <li>Go to <strong style={{ color: '#e2e8f0' }}>API Keys</strong> and create a key</li>
-              <li>Set <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>base_url</code> and pass your key in <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>x-ailedger-key</code></li>
+            <ol style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 2, paddingLeft: 20 }}>
+              <li>Sign up at <a href={DASHBOARD_URL} style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>dash.ailedger.dev</a></li>
+              <li>Go to <strong style={{ color: 'var(--fg-body)' }}>API Keys</strong> and create a key</li>
+              <li>Set <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>base_url</code> and pass your key in <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>x-ailedger-key</code></li>
               <li>Every inference is now logged automatically</li>
             </ol>
           </section>
 
-          {/* OpenAI */}
-          <section id="openai" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>OpenAI</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install openai</code></p>
-            {codeBlock('openai_example.py', `from openai import OpenAI\n\nclient = OpenAI(\n  api_key="your-openai-key",\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\ncompletion = client.chat.completions.create(\n  model="gpt-4.1-mini",\n  messages=[{"role": "user", "content": "Hello!"}]\n)\nprint(completion.choices[0].message.content)\n`, <>
-              {s(c.kw, 'from')}{s(c.plain, ' openai ')}{s(c.kw, 'import')}{s(c.plain, ' OpenAI\n\n')}
-              {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'OpenAI')}{s(c.plain, '(\n')}
-              {s(c.plain, '  api_key=')}{s(c.str, '"your-openai-key"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/openai"`)}{s(c.plain, ',\n')}
-              {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
-              {s(c.name, 'completion')}{s(c.plain, ' = client.chat.completions.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
-              {s(c.plain, '  model=')}{s(c.str, '"gpt-4.1-mini"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello!"')}{s(c.plain, '}]\n)\n')}
-              {s(c.fn, 'print')}{s(c.plain, '(completion.choices[')}{s(c.str, '0')}{s(c.plain, '].message.content)\n')}
-            </>)}
+          {/* Integration intro */}
+          <section id="integration" style={{ scrollMarginTop: '96px', marginBottom: 32 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Integration snippets</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>
+              Use whatever HTTP client or provider SDK you already have. The pattern is identical in every language: swap the base URL to {chip(`${PROXY_URL}/proxy/<provider>`)}, add one header ({chip('x-ailedger-key')}), keep your provider key in place. Below: cURL for smoke-tests, then the official SDKs in Python, JavaScript / TypeScript, and Go.
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7, marginTop: 8 }}>
+              Anthropic uses {chip('x-api-key')}. OpenAI uses {chip('Authorization: Bearer ...')}. Gemini accepts {chip('?key=')} or {chip('x-goog-api-key')}. The proxy forwards all of these unchanged.
+            </p>
           </section>
 
-          {/* Anthropic */}
-          <section id="anthropic" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Anthropic</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install anthropic</code></p>
-            {codeBlock('anthropic_example.py', `from anthropic import Anthropic\n\nclient = Anthropic(\n  api_key="your-anthropic-key",\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\nmessage = client.messages.create(\n  model="claude-opus-4-6",\n  max_tokens=1024,\n  messages=[{"role": "user", "content": "Hello, Claude"}]\n)\nprint(message.content)\n`, <>
-              {s(c.kw, 'from')}{s(c.plain, ' anthropic ')}{s(c.kw, 'import')}{s(c.plain, ' Anthropic\n\n')}
-              {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'Anthropic')}{s(c.plain, '(\n')}
-              {s(c.plain, '  api_key=')}{s(c.str, '"your-anthropic-key"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/anthropic"`)}{s(c.plain, ',\n')}
-              {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
-              {s(c.name, 'message')}{s(c.plain, ' = client.messages.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
-              {s(c.plain, '  model=')}{s(c.str, '"claude-opus-4-6"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  max_tokens=')}{s(c.str, '1024')}{s(c.plain, ',\n')}
-              {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello, Claude"')}{s(c.plain, '}]\n)\n')}
-              {s(c.fn, 'print')}{s(c.plain, '(message.content)\n')}
-            </>)}
+          {/* cURL */}
+          <section id="curl" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>cURL</h3>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Lingua franca for smoke-testing the proxy without installing anything. Set <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>$AILEDGER_KEY</code> and the relevant provider key in your shell, then run any of the three calls below.</p>
+            {codeBlock('openai.sh', curlOpenAI, hl(curlOpenAI))}
+            {codeBlock('anthropic.sh', curlAnthropic, hl(curlAnthropic))}
+            {codeBlock('gemini.sh', curlGemini, hl(curlGemini))}
           </section>
 
-          {/* Gemini */}
-          <section id="gemini" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Gemini</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install google-genai</code></p>
-            {codeBlock('gemini_example.py', `from google import genai\n\nclient = genai.Client(\n  api_key="your-gemini-key",\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": "alg_sk_..."},\n  }\n)\n\nresponse = client.models.generate_content(\n  model="gemini-2.5-flash",\n  contents="Explain how AI works in a few words"\n)\nprint(response.text)\n`, <>
-              {s(c.kw, 'from')}{s(c.plain, ' google ')}{s(c.kw, 'import')}{s(c.plain, ' genai\n\n')}
-              {s(c.name, 'client')}{s(c.plain, ' = genai.')}{s(c.fn, 'Client')}{s(c.plain, '(\n')}
-              {s(c.plain, '  api_key=')}{s(c.str, '"your-gemini-key"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  http_options={\n')}
-              {s(c.plain, '    ')}{s(c.str, '"base_url"')}{s(c.plain, ': ')}{s(c.str, `"${PROXY_URL}/proxy/gemini"`)}{s(c.plain, ',\n')}
-              {s(c.plain, '    ')}{s(c.str, '"headers"')}{s(c.plain, ': {')}{s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, '},\n')}
-              {s(c.plain, '  }\n)\n\n')}
-              {s(c.name, 'response')}{s(c.plain, ' = client.models.')}{s(c.fn, 'generate_content')}{s(c.plain, '(\n')}
-              {s(c.plain, '  model=')}{s(c.str, '"gemini-2.5-flash"')}{s(c.plain, ',\n')}
-              {s(c.plain, '  contents=')}{s(c.str, '"Explain how AI works in a few words"')}{s(c.plain, '\n)\n')}
-              {s(c.fn, 'print')}{s(c.plain, '(response.text)\n')}
-            </>)}
+          {/* Python */}
+          <section id="python" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 12 }}>Python</h3>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>OpenAI</h4>
+              <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install openai</code></p>
+              {codeBlock('openai_example.py', `from openai import OpenAI\n\nclient = OpenAI(\n  api_key="your-openai-key",\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\ncompletion = client.chat.completions.create(\n  model="gpt-4.1-mini",\n  messages=[{"role": "user", "content": "Hello!"}]\n)\nprint(completion.choices[0].message.content)\n`, <>
+                {s(c.kw, 'from')}{s(c.plain, ' openai ')}{s(c.kw, 'import')}{s(c.plain, ' OpenAI\n\n')}
+                {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'OpenAI')}{s(c.plain, '(\n')}
+                {s(c.plain, '  api_key=')}{s(c.str, '"your-openai-key"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/openai"`)}{s(c.plain, ',\n')}
+                {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
+                {s(c.name, 'completion')}{s(c.plain, ' = client.chat.completions.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
+                {s(c.plain, '  model=')}{s(c.str, '"gpt-4.1-mini"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello!"')}{s(c.plain, '}]\n)\n')}
+                {s(c.fn, 'print')}{s(c.plain, '(completion.choices[')}{s(c.str, '0')}{s(c.plain, '].message.content)\n')}
+              </>)}
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Anthropic</h4>
+              <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install anthropic</code></p>
+              {codeBlock('anthropic_example.py', `from anthropic import Anthropic\n\nclient = Anthropic(\n  api_key="your-anthropic-key",\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": "alg_sk_..."}\n)\n\nmessage = client.messages.create(\n  model="claude-opus-4-6",\n  max_tokens=1024,\n  messages=[{"role": "user", "content": "Hello, Claude"}]\n)\nprint(message.content)\n`, <>
+                {s(c.kw, 'from')}{s(c.plain, ' anthropic ')}{s(c.kw, 'import')}{s(c.plain, ' Anthropic\n\n')}
+                {s(c.name, 'client')}{s(c.plain, ' = ')}{s(c.fn, 'Anthropic')}{s(c.plain, '(\n')}
+                {s(c.plain, '  api_key=')}{s(c.str, '"your-anthropic-key"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  base_url=')}{s(c.str, `"${PROXY_URL}/proxy/anthropic"`)}{s(c.plain, ',\n')}
+                {s(c.plain, '  default_headers={')} {s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, ' }\n)\n\n')}
+                {s(c.name, 'message')}{s(c.plain, ' = client.messages.')}{s(c.fn, 'create')}{s(c.plain, '(\n')}
+                {s(c.plain, '  model=')}{s(c.str, '"claude-opus-4-6"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  max_tokens=')}{s(c.str, '1024')}{s(c.plain, ',\n')}
+                {s(c.plain, '  messages=[{')}{s(c.str, '"role"')}{s(c.plain, ': ')}{s(c.str, '"user"')}{s(c.plain, ', ')}{s(c.str, '"content"')}{s(c.plain, ': ')}{s(c.str, '"Hello, Claude"')}{s(c.plain, '}]\n)\n')}
+                {s(c.fn, 'print')}{s(c.plain, '(message.content)\n')}
+              </>)}
+            </div>
+
+            <div>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Gemini</h4>
+              <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 4 }}>Install: <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>pip install google-genai</code></p>
+              {codeBlock('gemini_example.py', `from google import genai\n\nclient = genai.Client(\n  api_key="your-gemini-key",\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": "alg_sk_..."},\n  }\n)\n\nresponse = client.models.generate_content(\n  model="gemini-2.5-flash",\n  contents="Explain how AI works in a few words"\n)\nprint(response.text)\n`, <>
+                {s(c.kw, 'from')}{s(c.plain, ' google ')}{s(c.kw, 'import')}{s(c.plain, ' genai\n\n')}
+                {s(c.name, 'client')}{s(c.plain, ' = genai.')}{s(c.fn, 'Client')}{s(c.plain, '(\n')}
+                {s(c.plain, '  api_key=')}{s(c.str, '"your-gemini-key"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  http_options={\n')}
+                {s(c.plain, '    ')}{s(c.str, '"base_url"')}{s(c.plain, ': ')}{s(c.str, `"${PROXY_URL}/proxy/gemini"`)}{s(c.plain, ',\n')}
+                {s(c.plain, '    ')}{s(c.str, '"headers"')}{s(c.plain, ': {')}{s(c.str, '"x-ailedger-key"')}{s(c.plain, ': ')}{s(c.str, '"alg_sk_..."')}{s(c.plain, '},\n')}
+                {s(c.plain, '  }\n)\n\n')}
+                {s(c.name, 'response')}{s(c.plain, ' = client.models.')}{s(c.fn, 'generate_content')}{s(c.plain, '(\n')}
+                {s(c.plain, '  model=')}{s(c.str, '"gemini-2.5-flash"')}{s(c.plain, ',\n')}
+                {s(c.plain, '  contents=')}{s(c.str, '"Explain how AI works in a few words"')}{s(c.plain, '\n)\n')}
+                {s(c.fn, 'print')}{s(c.plain, '(response.text)\n')}
+              </>)}
+            </div>
           </section>
 
-          {/* Test your keys */}
-          <section id="test" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Test your keys</h2>
-            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.8, marginBottom: 16 }}>
-              Run this script to verify all three providers are routing through AILedger correctly.
+          {/* JavaScript / TypeScript */}
+          <section id="javascript" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 12 }}>JavaScript / TypeScript</h3>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>Install whichever provider SDK you already use ({chip('npm i openai')}, {chip('npm i @anthropic-ai/sdk')}, or {chip('npm i @google/genai')}). Each one exposes <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>baseURL</code> and <code style={{ background: 'var(--border)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>defaultHeaders</code> — that's the only diff.</p>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>OpenAI</h4>
+              {codeBlock('openai.ts', jsOpenAI, hl(jsOpenAI))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Anthropic</h4>
+              {codeBlock('anthropic.ts', jsAnthropic, hl(jsAnthropic))}
+            </div>
+            <div>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Gemini</h4>
+              {codeBlock('gemini.ts', jsGemini, hl(jsGemini))}
+            </div>
+          </section>
+
+          {/* Go */}
+          <section id="go" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 12 }}>Go</h3>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>The provider SDKs are inconsistent across Go, so the most portable pattern is plain {chip('net/http')}: build the request, set two headers, send. Use this as a starter — drop into your preferred client (e.g. {chip('resty')}, {chip('hashicorp/cleanhttp')}) without changing the URL or header names.</p>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>OpenAI</h4>
+              {codeBlock('openai.go', goOpenAI, hl(goOpenAI))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Anthropic</h4>
+              {codeBlock('anthropic.go', goAnthropic, hl(goAnthropic))}
+            </div>
+            <div>
+              <h4 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Gemini</h4>
+              {codeBlock('gemini.go', goGemini, hl(goGemini))}
+            </div>
+          </section>
+
+          {/* Streaming / SSE */}
+          <section id="streaming" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Streaming / SSE</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 12 }}>
+              Streaming responses pass through unchanged. Set {chip('stream: true')} on the upstream call exactly as you would directly — the proxy forwards the {chip('text/event-stream')} chunks to your client byte-for-byte and assembles its own copy of the full body in parallel.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 12 }}>
+              Hashing happens once, after the stream ends. We hash the assembled body (the full {chip('data: ...\\n\\n')} concatenation, terminator and all) as raw bytes — there is no JCS canonical form for an SSE stream. That means: <strong style={{ color: 'var(--fg-body)' }}>if you want to recompute the response hash, you must reassemble the same bytes you stored on your side</strong>, in the same order, with the same SSE framing. Per-chunk hashing will not match.
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8 }}>
+              For the request body, the JCS rule still applies: a JSON-typed POST body (which is the typical shape for {chip('chat/completions')} or {chip('messages')}) is JCS-canonicalized before hashing, regardless of whether the response was streaming.
+            </p>
+          </section>
+
+          {/* Your audit trail */}
+          <section id="audit-trail" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Your audit trail</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
+              Each call writes one row to the {chip('inference_logs')} table. Below: the shape of a row and what each field means.
+            </p>
+
+            <div style={{ marginBottom: 20, padding: '14px 18px', borderRadius: 10, border: '1px solid var(--border-accent-soft)', background: 'var(--accent-tint-bg)' }}>
+              <p style={{ fontSize: 13, color: 'var(--accent-text)', lineHeight: 1.7, fontWeight: 500 }}>
+                We do not store raw inputs or outputs. Only their SHA-256 hashes plus the metadata fields below. The recipe in the next section is what lets you re-prove that a stored hash matches a specific request body you held on your side.
+              </p>
+            </div>
+
+            {codeBlock('inference_logs.row.json', sampleRow, hl(sampleRow))}
+
+            <div style={{ marginTop: 24, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Field', 'Type', 'Description'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {inferenceFields.map(([f, t, d]) => (
+                    <tr key={f} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{f}</code></td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontFamily: 'ui-monospace, monospace', fontSize: 12, verticalAlign: 'top', whiteSpace: 'nowrap' }}>{t}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{d}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{ marginTop: 20, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+              Bulk export of inference rows in CSV / JSONL is on the roadmap and will land alongside SOC 2 Type I (Q3 2026 target). Until then, rows are queryable from the dashboard.
+            </p>
+          </section>
+
+          {/* Verify a record yourself */}
+          <section id="verify" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Verify a record yourself</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
+              The defense in a regulator audit is simple: you produce your server's stored request body + content-type + timestamp, plus our stored hash, plus the recipe below. If the recomputed hash matches our hash, the inference provably happened as logged.
+            </p>
+
+            <div style={{ marginBottom: 24, padding: '20px 24px', borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--surface-tint)' }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-ultrasubtle)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>The recipe — hard contract</p>
+              <ol style={{ fontSize: 14, color: 'var(--fg-body)', lineHeight: 1.9, paddingLeft: 22, margin: 0 }}>
+                <li>Take the {chip('Content-Type')} you stored alongside the raw body.</li>
+                <li>If it starts with {chip('application/json')} or ends with {chip('+json')}:
+                  <ol type="a" style={{ paddingLeft: 22, marginTop: 6, color: 'var(--fg-subtle)', fontSize: 13.5 }}>
+                    <li>Parse the raw body as JSON.</li>
+                    <li>Run the parsed value through RFC 8785 JCS canonicalization.</li>
+                    <li>SHA-256 the canonical UTF-8 bytes.</li>
+                  </ol>
+                </li>
+                <li>Otherwise: SHA-256 the raw bytes unchanged.</li>
+                <li>Compare to our stored {chip('input_hash')} / {chip('output_hash')}. Match = proof the logged inference was exactly that call.</li>
+              </ol>
+              <p style={{ marginTop: 14, fontSize: 12, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+                If the JSON path fails (malformed JSON, invalid UTF-8, JCS-unrepresentable values like NaN / Infinity), the recipe falls through to step 3. The proxy does the same — staying raw keeps the hash stable and ties it to what was actually on the wire.
+              </p>
+            </div>
+
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-primary)', marginTop: 8, marginBottom: 8 }}>RFC 8785 libraries</h3>
+            <ul style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.9, paddingLeft: 22, marginBottom: 24 }}>
+              <li><strong style={{ color: 'var(--fg-body)' }}>JavaScript / TypeScript:</strong> {chip('canonicalize')} on npm (the same package the proxy uses).</li>
+              <li><strong style={{ color: 'var(--fg-body)' }}>Python:</strong> {chip('jcs')} on PyPI (or {chip('rfc8785')}).</li>
+              <li><strong style={{ color: 'var(--fg-body)' }}>Go:</strong> {chip('github.com/cyberphone/json-canonicalization')}.</li>
+              <li><strong style={{ color: 'var(--fg-body)' }}>Ruby:</strong> {chip('json-canonicalization')} gem.</li>
+            </ul>
+
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-primary)', marginTop: 8, marginBottom: 8 }}>Code: end-to-end recipe per language</h3>
+
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>JavaScript / TypeScript</h4>
+              {codeBlock('verify.ts', verifyJS, hl(verifyJS))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Python</h4>
+              {codeBlock('verify.py', verifyPython, hl(verifyPython))}
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Go</h4>
+              {codeBlock('verify.go', verifyGo, hl(verifyGo))}
+            </div>
+            <div>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 4 }}>Ruby</h4>
+              {codeBlock('verify.rb', verifyRuby, hl(verifyRuby))}
+            </div>
+
+            <p style={{ marginTop: 24, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+              Every implementation above produces the same hex string for the same input — that's the entire point of RFC 8785. If your hash differs from ours, the cause is almost always content-type drift or middleware that re-serialized the body. See <a href="#troubleshooting" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>Troubleshooting</a>.
+            </p>
+          </section>
+
+          {/* Performance (relocated benchmark) */}
+          <section id="performance" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>Performance</h2>
+            <p style={{ fontSize: 14, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 16 }}>
+              Measure the overhead the proxy adds vs. calling the providers directly. Run this script with all three keys filled in to get a side-by-side direct/proxy comparison.
             </p>
             {codeBlock('test_proxy.py', `import time\nfrom openai import OpenAI\nfrom anthropic import Anthropic\nfrom google import genai\n\nAILEDGER_KEY  = "alg_sk_..."\nOPENAI_KEY    = "sk-..."\nANTHROPIC_KEY = "sk-ant-..."\nGEMINI_KEY    = "AIza..."\n\nRUNS = 3\ndef avg(times): return sum(times) / len(times)\n\n# OpenAI\ndirect = OpenAI(api_key=OPENAI_KEY)\nproxy  = OpenAI(\n  api_key=OPENAI_KEY,\n  base_url="${PROXY_URL}/proxy/openai",\n  default_headers={"x-ailedger-key": AILEDGER_KEY},\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.chat.completions.create(model="gpt-4.1-mini", messages=[{"role": "user", "content": "Say: ok"}], max_tokens=5)\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.chat.completions.create(model="gpt-4.1-mini", messages=[{"role": "user", "content": "Say: ok"}], max_tokens=5)\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.choices and r.choices[0].message.content:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [OpenAI]    '{r.choices[0].message.content.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n\n# Anthropic\ndirect = Anthropic(api_key=ANTHROPIC_KEY)\nproxy  = Anthropic(\n  api_key=ANTHROPIC_KEY,\n  base_url="${PROXY_URL}/proxy/anthropic",\n  default_headers={"x-ailedger-key": AILEDGER_KEY},\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.messages.create(model="claude-opus-4-6", max_tokens=5, messages=[{"role": "user", "content": "Say: ok"}])\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.messages.create(model="claude-opus-4-6", max_tokens=5, messages=[{"role": "user", "content": "Say: ok"}])\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.content and r.content[0].text:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [Anthropic] '{r.content[0].text.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n\n# Gemini\ndirect = genai.Client(api_key=GEMINI_KEY)\nproxy  = genai.Client(\n  api_key=GEMINI_KEY,\n  http_options={\n    "base_url": "${PROXY_URL}/proxy/gemini",\n    "headers": {"x-ailedger-key": AILEDGER_KEY},\n  },\n)\ndirect_times, proxy_times = [], []\nfor _ in range(RUNS):\n  t0 = time.perf_counter()\n  direct.models.generate_content(model="gemini-2.5-flash", contents="Say: ok")\n  direct_times.append((time.perf_counter() - t0) * 1000)\n  t0 = time.perf_counter()\n  r = proxy.models.generate_content(model="gemini-2.5-flash", contents="Say: ok")\n  proxy_times.append((time.perf_counter() - t0) * 1000)\nif r.text:\n  d, p = avg(direct_times), avg(proxy_times)\n  print(f"✓ [Gemini]    '{r.text.strip()}'")\n  print(f"  avg over {RUNS} runs - direct={d:.0f}ms  proxy={p:.0f}ms  overhead={p - d:+.0f}ms")\n`, <>
               {s(c.kw, 'import')}{s(c.plain, ' time\n')}
@@ -914,8 +1415,8 @@ function Docs() {
             </>)}
 
             {/* Expected output */}
-            <div style={{ marginTop: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)', background: '#0d1017', overflow: 'hidden' }}>
-              <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>expected output</div>
+            <div style={{ marginTop: 16, borderRadius: 12, border: '1px solid var(--border-strong)', background: 'var(--bg-code)', overflow: 'hidden' }}>
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--fg-ultrasubtle)', fontFamily: 'monospace' }}>expected output</div>
               <div style={{ padding: '20px 22px', fontFamily: 'ui-monospace, monospace', fontSize: 13, lineHeight: 2.2 }}>
                 {[
                   { label: '[OpenAI]    ' },
@@ -925,52 +1426,118 @@ function Docs() {
                   <div key={label} style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                      <span style={{ color: '#475569' }}>{label}</span>
+                      <span style={{ color: 'var(--fg-ultrasubtle)' }}>{label}</span>
                       <span style={{ color: '#86efac' }}>'ok'</span>
                     </div>
-                    <div style={{ paddingLeft: 28, color: '#475569', fontSize: 12 }}>
-                      avg over 3 runs - direct=<span style={{ color: '#94a3b8' }}>450ms</span>  proxy=<span style={{ color: '#94a3b8' }}>468ms</span>  overhead=<span style={{ color: '#86efac' }}>+18ms</span>
+                    <div style={{ paddingLeft: 28, color: 'var(--fg-ultrasubtle)', fontSize: 12 }}>
+                      avg over 3 runs - direct=<span style={{ color: 'var(--fg-muted)' }}>450ms</span>  proxy=<span style={{ color: 'var(--fg-muted)' }}>468ms</span>  overhead=<span style={{ color: '#86efac' }}>+18ms</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <p style={{ marginTop: 16, fontSize: 13, color: '#94a3b8', lineHeight: 1.8 }}>
-              LLM inference time is noisy - bump <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>RUNS</code> to <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>10</code> for a stable average.
-              {' '}Typical overhead is <span style={{ color: '#e2e8f0' }}>150–300ms</span> - an extra network hop through Cloudflare's edge. This is well within the natural variance of LLM inference time and has no meaningful impact on end-user experience. You may occasionally see the proxy come in <em>faster</em> than direct when Cloudflare's backbone beats your ISP's path to the provider.
+            <p style={{ marginTop: 16, fontSize: 13, color: 'var(--fg-muted)', lineHeight: 1.8 }}>
+              LLM inference time is noisy - bump <code style={{ background: 'var(--border)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>RUNS</code> to <code style={{ background: 'var(--border)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>10</code> for a stable average.
+              {' '}Typical overhead is <span style={{ color: 'var(--fg-body)' }}>150–300ms</span> - an extra network hop through Cloudflare's edge. This is well within the natural variance of LLM inference time and has no meaningful impact on end-user experience. You may occasionally see the proxy come in <em>faster</em> than direct when Cloudflare's backbone beats your ISP's path to the provider.
             </p>
           </section>
 
           {/* API reference */}
           <section id="reference" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#fff', marginBottom: 16 }}>API reference</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 16 }}>API reference</h2>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  {['Header', 'Required', 'Description'].map((h) => (
-                    <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: '#475569', fontWeight: 500 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['x-ailedger-key', 'Yes', 'Your AILedger API key (alg_sk_...)'],
-                  ['Authorization', 'Yes', 'Your provider key - forwarded as-is to the upstream API'],
-                ].map(([h, r, d]) => (
-                  <tr key={h} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '10px 12px' }}><code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#93c5fd' }}>{h}</code></td>
-                    <td style={{ padding: '10px 12px', color: r === 'Yes' ? '#86efac' : '#475569' }}>{r}</td>
-                    <td style={{ padding: '10px 12px', color: '#64748b' }}>{d}</td>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginTop: 8, marginBottom: 10 }}>Endpoints</h3>
+            <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Method', 'Path', 'Purpose'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {([
+                    ['ANY', '/proxy/<provider>/<...path>', 'Forward to the upstream provider, log the call. Provider must be openai, anthropic, or gemini.'],
+                    ['GET', '/health', 'Liveness check. Returns 200 with { "status": "ok" }.'],
+                    ['—', '/audit/export', 'Bulk export of inference rows (CSV / JSONL) — coming soon, ships alongside SOC 2 Type I (Q3 2026 target).'],
+                  ] as Array<[string, string, string]>).map(([m, path, purp]) => (
+                    <tr key={path} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontFamily: 'ui-monospace, monospace', fontSize: 12, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{m}</td>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{path}</code></td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{purp}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-            <p style={{ marginTop: 24, fontSize: 14, color: '#475569', lineHeight: 1.8 }}>
-              Proxy base URL: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>{PROXY_URL}/proxy/{'<provider>'}</code>
-              <br />Supported providers: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>openai</code> · <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>anthropic</code> · <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: '#e2e8f0' }}>gemini</code>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginTop: 8, marginBottom: 10 }}>Headers</h3>
+            <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Header', 'Required', 'Description'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {headersTable.map(([h, r, d]) => (
+                    <tr key={h} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--color-info)' }}>{h}</code></td>
+                      <td style={{ padding: '10px 12px', color: r === 'Yes' ? 'var(--color-success)' : 'var(--fg-ultrasubtle)', verticalAlign: 'top', whiteSpace: 'nowrap' }}>{r}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{d}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginTop: 8, marginBottom: 10 }}>Status codes</h3>
+            <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 540 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-strong)' }}>
+                    {['Status', 'Meaning', 'Detail'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontWeight: 500, fontSize: 12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {statusCodes.map(([code, meaning, detail]) => (
+                    <tr key={code} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
+                      <td style={{ padding: '10px 12px', verticalAlign: 'top', whiteSpace: 'nowrap' }}><code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>{code}</code></td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-body)', verticalAlign: 'top', fontSize: 13 }}>{meaning}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fg-subtle)', lineHeight: 1.6 }}>{detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{ marginTop: 16, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.8 }}>
+              Proxy base URL: <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>{PROXY_URL}/proxy/{'<provider>'}</code>
+              <br />Supported providers: <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>openai</code> · <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>anthropic</code> · <code style={{ background: 'var(--border)', padding: '2px 7px', borderRadius: 4, fontSize: 12, color: 'var(--fg-body)' }}>gemini</code>
+              <br />OpenAI's SDK omits the {chip('/v1')} prefix when {chip('base_url')} is overridden; the proxy normalizes it back, so calls work whether or not your client includes it.
+              <br />Free-tier ceiling is 10,000 requests / calendar month. Higher ceilings are on Pro / Scale / Evidence — see <a href="/pricing" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>pricing</a>.
+            </p>
+          </section>
+
+          {/* Troubleshooting */}
+          <section id="troubleshooting" style={{ scrollMarginTop: '96px', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 16 }}>Troubleshooting</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {troubles.map(([q, a]) => (
+                <div key={q} style={{ padding: '16px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-tint)' }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 6 }}>{q}</p>
+                  <p style={{ fontSize: 13.5, color: 'var(--fg-subtle)', lineHeight: 1.75 }}>{a}</p>
+                </div>
+              ))}
+            </div>
+            <p style={{ marginTop: 20, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
+              Still stuck? Email <a href="mailto:support@ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>support@ailedger.dev</a> with the request ID from your dashboard row and the recipe step that failed — that's enough for us to reproduce in most cases.
             </p>
           </section>
 
@@ -1089,25 +1656,25 @@ function Legal() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 32px' }}>
-        <a href="/" style={{ color: '#475569', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>Legal</h1>
-        <p style={{ color: '#475569', fontSize: 14, marginBottom: 48 }}>Last updated: April 13, 2026</p>
+        <a href="/" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>Legal</h1>
+        <p style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, marginBottom: 48 }}>Last updated: April 13, 2026</p>
 
-        <h2 id="terms" style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px', marginTop: 24, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Terms of Service</h2>
+        <h2 id="terms" style={{ fontSize: 26, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginTop: 24, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border-strong)' }}>Terms of Service</h2>
         {termsSections.map((s) => (
-          <div key={s.title} style={{ marginBottom: 36 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>{s.title}</h3>
-            <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.8 }}>{s.body}</p>
+          <div key={s.title} style={{ marginBottom: 36, paddingLeft: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8 }}>{s.title}</h3>
+            <p style={{ fontSize: 15, color: 'var(--fg-subtle)', lineHeight: 1.8 }}>{s.body}</p>
           </div>
         ))}
 
-        <h2 id="privacy" style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px', marginTop: 64, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>Privacy Policy</h2>
+        <h2 id="privacy" style={{ fontSize: 26, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginTop: 64, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border-strong)' }}>Privacy Policy</h2>
         {privacySections.map((s) => (
-          <div key={s.title} style={{ marginBottom: 36 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 8 }}>{s.title}</h3>
-            <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.8 }}>{s.body}</p>
+          <div key={s.title} style={{ marginBottom: 36, paddingLeft: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8 }}>{s.title}</h3>
+            <p style={{ fontSize: 15, color: 'var(--fg-subtle)', lineHeight: 1.8 }}>{s.body}</p>
           </div>
         ))}
       </div>
@@ -1117,17 +1684,17 @@ function Legal() {
 
 function Contact() {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '80px 32px' }}>
-        <a href="/" style={{ color: '#475569', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>- Back</a>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>Contact</h1>
-        <p style={{ color: '#475569', fontSize: 15, lineHeight: 1.8, marginBottom: 36 }}>
+        <a href="/" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back</a>
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>Contact</h1>
+        <p style={{ color: 'var(--fg-muted)', fontSize: 15, lineHeight: 1.8, marginBottom: 36 }}>
           For support, billing questions, and to exercise your data rights under GDPR, reach us at:
         </p>
-        <a href="mailto:support@ailedger.dev" style={{ fontSize: 18, color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>
+        <a href="mailto:support@ailedger.dev" style={{ fontSize: 18, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>
           support@ailedger.dev
         </a>
-        <p style={{ color: '#334155', fontSize: 14, marginTop: 48, lineHeight: 1.8 }}>
+        <p style={{ color: 'var(--fg-subtle)', fontSize: 14, marginTop: 48, lineHeight: 1.8 }}>
           For enterprise inquiries or EU data residency questions, use the same address and we'll route you to the correct person.
         </p>
       </div>
@@ -1194,47 +1761,437 @@ function AnnexIIIGuide() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '100px 32px 80px' }}>
-        <a href="/docs" style={{ color: '#475569', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back to docs</a>
-        <h1 style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', marginBottom: 8 }}>
+        <a href="/docs" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none', display: 'inline-block', marginBottom: 48 }}>← Back to docs</a>
+        <h1 style={{ fontSize: 36, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.5px', marginBottom: 8 }}>
           Annex III Category Guide
         </h1>
-        <p style={{ color: '#64748b', fontSize: 16, lineHeight: 1.7, marginBottom: 16 }}>
+        <p style={{ color: 'var(--fg-subtle)', fontSize: 16, lineHeight: 1.7, marginBottom: 16 }}>
           The EU AI Act (Regulation 2024/1689) classifies certain AI systems as "high-risk" under Annex III. If your system falls into any of these categories, you are required to maintain automatic event logs under Article 12.
         </p>
-        <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.7, marginBottom: 48 }}>
+        <p style={{ color: 'var(--fg-subtle)', fontSize: 14, lineHeight: 1.7, marginBottom: 48 }}>
           For each category below, ask yourself the question. If the answer is yes, that is likely your Annex III classification. If your system spans multiple categories, select the most specific one. If you are unsure, consult your legal or compliance team.
         </p>
 
         {categories.map((cat, i) => (
-          <div key={cat.num} style={{ marginBottom: 36, paddingBottom: i < categories.length - 1 ? 36 : 0, borderBottom: i < categories.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+          <div key={cat.num} style={{ marginBottom: 36, paddingBottom: i < categories.length - 1 ? 36 : 0, borderBottom: i < categories.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', marginBottom: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', fontFamily: 'monospace', minWidth: 28 }}>{cat.num}.</span>
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#fff' }}>{cat.title}</h2>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)', fontFamily: 'monospace', minWidth: 28 }}>{cat.num}.</span>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)' }}>{cat.title}</h2>
             </div>
             <div style={{ paddingLeft: 44 }}>
-              <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.8, marginBottom: 12 }}>
-                <span style={{ color: '#e2e8f0', fontWeight: 500 }}>Ask:</span> {cat.ask}
+              <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.8, marginBottom: 12 }}>
+                <span style={{ color: 'var(--fg-body)', fontWeight: 500 }}>Ask:</span> {cat.ask}
               </p>
-              <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>
-                <span style={{ color: '#475569', fontWeight: 500 }}>Examples:</span> {cat.examples}
+              <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7 }}>
+                <span style={{ color: 'var(--fg-ultrasubtle)', fontWeight: 500 }}>Examples:</span> {cat.examples}
               </p>
             </div>
           </div>
         ))}
 
-        <div style={{ marginTop: 48, padding: '20px 24px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 12 }}>
-          <p style={{ fontSize: 14, color: '#818cf8', lineHeight: 1.7 }}>
+        <div style={{ marginTop: 48, padding: '20px 24px', background: 'var(--accent-tint-bg)', border: '1px solid var(--border-accent-soft)', borderRadius: 12 }}>
+          <p style={{ fontSize: 14, color: 'var(--accent-text)', lineHeight: 1.7 }}>
             <span style={{ fontWeight: 600 }}>Not sure?</span> Select "Other (describe in system purpose)" in your system settings and describe your use case in the purpose field. Your compliance report will include this description for regulators to assess.
           </p>
         </div>
 
-        <p style={{ marginTop: 32, fontSize: 12, color: '#475569', lineHeight: 1.7 }}>
+        <p style={{ marginTop: 32, fontSize: 12, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
           Source: Annex III, Regulation (EU) 2024/1689 of the European Parliament and of the Council (EU AI Act).
         </p>
       </div>
+    </div>
+  )
+}
+
+function PricingPage() {
+  const tiers = [
+    {
+      name: 'Ledger',
+      band: '10k free · 100k on Pro ($149/mo) · 1M on Scale ($499/mo) · usage-based above.',
+      positioning: 'For engineering teams shipping LLM features that will need audit evidence before they need an auditor.',
+      bullets: [
+        'Proxy drop-in for Anthropic, OpenAI, and Google — swap your base URL, inherit auth, keep shipping.',
+        'Chain of custody on every request/response (SHA-256 fingerprints; full chain verification ships alongside SOC 2 Type I, Q3 2026 target).',
+        'Dashboard and `ailedger verify` CLI for on-demand chain verification.',
+        '6-month retention baseline for free plan.',
+        'Single-tenant workspace, 2 seats, community support (docs + GitHub).',
+        'Usage ceiling: 10k free / 100k on Pro / 1M on Scale; usage-based above.',
+      ],
+      primary: { label: 'Start free', href: DASHBOARD_URL },
+      secondary: { label: 'Apply for design partnership', href: '/contact' },
+      highlight: false,
+    },
+    {
+      name: 'Evidence',
+      band: '$40,000 / year · annual contract. Design-partner pricing ($24,000 / year) available for the first three cohort customers.',
+      positioning: 'For the DPO, counsel, and engineering lead who need to hand an auditor a defensible artifact — not a screenshot.',
+      bullets: [
+        'Everything in Ledger, plus:',
+        'Multi-tenant isolation with per-tenant ledger separation.',
+        'Data-residency election: EU region available (EU-primary hosting; Frankfurt).',
+        'Article 26 ↔ Article 12 mapping export: the one-pager your DPO takes into a RoPA appendix unchanged.',
+        'Audit-PDF export with chain-verification appendix; signing available on SOC 2 Type I.',
+        'Multi-seat: DPO, counsel, engineering lead, and auditor read-only roles.',
+        'SSO (SAML / OIDC): included.',
+        'Retention extension: available under custom scope.',
+        'Standard DPA template available.',
+        'Priority email support; SOC 2 Type I attestation (audit in progress; target Q3 2026).',
+      ],
+      primary: { label: 'Request a guided evaluation', href: '/contact' },
+      secondary: { label: 'Talk to us', href: '/contact' },
+      highlight: true,
+    },
+    {
+      name: 'Audit',
+      band: 'From $80,000 / year · custom-scoped. Single-overlay deployments start at $80k; multi-overlay / strict-EU-only / extended-retention configurations scale with complexity.',
+      positioning: 'For regulated enterprises whose InfoSec, legal, and sectoral-supervisor lines all want the same answer to the same question.',
+      bullets: [
+        'Everything in Evidence, plus:',
+        'Dedicated data residency (single-tenant or BYOC, negotiated).',
+        'Configured retention aligned to sectoral overlay (BaFin MaRisk, FCA SYSC, AMF RG, Solvency II, MiCA).',
+        'SLA on uptime and response; dedicated support contact; named onboarding architect.',
+        'Annual Article 12 conformance letter included.',
+        'SIG / CAIQ package available at engagement start (Week-1 of Audit scoping).',
+        'MRM integration hooks on roadmap; scoped at Audit-contract signing.',
+        'SOC 2 Type II — this tier is gated on SOC 2 Type II availability; Q3 2027 realistic target (on-track, not a contractual commitment).',
+      ],
+      primary: { label: 'Contact us for qualifying', href: '/contact' },
+      secondary: { label: 'Request overview (redacted)', href: '/contact' },
+      highlight: false,
+    },
+  ]
+
+  const compareRows: Array<{ feature: string; ledger: string; evidence: string; audit: string; bold?: boolean }> = [
+    { feature: 'Proxy (Anthropic / OpenAI / Google)', ledger: 'Included', evidence: 'Included', audit: 'Included' },
+    { feature: 'Chain of custody (SHA-256 fingerprints; full chain verification ships alongside SOC 2 Type I)', ledger: 'Included', evidence: 'Included', audit: 'Included' },
+    { feature: 'Dashboard + `ailedger verify` CLI', ledger: 'Included', evidence: 'Included', audit: 'Included' },
+    { feature: 'Retention — baseline', ledger: '6 months', evidence: '6 months', audit: 'Configured to sectoral overlay', bold: true },
+    { feature: 'Retention — extension', ledger: 'Not available', evidence: 'Available under custom scope', audit: 'Included', bold: true },
+    { feature: 'Tenant isolation', ledger: 'Single-tenant workspace', evidence: 'Multi-tenant with per-tenant separation', audit: 'Multi-tenant + dedicated / BYOC option' },
+    { feature: 'Seats', ledger: '2', evidence: '5–10 + auditor read-only', audit: 'Unlimited + SSO' },
+    { feature: 'SSO (SAML / OIDC)', ledger: 'Not available', evidence: 'Included', audit: 'Included', bold: true },
+    { feature: 'Data-residency election (EU region)', ledger: 'Not available', evidence: 'Included (EU-primary, Frankfurt)', audit: 'Included (dedicated)' },
+    { feature: 'Article 26 ↔ Article 12 mapping export', ledger: 'Not available', evidence: 'Included', audit: 'Included + sectoral overlay' },
+    { feature: 'Audit-PDF export', ledger: 'Not available', evidence: 'Included; signing available on SOC 2 Type I', audit: 'Included + annual conformance letter' },
+    { feature: 'Audit-chain granularity', ledger: 'Per-request hash record; per-tenant root + full chain ship alongside SOC 2 Type I', evidence: 'Per-request hash record; per-tenant root + full chain ship alongside SOC 2 Type I', audit: 'Per-request hash record; per-tenant root + full chain + sectoral segmentation ship alongside SOC 2 Type I' },
+    { feature: 'DPA template', ledger: 'Not available', evidence: 'Standard template', audit: 'Custom per counsel' },
+    { feature: 'SOC 2 Type I', ledger: 'Not available', evidence: 'Included (audit in progress, target Q3 2026)', audit: 'Included', bold: true },
+    { feature: 'SOC 2 Type II', ledger: 'Not available', evidence: 'Not available', audit: 'Gated — required for this tier; Q3 2027 realistic target', bold: true },
+    { feature: 'Support', ledger: 'Community (docs + GitHub)', evidence: 'Priority email', audit: 'Dedicated contact + named architect' },
+    { feature: 'SLA', ledger: 'Best-effort', evidence: 'Best-effort', audit: 'Contractual uptime + response (scoped at contract)' },
+    { feature: 'BYOC / self-hosted', ledger: 'Not available', evidence: 'Not available', audit: 'Negotiated' },
+    { feature: 'Contract shape', ledger: 'Self-serve (Free / Pro / Scale) or design partnership', evidence: 'Sales-assisted, standard MSA', audit: 'MSA + custom order form' },
+  ]
+
+  const personaCards = [
+    {
+      tier: 'Ledger',
+      header: "If you're shipping LLM features and your next enterprise deal will ask about AI logging — start here.",
+      body: 'You swap a base URL; we capture every request and response as a SHA-256-fingerprinted ledger entry (full chain verification ships alongside SOC 2 Type I). Your dev-observability tool still answers "is my prompt working?" We answer "can you prove what this model said, and when, to someone who needs to verify it later?" Adjacent stacks, different question.',
+      footer: 'Ledger is priced for an engineering departmental budget. No procurement call required to evaluate.',
+    },
+    {
+      tier: 'Evidence',
+      header: "If your next EU customer's vendor-risk review includes an AI-logging line item — you need Evidence.",
+      body: 'Evidence ships the artifacts your team actually uses: Article 26 ↔ Article 12 mapping export for your RoPA appendix, audit-PDF exports (signing available on SOC 2 Type I), per-tenant ledger separation, EU data residency (EU-primary hosting in Frankfurt), SSO, and a standard DPA your counsel can red-line instead of draft from scratch.',
+      footer: "Evidence is sales-assisted: we'd rather scope it to your Article 12 surface before you commit than after.",
+    },
+    {
+      tier: 'Audit',
+      header: 'If BaFin, FCA, AMF, or an equivalent supervisor can ask you — specifically, your deployer entity — to produce the log of a specific AI call, Audit is the tier built for that question.',
+      body: "Dedicated data residency, configured retention aligned to your sectoral overlay, and a SIG / CAIQ package available at engagement start so your review calendar isn't gated on our response time. MRM integration hooks (for coexistence with ValidMind / Monitaur governance layers) are on roadmap and scoped at Audit-contract signing — we're complementary to governance layers, not a rip-and-replace.",
+      footer: "Audit is gated on SOC 2 Type II availability (Q3 2027 target) and reference-customer fit.",
+    },
+  ]
+
+  const positioning = [
+    { label: 'vs. LangFuse (dev-observability).', body: 'LangFuse helps your engineers debug prompts during development. AILedger captures a deployer-custody, tamper-evident record for the auditor who shows up later. Adjacent layers, different question.' },
+    { label: 'vs. ValidMind (MRM).', body: 'ValidMind governs model-lifecycle risk for MRM-mature orgs. AILedger is the proof layer below your compliance workflow that their governance layer references. We sit below; they sit above.' },
+    { label: 'vs. Monitaur (MRM).', body: 'Monitaur sits in the same MRM-sector frame as ValidMind with a compliance-workflow emphasis. Same split applies: AILedger is the audit-ready logging layer their workflows verify against — they run the workflow on top, we hold the evidence underneath.' },
+    { label: 'vs. Credo AI (governance dashboard).', body: 'Credo AI ships AI-governance dashboards and policy workflows for compliance/risk teams. AILedger is the tamper-evident log their dashboard queries and attests against — the proof layer below their governance workflow.' },
+    { label: 'vs. Holistic AI (governance dashboard).', body: 'Holistic AI operates in the governance-dashboard sector alongside Credo AI (policy + assessment emphasis). AILedger provides the audit-ready logging layer their policy engine can point to — the record built for auditor acceptance when the policy is tested.' },
+    { label: 'Compliance-ready audit chain.', body: 'Article 12 "automatic recording" is a deployer obligation. Our ledger is built for that obligation by default, not retrofitted to it.' },
+  ]
+
+  const faqItems = [
+    {
+      q: "How did you price Evidence at $40k/year and Audit at $80k+/year?",
+      a: "Three independent anchors converge. (1) Budget: the AI-compliance line item at a €10–100M ARR high-risk AI deployer is typically €30–100k/year — Evidence fits inside it. Enterprise GRC budgets at regulated entities run €200k–€1M; Audit sits at the Article-12-specific slice. (2) Alternatives: DIY Article 12 infrastructure costs €200–350k plus 6 months for mid-market, €500–800k plus 9 months for regulated enterprises. Drata/Vanta + manual AI-evidence gaps hits €80k/year without AI-specific depth. Evidence replaces that stack; Audit adds sectoral overlay. (3) Fine exposure: Article 99 caps Art. 12 violations at max(€15M, 3% of turnover). For regulated entities, sectoral supervisors (BaFin, FCA, AMF) layer additional penalties on top. Priced as insurance premium against realistic expected annual exposure. Competitive cross-check: Evidence sits in ValidMind's band (€30–80k); Audit sits at Monitaur's floor (€50–150k) and scales up with overlay complexity.",
+    },
+    {
+      q: "What's your retention policy?",
+      a: "6-month retention baseline on Ledger and Evidence. Audit is configured to your sectoral overlay and can extend beyond 6 months — up to regulated-period maximums (typically 5-7 years depending on BaFin/FCA/AMF/Solvency II/MiCA scope). If your regulator requires longer than 6 months and you're on Ledger or Evidence, that's the conversation that moves you to Audit. A retention extension on Evidence is available under custom scope.",
+    },
+    {
+      q: "What's your current SOC 2 status?",
+      a: "SOC 2 Type I audit is in progress, target completion Q3 2026. SOC 2 Type II is on-track with a realistic target of Q3 2027 — Audit is gated on Type II availability. We'd rather name the target than paper over the gap.",
+    },
+    {
+      q: 'Do you offer on-prem or BYOC (bring-your-own-cloud)?',
+      a: "Not today. BYOC is available as a negotiated option inside Audit for regulated enterprise customers. Broader on-prem availability is on roadmap; we aren't committing a date.",
+    },
+    {
+      q: 'What are your data-residency options?',
+      a: 'AILedger is EU-primary today (Supabase eu-central-1, Frankfurt). EU data residency is available on Evidence and Audit out of the box. For customers requiring a strict EU-only data path (no US-routed control-plane egress), we can tighten the configuration — typically a 2-4 week engineering scope. US-primary and APAC tenant hosting is deferred until after SOC 2 Type II (Q3 2027 target) and is discussed case-by-case for Audit until then.',
+    },
+    {
+      q: 'What are your contract terms?',
+      a: "Ledger is self-serve via our existing Stripe tiers (Free / Pro $149/mo / Scale $499/mo); a design-partnership cohort (strategic-logo gate) is also available via Apply for design partnership. Evidence and Audit default to annual contracts; multi-year options are available and tend to unlock preferred terms. MSA is standard for Evidence and custom for Audit. Chain of custody is SHA-256-fingerprinted on every request/response today; full chain verification ships alongside SOC 2 Type I (Q3 2026 target).",
+    },
+    {
+      q: 'How do you compare to LangFuse, LangSmith, or provider console logs?',
+      a: "Dev-observability tools (LangFuse, LangSmith) are designed to help you debug prompts during development. Provider consoles show provider-side data you don't custody. AILedger lives at a different layer: deployer-custody of a SHA-256-fingerprinted record of every AI call, built for the Article 12 conformance question. Full chain verification ships alongside SOC 2 Type I. Most mature teams run dev-observability and AILedger. They're adjacent, not substitutes — we're built for auditor acceptance, sitting below whatever governance workflow you run on top.",
+    },
+    {
+      q: 'Can I try Evidence before buying?',
+      a: "Yes — Evidence evaluations are guided. We scope to your specific Article 12 surface, stand up a time-boxed workspace, and walk your DPO and counsel through the audit-PDF export before you commit.",
+    },
+    {
+      q: 'What happens to my data if we leave?',
+      a: "You can export your ledger at any time via the CLI or dashboard. On contract termination, data handling follows your DPA; for Audit customers, sectoral-overlay retention obligations may require continued custody for a regulated period — that's scoped at contract signing, not after.",
+    },
+    {
+      q: 'Is pricing final, or will it change?',
+      a: "Ledger's published band (10k free / 100k on Pro / 1M on Scale; usage-based above) is intended to stay stable through launch. Evidence and Audit are anchored at band-shape (mid-five-figure and enterprise-custom respectively) and firm up alongside our SOC 2 Type I completion (Q3 2026 target). If you're in an active evaluation we'll price-lock at the time of your order form.",
+    },
+    {
+      q: 'Who owns the audit evidence — you or us?',
+      a: 'You do. AILedger is a processor, not a controller, of your audit data. Your ledger is your evidence; our job is to make it tamper-evident, verifiable, and exportable in a format your auditor will accept. Our DPA reflects that posture.',
+    },
+  ]
+
+  return (
+    <div className="min-h-screen" style={{ background: "var(--bg-page)", color: "var(--fg-body)", fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <Nav />
+
+      {/* Header banner */}
+      <section className="section-pad" style={{ padding: '128px 32px 64px', textAlign: 'center' }}>
+        <div style={{ maxWidth: 820, margin: '0 auto' }}>
+          <h1 className="hero-title" style={{ fontSize: 'clamp(40px, 6vw, 64px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.03em', lineHeight: 1.05, marginBottom: 24 }}>
+            Audit-grade evidence for <span style={{ display: 'inline-block', position: 'relative', top: '-0.055em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.
+          </h1>
+          <p style={{ fontSize: 19, color: 'var(--fg-muted)', lineHeight: 1.6, marginBottom: 36, maxWidth: 680, margin: '0 auto 36px' }}>
+            Three tiers. One chain of custody. Built for the EU AI Act Article&nbsp;12 conformance question your enterprise customers are already asking.
+          </p>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="#tiers" style={{ padding: '14px 28px', background: 'var(--accent)', color: 'var(--fg-on-accent)', fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none' }}>
+              See your tier
+            </a>
+            <a href="/contact" style={{ padding: '14px 28px', color: 'var(--fg-muted)', fontSize: 15, textDecoration: 'none', borderRadius: 12, border: '1px solid var(--border-strong)' }}>
+              Talk to us →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Three tier cards */}
+      <section id="tiers" className="section-pad" style={{ padding: '40px 32px 100px', scrollMarginTop: '96px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'stretch' }}>
+            {tiers.map((tier) => (
+              <div key={tier.name} className="tier-card" style={{
+                borderRadius: 12,
+                border: tier.highlight ? '1px solid var(--border-accent)' : '1px solid var(--border)',
+                background: tier.highlight ? 'var(--accent-tint-bg-soft)' : 'var(--surface-tint)',
+                padding: '36px 28px',
+                display: 'flex', flexDirection: 'column',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: tier.highlight ? 'var(--accent-text)' : 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+                  {tier.name}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 14, lineHeight: 1.5 }}>
+                  {tier.band}
+                </div>
+                <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.7, marginBottom: 24, fontStyle: 'italic' }}>
+                  {tier.positioning}
+                </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px 0', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+                  {tier.bullets.map((b, idx) => (
+                    <li key={idx} style={{ display: 'flex', gap: 10, fontSize: 13, color: 'var(--fg-muted)', lineHeight: 1.6 }}>
+                      <span style={{ color: 'var(--accent-text)', flexShrink: 0, marginTop: 2 }}>•</span>
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <a href={tier.primary.href} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '11px 20px', borderRadius: 10,
+                    fontSize: 14, fontWeight: 600, textDecoration: 'none',
+                    background: tier.highlight ? 'var(--accent)' : 'var(--border)',
+                    color: tier.highlight ? 'var(--fg-on-accent)' : 'var(--fg-body)',
+                    border: tier.highlight ? 'none' : '1px solid var(--border-prominent)',
+                  }}>
+                    {tier.primary.label}
+                  </a>
+                  <a href={tier.secondary.href} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '9px 20px', fontSize: 13, textDecoration: 'none',
+                    color: 'var(--fg-muted)',
+                  }}>
+                    {tier.secondary.label}
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison table */}
+      <section className="section-pad" style={{
+        padding: '80px 32px', borderTop: '1px solid var(--border)',
+        background: 'var(--surface-tint-soft)',
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 36 }}>
+            What you get, tier by tier
+          </h2>
+          <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 720 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-prominent)', background: 'var(--surface-tint)' }}>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Feature</th>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Ledger</th>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Evidence</th>
+                  <th style={{ textAlign: 'left', padding: '16px 18px', color: 'var(--fg-body)', fontWeight: 600, fontSize: 13 }}>Audit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compareRows.map((row, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '14px 18px', color: row.bold ? 'var(--fg-secondary)' : 'var(--fg-muted)', fontWeight: row.bold ? 600 : 400, lineHeight: 1.5 }}>{row.feature}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--fg-muted)', lineHeight: 1.5 }}>{row.ledger}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--fg-muted)', lineHeight: 1.5 }}>{row.evidence}</td>
+                    <td style={{ padding: '14px 18px', color: 'var(--fg-muted)', lineHeight: 1.5 }}>{row.audit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 920 }}>
+            <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7 }}>
+              ISO 27001, HIPAA BAA, and sector-specific attestations on roadmap post–SOC 2 Type II (Q3 2027 target).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Persona cards */}
+      <section className="section-pad" style={{ padding: '96px 32px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 36 }}>
+            Why this tier is for you
+          </h2>
+          <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+            {personaCards.map((card) => (
+              <div key={card.tier} style={{
+                padding: '28px 26px', borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--surface-tint)',
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+                  {card.tier}
+                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-secondary)', lineHeight: 1.45, marginBottom: 14 }}>
+                  {card.header}
+                </h3>
+                <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 14 }}>
+                  {card.body}
+                </p>
+                <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7, fontStyle: 'italic' }}>
+                  {card.footer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Competitive positioning */}
+      <section className="section-pad" style={{
+        padding: '96px 32px',
+        borderTop: '1px solid var(--border)',
+        background: 'var(--surface-tint-soft)',
+      }}>
+        <div style={{ maxWidth: 820, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 20 }}>
+            Where we sit
+          </h2>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7, marginBottom: 36 }}>
+            AILedger is <strong style={{ color: 'var(--fg-body)' }}>the audit-ready logging layer</strong> — not a governance-layer dashboard, not a dev-observability tool, not a full MRM platform. We sit below the governance workflow your compliance team already runs; we're complementary to all three.
+          </p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {positioning.map((p, idx) => (
+              <li key={idx} style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
+                <strong style={{ color: 'var(--fg-body)' }}>{p.label}</strong> {p.body}
+              </li>
+            ))}
+          </ul>
+          <p style={{ fontSize: 13, color: 'var(--fg-subtle)', lineHeight: 1.7, marginTop: 36, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+            SOC 2 Type I target Q3 2026. SOC 2 Type II target Q3 2027.
+          </p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="section-pad" style={{ padding: '96px 32px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ maxWidth: 820, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 36 }}>
+            Pricing FAQ
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {faqItems.map((item) => (
+              <details key={item.q} style={{
+                borderRadius: 10,
+                border: '1px solid var(--border)',
+                background: 'var(--surface-tint)',
+                overflow: 'hidden',
+              }}>
+                <summary style={{
+                  padding: '18px 22px', fontSize: 15, fontWeight: 500, color: 'var(--fg-secondary)',
+                  cursor: 'pointer', listStyle: 'none',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
+                }}>
+                  {item.q}
+                  <span style={{ color: 'var(--fg-ultrasubtle)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
+                </summary>
+                <div style={{ padding: '0 22px 20px', fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.8 }}>
+                  {item.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Page-foot CTA */}
+      <section className="section-pad" style={{
+        padding: '96px 32px', textAlign: 'center',
+        borderTop: '1px solid var(--border)',
+      }}>
+        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 16 }}>
+            Not sure which tier fits?
+          </h2>
+          <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 36, lineHeight: 1.7 }}>
+            A 20-minute call maps your Article 12 surface against the three tiers. If there's no fit — on your side or ours — the call is where you find out, not after a procurement cycle.
+          </p>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="/contact" style={{ padding: '14px 28px', background: 'var(--accent)', color: 'var(--fg-on-accent)', fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none' }}>
+              Book a fit conversation
+            </a>
+            <a href="/docs" style={{ padding: '14px 28px', color: 'var(--fg-muted)', fontSize: 15, textDecoration: 'none', borderRadius: 12, border: '1px solid var(--border-strong)' }}>
+              Read the docs
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
     </div>
   )
 }

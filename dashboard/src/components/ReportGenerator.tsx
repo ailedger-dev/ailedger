@@ -4,6 +4,47 @@ import autoTable from 'jspdf-autotable'
 import { supabase } from '../supabase'
 import UpgradeModal from './UpgradeModal'
 
+// Supabase PostgREST enforces a default max-rows of 1000 per response. A plain
+// .select('*') silently truncates — catastrophic for a compliance report that
+// must contain EVERY inference. Fetch in 1000-row chunks via .range() until the
+// backend returns a short page.
+interface LogRow {
+  id: number
+  logged_at: string
+  started_at: string | null
+  completed_at: string | null
+  provider: string
+  model_name: string | null
+  path: string
+  input_hash: string | null
+  output_hash: string | null
+  status_code: number
+  latency_ms: number
+  system_id: string | null
+}
+
+const PAGE_SIZE = 1000
+async function fetchAllLogs(customerId: string): Promise<LogRow[]> {
+  const all: LogRow[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('inference_logs')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('logged_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+      .returns<LogRow[]>()
+    if (error) throw error
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return all
+}
+
 interface Props {
   customerId: string
   customerEmail: string
@@ -40,7 +81,7 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
         )}
         <button
           onClick={() => setShowUpgradeModal(true)}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: 'default' }}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white text-xs font-medium rounded-lg transition-colors"
         >
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -59,13 +100,16 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
     const formatDate = (d: Date) =>
       d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 
-    // Fetch logs, all systems, profile, and subscription in parallel
-    const [{ data: rawLogs }, { data: allSystems }, { data: subData }, { data: profileData }] = await Promise.all([
-      supabase
-        .from('inference_logs')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('logged_at', { ascending: true }),
+    // Fetch logs (paginated — ALL rows, not the PostgREST-default 1000),
+    // systems, profile, subscription, and chain head in parallel.
+    const [
+      rawLogs,
+      { data: allSystems },
+      { data: subData },
+      { data: profileData },
+      { data: chainHeadData },
+    ] = await Promise.all([
+      fetchAllLogs(customerId).catch(() => null),
       supabase
         .from('account_settings')
         .select('id, system_name, system_purpose, annex_iii_category')
@@ -80,7 +124,14 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
         .select('org_name')
         .eq('customer_id', customerId)
         .maybeSingle(),
+      supabase.schema('ledger').rpc('chain_head', { p_customer_id: customerId }),
     ])
+
+    const chainHead = (chainHeadData as { chain_head_hash: string | null; last_id: number | null; row_count: number } | null) ?? {
+      chain_head_hash: null,
+      last_id: null,
+      row_count: 0,
+    }
 
     // Determine plan limit
     const activePlan = subData?.status === 'active' ? subData.plan : null
@@ -380,6 +431,7 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
       ['Retention Policy', retentionPolicy],
       ['Hash Algorithm', 'SHA-256 (inputs and outputs - raw data is never stored)'],
       ['Immutability', 'Append-only - records cannot be modified or deleted'],
+      ['Chain Integrity', 'Every row\'s chain_prev_hash is the SHA-256 of the prior row\'s canonical serialization (tamper-evident hash chain)'],
     ]
 
     let gy = afterAnomaliesY + 8
@@ -393,6 +445,49 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
       const lines = doc.splitTextToSize(value, pageWidth - margin * 2 - 52)
       doc.text(lines, margin + 52, gy)
       gy += lines.length * 5 + 2
+    }
+
+    // ─── Chain-Head Signature ──────────────────────────────────────────────────
+    // Regulators re-verify by calling ledger.verify_chain(customer_id); the
+    // returned chain_head_hash MUST equal the value printed here. Any row
+    // tampered with after export invalidates the chain and produces a
+    // different head hash.
+    gy += 8
+    if (gy > doc.internal.pageSize.getHeight() - 60) {
+      doc.addPage()
+      gy = 20
+    }
+
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 30, 40)
+    doc.text('Chain-Head Signature', margin, gy)
+    doc.setDrawColor(220, 220, 230)
+    doc.line(margin, gy + 2, pageWidth - margin, gy + 2)
+    gy += 8
+
+    const chainRows: [string, string][] = [
+      ['Algorithm', 'SHA-256 over pipe-delimited canonical serialization'],
+      ['Row Count', String(chainHead.row_count)],
+      ['Last Row ID', chainHead.last_id != null ? String(chainHead.last_id) : '-'],
+      ['Chain Head Hash', chainHead.chain_head_hash ?? '(no rows)'],
+      ['Re-verify Command', 'select ledger.verify_chain(\'' + customerId + '\'::uuid);'],
+    ]
+
+    doc.setFontSize(9)
+    for (const [label, value] of chainRows) {
+      if (gy > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage()
+        gy = 20
+      }
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(80, 80, 100)
+      doc.text(label, margin, gy)
+      doc.setFont(label === 'Chain Head Hash' || label === 'Re-verify Command' ? 'courier' : 'helvetica', 'normal')
+      doc.setTextColor(30, 30, 40)
+      const vLines = doc.splitTextToSize(value, pageWidth - margin * 2 - 52)
+      doc.text(vLines, margin + 52, gy)
+      gy += vLines.length * 5 + 2
     }
 
     // ─── Article 12 Compliance Matrix ───────────────────────────────────────────

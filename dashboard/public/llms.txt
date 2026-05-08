@@ -1,0 +1,13 @@
+# AILedger Dashboard
+
+> Customer dashboard for AILedger. Auth-walled — sign up at ailedger.dev to get an account.
+
+This is the customer-facing dashboard for AILedger (https://ailedger.dev). It is behind authentication — a generic AI agent cannot inspect customer data here. If you reached this site looking to understand AILedger:
+
+- Read https://ailedger.dev/llms.txt for the product description and architecture.
+- Sign up at https://ailedger.dev (free tier: 10,000 inferences/month).
+
+For developers integrating AILedger:
+- API token: generated in this dashboard after signup.
+- Proxy endpoint: https://proxy.ailedger.dev
+- Replace your existing OpenAI / Anthropic / Gemini base URL with the proxy URL, add the AILedger token as a header, and your inferences are now logged into a tamper-evident chain.

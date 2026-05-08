@@ -1,2 +1,25 @@
 name = "ailedger-dashboard"
 pages_build_output_dir = "dist"
+
+# Cloudflare Pages env model
+# ---------------------------
+# Pages projects expose two fixed environments via the CF Git integration:
+#   production  — auto-deployed on push to the project's production branch (main)
+#   preview     — auto-deployed on every other branch / PR (acts as staging)
+#
+# Pages does NOT support a named `env.staging` the way Workers do. For this
+# project "staging" IS the preview environment. The `[env.preview]` block
+# below is the staging override. Keeping this explicit so env separation
+# is discoverable in the same place as the Worker wranglers.
+#
+# See docs/deploy-runbook.md and docs/staging-provisioning.md.
+
+[env.production]
+# No Pages-level overrides today — dashboard is a client-side SPA. Add vars
+# / bindings here if prod ever needs a KV, D1, or env var separate from
+# preview.
+
+[env.preview]
+# Staging == preview for Pages. No overrides needed today; add preview-only
+# vars here if dashboard ever consumes runtime env (e.g. a staging proxy
+# origin for API calls).

@@ -1,0 +1,220 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "contractor-auth",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Base config is a SAFE-DEFAULT placeholder. Do NOT deploy the base — each
+  // contractor deploys via `wrangler deploy --env <slug>`. The base exists only
+  // so `wrangler dev` can run locally without a contractor context.
+  "vars": {
+    "CONTRACTOR_SLUG": "unset",
+    "RP_ID": "localhost",
+    "RP_NAME": "Contractor Web UI (dev)",
+    "RP_ORIGIN": "http://localhost:8787",
+    "MAGIC_LINK_FROM": "no-reply@example.invalid",
+    "SESSION_TTL_SECONDS": "28800",
+    "REFRESH_TTL_SECONDS": "604800",
+    "MAGIC_LINK_TTL_SECONDS": "600",
+    "ALLOWED_RETURN_HOSTS": "localhost:5173"
+  },
+
+  "observability": { "enabled": true },
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  // Per-contractor environments. Add a new stanza per contractor deployment.
+  // Each environment owns its own D1, KV, and secrets. Secrets required per env:
+  //   SESSION_JWT_SECRET        (>= 32 bytes random; distinct per contractor)
+  //   REFRESH_JWT_SECRET        (>= 32 bytes random; distinct per contractor)
+  //   GMAIL_API_CREDENTIALS     (for magic-link email — pending Workspace setup; see memory/feedback_email_stack_google_only.md)
+  //   CONTRACTOR_ALLOWED_EMAILS (comma-separated allowlist; required — empty = deny-all)
+  //
+  // Bootstrap commands for env.pasha:
+  //   wrangler d1 create contractor-auth-pasha
+  //   wrangler kv namespace create AUTH_KV --env pasha
+  //   (paste the returned ids into this file under env.pasha, then:)
+  //   wrangler d1 execute contractor-auth-pasha --env pasha --file=./schema.sql
+  //   wrangler d1 execute contractor-auth-pasha --env pasha --remote --file=./schema.sql
+  //   wrangler secret put SESSION_JWT_SECRET --env pasha
+  //   wrangler secret put REFRESH_JWT_SECRET --env pasha
+  //   wrangler secret put CONTRACTOR_ALLOWED_EMAILS --env pasha
+  //   wrangler deploy --env pasha
+  //
+  // env.staging: shared staging target for CI "Deploy Workers → staging".
+  // Lives on workers.dev until staging.contractor.jvholdings.co is provisioned
+  // (see docs/staging-provisioning.md). Bindings do NOT inherit from the
+  // top-level; env.staging redeclares everything it needs.
+  //
+  // Staging secrets MUST be distinct from production and from any contractor env:
+  //   wrangler secret put SESSION_JWT_SECRET --env staging
+  //   wrangler secret put REFRESH_JWT_SECRET --env staging
+  //   wrangler secret put GMAIL_API_CREDENTIALS --env staging   # pending Workspace
+  //   wrangler secret put CONTRACTOR_ALLOWED_EMAILS --env staging
+  "env": {
+    "staging": {
+      "name": "contractor-auth-staging",
+      "workers_dev": true,
+      // "routes": [
+      //   { "pattern": "staging.contractor.jvholdings.co", "custom_domain": true }
+      // ],
+      "vars": {
+        "CONTRACTOR_SLUG": "staging",
+        "CONTRACTOR_DISPLAY_NAME": "Contractor Auth (staging)",
+        "RP_ID": "contractor-auth-staging.workers.dev",
+        "RP_NAME": "Joyner Ventures (contractor staging)",
+        "RP_ORIGIN": "https://contractor-auth-staging.workers.dev",
+        "MAGIC_LINK_FROM": "no-reply-staging@jvholdings.co",
+        "MAGIC_LINK_REDIRECT_BASE": "https://contractor-auth-staging.workers.dev",
+        "SESSION_TTL_SECONDS": "28800",
+        "REFRESH_TTL_SECONDS": "604800",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "contractor-auth-staging.workers.dev"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "contractor-auth-staging",
+          "database_id": "REPLACE_WITH_STAGING_D1_ID"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "REPLACE_WITH_STAGING_AUTH_KV_ID"
+        }
+      ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      },
+      "observability": { "enabled": true }
+    },
+    "staging-pasha": {
+      "name": "contractor-auth-staging-pasha",
+      // Staging sibling of env.pasha. Same shape; distinct slug, RP_ID,
+      // secrets, D1, and KV so passkeys, sessions, and allowlist never cross.
+      // Shared data layer (Plaza publish dir, canonical-jo persona) lives
+      // outside Cloudflare and is handled by the contractor-webui-api env.
+      //
+      // Bootstrap — Jake only (polecat cannot run these):
+      //   wrangler d1 create contractor-auth-staging-pasha
+      //   wrangler kv namespace create AUTH_KV --env staging-pasha
+      //   (paste the returned ids into this file, then:)
+      //   wrangler d1 execute contractor-auth-staging-pasha --env staging-pasha --file=./schema.sql
+      //   wrangler d1 execute contractor-auth-staging-pasha --env staging-pasha --remote --file=./schema.sql
+      //   wrangler secret put SESSION_JWT_SECRET --env staging-pasha       # MUST differ from env.pasha
+      //   wrangler secret put REFRESH_JWT_SECRET --env staging-pasha       # MUST differ from env.pasha
+      //   wrangler secret put GMAIL_API_CREDENTIALS --env staging-pasha     # pending Workspace
+      //   wrangler secret put CONTRACTOR_ALLOWED_EMAILS --env staging-pasha  # jjoyner+bob only
+      //   wrangler deploy --env staging-pasha
+      "workers_dev": true,
+      // Add a custom_domain route only after staging-pasha.jvholdings.co is
+      // created in CF Pages/tunnel (see docs/staging-pasha-provisioning.md):
+      // "routes": [
+      //   { "pattern": "auth.staging-pasha.jvholdings.co", "custom_domain": true }
+      // ],
+      "vars": {
+        "CONTRACTOR_SLUG": "pasha-staging",
+        "CONTRACTOR_DISPLAY_NAME": "Pasha Missaghieh (Staging)",
+        "RP_ID": "staging-pasha.jvholdings.co",
+        "RP_NAME": "Joyner Ventures (Pasha staging)",
+        "RP_ORIGIN": "https://staging-pasha.jvholdings.co",
+        "MAGIC_LINK_FROM": "no-reply-staging@jvholdings.co",
+        "MAGIC_LINK_REDIRECT_BASE": "https://staging-pasha.jvholdings.co",
+        "SESSION_TTL_SECONDS": "28800",
+        "REFRESH_TTL_SECONDS": "604800",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "staging-pasha.jvholdings.co"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "contractor-auth-staging-pasha",
+          "database_id": "1117ac24-83b6-4be1-8b23-0f3efee2edcf"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "f31b34da60b4442c8c05229b56b5b1bb"
+        }
+      ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      },
+      "observability": { "enabled": true }
+    },
+    "pasha": {
+      "name": "contractor-auth-pasha",
+      "vars": {
+        "CONTRACTOR_SLUG": "pasha",
+        "CONTRACTOR_DISPLAY_NAME": "Pasha Missaghieh",
+        "RP_ID": "pasha.jvholdings.co",
+        "RP_NAME": "Joyner Ventures (Pasha)",
+        "RP_ORIGIN": "https://pasha.jvholdings.co",
+        "MAGIC_LINK_FROM": "no-reply@jvholdings.co",
+        "MAGIC_LINK_REDIRECT_BASE": "https://pasha.jvholdings.co",
+        "SESSION_TTL_SECONDS": "28800",
+        "REFRESH_TTL_SECONDS": "604800",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "pasha.jvholdings.co"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "contractor-auth-pasha",
+          "database_id": "52688a68-8664-4c68-9f96-7c789a3667d7"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "46e08970c6c748709e099ffeb0670316"
+        }
+      ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      }
+    },
+    "jake": {
+      "name": "contractor-auth-jake",
+      "vars": {
+        "CONTRACTOR_SLUG": "jake",
+        "CONTRACTOR_DISPLAY_NAME": "Jake Joyner (debug)",
+        "RP_ID": "jake-dash.ailedger.dev",
+        "RP_NAME": "AILedger (Jake debug)",
+        "RP_ORIGIN": "https://jake-dash.ailedger.dev",
+        "MAGIC_LINK_FROM": "no-reply@ailedger.dev",
+        "MAGIC_LINK_REDIRECT_BASE": "https://jake-dash.ailedger.dev",
+        "SESSION_TTL_SECONDS": "28800",
+        "REFRESH_TTL_SECONDS": "604800",
+        "MAGIC_LINK_TTL_SECONDS": "600",
+        "ALLOWED_RETURN_HOSTS": "jake-dash.ailedger.dev"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "contractor-auth-jake",
+          "database_id": "54cbfeff-1b9c-49ff-a203-51b1c69783eb"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "AUTH_KV",
+          "id": "89e03d5174b24552afe4203132f5d495"
+        }
+      ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      }
+    }
+  }
+}

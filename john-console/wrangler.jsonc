@@ -1,0 +1,63 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "john-console",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-04-18",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "workers_dev": true,
+
+  // Custom domain activation: uncomment once DNS for sales.ailedger.dev is provisioned.
+  // "routes": [
+  //   { "pattern": "sales.ailedger.dev", "custom_domain": true }
+  // ],
+
+  // Secrets set via `wrangler secret put`:
+  //   AILEDGER_KEY       — alg_sk_* dogfood key
+  //   ANTHROPIC_API_KEY  — Jake's Anthropic key (sk-ant-*)
+  "placement": { "mode": "smart" },
+
+  // SESSION_KV: greeting-opener cache (ai-9qy), keyed by stable browser session_id.
+  // SESSIONS:   /chat conversation history (ai-b4q), keyed by opaque cookie UUID,
+  //             30-day rolling TTL refreshed on each write.
+  // Provision SESSIONS with: `wrangler kv namespace create SESSIONS` (paste id below).
+  "kv_namespaces": [
+    { "binding": "SESSION_KV", "id": "801ecc0deebc4384b8417441071050c1" },
+    { "binding": "SESSIONS", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
+  ],
+
+  // Named environments — see docs/deploy-runbook.md.
+  // Deploy: `wrangler deploy --env staging`
+  // Staging rides workers.dev until sales.ailedger.dev is live in prod; the
+  // staging custom domain (staging.sales.ailedger.dev) follows the same gate.
+  //
+  // Staging secrets MUST be distinct from production:
+  //   wrangler secret put AILEDGER_KEY --env staging
+  //   wrangler secret put ANTHROPIC_API_KEY --env staging
+  "env": {
+    "staging": {
+      "name": "john-console-staging",
+      "workers_dev": true,
+      // "routes": [
+      //   { "pattern": "staging.sales.ailedger.dev", "custom_domain": true }
+      // ],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS"
+      },
+      "observability": {
+        "enabled": true
+      },
+      "placement": { "mode": "smart" },
+      "kv_namespaces": [
+        { "binding": "SESSION_KV", "id": "REPLACE_WITH_STAGING_SESSION_KV_ID" },
+        { "binding": "SESSIONS", "id": "REPLACE_WITH_STAGING_SESSIONS_KV_ID" }
+      ]
+    }
+  }
+}

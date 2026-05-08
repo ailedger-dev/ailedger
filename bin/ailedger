@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# ailedger — operator CLI for AILedger.
+#
+# Subcommands:
+#   verify <customer_id>   Recompute and verify the tamper-evident hash chain
+#                          for the given customer. Prints a jsonb summary from
+#                          ledger.verify_chain(customer_id). Exit 0 if ok, 1 if
+#                          the chain is broken, 2 on usage / transport error.
+#
+# Required env:
+#   SUPABASE_URL           https://<project>.supabase.co
+#   SUPABASE_SERVICE_KEY   service role key (bypasses RLS so operators can
+#                          verify any customer's chain)
+#
+# Intended for regulator re-verification and internal audits. End users
+# verify their own chain from the dashboard / via SQL RPC with their JWT.
+
+set -euo pipefail
+
+die() { echo "ailedger: $*" >&2; exit 2; }
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: ailedger verify <customer_id>
+
+Environment:
+  SUPABASE_URL          (required)
+  SUPABASE_SERVICE_KEY  (required)
+EOF
+  exit 2
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  verify)
+    shift
+    customer_id="${1:-}"
+    [ -n "$customer_id" ] || usage
+    [ -n "${SUPABASE_URL:-}" ] || die "SUPABASE_URL not set"
+    [ -n "${SUPABASE_SERVICE_KEY:-}" ] || die "SUPABASE_SERVICE_KEY not set"
+
+    # UUID sanity check — not a security boundary, just a usability guard.
+    if ! [[ "$customer_id" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+      die "customer_id must be a UUID"
+    fi
+
+    # Call PostgREST RPC on the ledger schema.
+    response=$(
+      curl -sS -X POST \
+        -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+        -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+        -H "Content-Type: application/json" \
+        -H "Content-Profile: ledger" \
+        -H "Accept-Profile: ledger" \
+        --data "{\"p_customer_id\":\"${customer_id}\"}" \
+        "${SUPABASE_URL}/rest/v1/rpc/verify_chain"
+    ) || die "transport error calling verify_chain"
+
+    echo "$response"
+
+    # PostgREST returns the jsonb value directly. A broken chain has "ok":false;
+    # a healthy one has "ok":true. Any other shape is a transport / auth error.
+    case "$response" in
+      *'"ok":true'*)  exit 0 ;;
+      *'"ok":false'*) exit 1 ;;
+      *)              die "unexpected response: $response" ;;
+    esac
+    ;;
+  ""|-h|--help|help)
+    usage
+    ;;
+  *)
+    die "unknown subcommand: $cmd"
+    ;;
+esac

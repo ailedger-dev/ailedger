@@ -7,48 +7,54 @@ import {
 import { describe, it, expect } from "vitest";
 import worker from "../src";
 
-describe("Hello World user worker", () => {
-	describe("request for /message", () => {
-		it('/ responds with "Hello, World!" (unit style)', async () => {
+describe("AILedger proxy worker", () => {
+	describe("GET /health", () => {
+		it("returns 200 with status:ok (unit style)", async () => {
 			const request = new Request<unknown, IncomingRequestCfProperties>(
-				"http://example.com/message"
+				"http://example.com/health"
 			);
-			// Create an empty context to pass to `worker.fetch()`.
 			const ctx = createExecutionContext();
 			const response = await worker.fetch(request, env, ctx);
-			// Wait for all `Promise`s passed to `ctx.waitUntil()` to settle before running test assertions
 			await waitOnExecutionContext(ctx);
-			expect(await response.text()).toMatchInlineSnapshot(`"Hello, World!"`);
+			expect(response.status).toBe(200);
+			expect(await response.json()).toEqual({ status: "ok" });
 		});
 
-		it('responds with "Hello, World!" (integration style)', async () => {
-			const request = new Request("http://example.com/message");
-			const response = await SELF.fetch(request);
-			expect(await response.text()).toMatchInlineSnapshot(`"Hello, World!"`);
+		it("returns 200 with status:ok (integration style)", async () => {
+			const response = await SELF.fetch("http://example.com/health");
+			expect(response.status).toBe(200);
+			expect(await response.json()).toEqual({ status: "ok" });
 		});
 	});
 
-	describe("request for /random", () => {
-		it("/ responds with a random UUID (unit style)", async () => {
-			const request = new Request<unknown, IncomingRequestCfProperties>(
-				"http://example.com/random"
+	describe("unknown routes", () => {
+		it("returns 404 for unmatched paths", async () => {
+			const response = await SELF.fetch("http://example.com/does-not-exist");
+			expect(response.status).toBe(404);
+		});
+	});
+
+	describe("/proxy/<provider> auth", () => {
+		it("rejects missing x-ailedger-key with 401", async () => {
+			const response = await SELF.fetch(
+				"http://example.com/proxy/openai/chat/completions",
+				{ method: "POST" }
 			);
-			// Create an empty context to pass to `worker.fetch()`.
-			const ctx = createExecutionContext();
-			const response = await worker.fetch(request, env, ctx);
-			// Wait for all `Promise`s passed to `ctx.waitUntil()` to settle before running test assertions
-			await waitOnExecutionContext(ctx);
-			expect(await response.text()).toMatch(
-				/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/
-			);
+			expect(response.status).toBe(401);
+			expect(await response.json()).toEqual({
+				error: "Missing x-ailedger-key header",
+			});
 		});
 
-		it("responds with a random UUID (integration style)", async () => {
-			const request = new Request("http://example.com/random");
-			const response = await SELF.fetch(request);
-			expect(await response.text()).toMatch(
-				/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/
+		it("rejects unknown provider with 400", async () => {
+			const response = await SELF.fetch(
+				"http://example.com/proxy/bogus/anything",
+				{
+					method: "POST",
+					headers: { "x-ailedger-key": "test_sk_fake" },
+				}
 			);
+			expect(response.status).toBe(400);
 		});
 	});
 });

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Sign in</title>
+<meta name="referrer" content="strict-origin" />
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0b0c0f;
+    --fg: #f2f2f3;
+    --muted: #8a8a90;
+    --accent: #4f8cff;
+    --accent-hover: #6aa0ff;
+    --card: #14161b;
+    --border: #242831;
+    --danger: #ff6b6b;
+  }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, system-ui, sans-serif; }
+  .wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+  h1 { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  p.sub { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  input[type=email] { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: #0b0d12; color: var(--fg); font-size: 14px; outline: none; }
+  input[type=email]:focus { border-color: var(--accent); }
+  button { width: 100%; padding: 11px 14px; border-radius: 8px; border: 0; background: var(--accent); color: white; font-weight: 600; font-size: 14px; margin-top: 12px; }
+  button:hover { background: var(--accent-hover); }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+  button.secondary:hover { background: rgba(79,140,255,0.08); }
+  .divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 18px 0; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .status { min-height: 20px; margin-top: 14px; font-size: 13px; color: var(--muted); }
+  .status.err { color: var(--danger); }
+  .status.ok { color: #6ce58a; }
+  .tiny { font-size: 11px; color: var(--muted); margin-top: 16px; text-align: center; }
+  a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" role="main" aria-labelledby="title">
+    <h1 id="title">Sign in</h1>
+    <p class="sub">Use your passkey, or get a sign-in link by email.</p>
+
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username webauthn" placeholder="you@example.com" />
+
+    <button id="btn-passkey" type="button">Sign in with passkey</button>
+    <div class="divider">or</div>
+    <button id="btn-magic" class="secondary" type="button">Email me a sign-in link</button>
+
+    <div class="divider">new here?</div>
+    <button id="btn-register" class="secondary" type="button">Register a passkey</button>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <p class="tiny">Protected by passkey (WebAuthn). No passwords are stored.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const status = $("status");
+
+  function setStatus(msg, kind) {
+    status.textContent = msg;
+    status.className = "status" + (kind ? " " + kind : "");
+  }
+
+  function getReturnUrl() {
+    const p = new URLSearchParams(location.search);
+    const r = p.get("return");
+    if (r) {
+      try { sessionStorage.setItem("return", r); } catch {}
+      return r;
+    }
+    try { return sessionStorage.getItem("return") || "/"; } catch { return "/"; }
+  }
+
+  function csrfFromCookie() {
+    const m = /(?:^|;\s*)csrf=([^;]+)/.exec(document.cookie);
+    return m?.[1];
+  }
+
+  async function jsonFetch(url, body) {
+    const csrf = csrfFromCookie();
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: Object.assign(
+        { "content-type": "application/json" },
+        csrf ? { "x-csrf-token": csrf } : {},
+      ),
+      body: JSON.stringify(body ?? {}),
+    });
+    const txt = await res.text();
+    let j = {};
+    try { j = txt ? JSON.parse(txt) : {}; } catch {}
+    return { ok: res.ok, status: res.status, json: j };
+  }
+
+  function b64urlToBytes(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    const bin = atob(s);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out.buffer;
+  }
+  function bytesToB64url(buf) {
+    const arr = new Uint8Array(buf);
+    let s = ""; for (const b of arr) s += String.fromCharCode(b);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  // Convert SimpleWebAuthn JSON options → real WebAuthn objects
+  function publicKeyForCreate(opts) {
+    return {
+      ...opts,
+      challenge: b64urlToBytes(opts.challenge),
+      user: { ...opts.user, id: b64urlToBytes(opts.user.id) },
+      excludeCredentials: (opts.excludeCredentials || []).map((c) => ({ ...c, id: b64urlToBytes(c.id) })),
+    };
+  }
+  function publicKeyForGet(opts) {
+    return {
+      ...opts,
+      challenge: b64urlToBytes(opts.challenge),
+      allowCredentials: (opts.allowCredentials || []).map((c) => ({ ...c, id: b64urlToBytes(c.id) })),
+    };
+  }
+
+  function credToJson(cred) {
+    const r = cred.response;
+    const out = {
+      id: cred.id,
+      rawId: bytesToB64url(cred.rawId),
+      type: cred.type,
+      response: {
+        clientDataJSON: bytesToB64url(r.clientDataJSON),
+      },
+    };
+    if (r.attestationObject) out.response.attestationObject = bytesToB64url(r.attestationObject);
+    if (r.authenticatorData) out.response.authenticatorData = bytesToB64url(r.authenticatorData);
+    if (r.signature) out.response.signature = bytesToB64url(r.signature);
+    if (r.userHandle) out.response.userHandle = bytesToB64url(r.userHandle);
+    if (typeof r.getTransports === "function") {
+      try { out.response.transports = r.getTransports(); } catch {}
+    }
+    if (cred.authenticatorAttachment) out.authenticatorAttachment = cred.authenticatorAttachment;
+    if (typeof cred.getClientExtensionResults === "function") {
+      out.clientExtensionResults = cred.getClientExtensionResults();
+    }
+    return out;
+  }
+
+  async function doRegister() {
+    const email = $("email").value.trim();
+    if (!email) return setStatus("Enter your email first.", "err");
+    setStatus("Starting registration…");
+    const r1 = await jsonFetch("/register-passkey/options", { email });
+    if (!r1.ok) return setStatus("Error: " + (r1.json.error || r1.status), "err");
+    const { options, userId } = r1.json;
+    let cred;
+    try {
+      cred = await navigator.credentials.create({ publicKey: publicKeyForCreate(options) });
+    } catch (e) {
+      return setStatus("Passkey creation cancelled or failed.", "err");
+    }
+    const r2 = await jsonFetch("/register-passkey/verify", { userId, response: credToJson(cred) });
+    if (!r2.ok) return setStatus("Error: " + (r2.json.error || r2.status), "err");
+    setStatus("Registered. Redirecting…", "ok");
+    location.replace(getReturnUrl());
+  }
+
+  async function doLogin() {
+    const email = $("email").value.trim();
+    setStatus("Waiting for passkey…");
+    const r1 = await jsonFetch("/login-passkey/options", email ? { email } : {});
+    if (!r1.ok) return setStatus("Error: " + (r1.json.error || r1.status), "err");
+    const { options, handle } = r1.json;
+    let cred;
+    try {
+      cred = await navigator.credentials.get({ publicKey: publicKeyForGet(options) });
+    } catch (e) {
+      return setStatus("Sign-in cancelled.", "err");
+    }
+    const r2 = await jsonFetch("/login-passkey/verify", { handle, response: credToJson(cred) });
+    if (!r2.ok) return setStatus("Error: " + (r2.json.error || r2.status), "err");
+    setStatus("Signed in. Redirecting…", "ok");
+    location.replace(getReturnUrl());
+  }
+
+  async function doMagic() {
+    const email = $("email").value.trim();
+    if (!email) return setStatus("Enter your email first.", "err");
+    setStatus("Sending link…");
+    const r = await jsonFetch("/magic-link/request", { email });
+    if (!r.ok) return setStatus("Error: " + (r.json.error || r.status), "err");
+    setStatus("If that email is on file, a sign-in link is on its way.", "ok");
+  }
+
+  $("btn-register").addEventListener("click", doRegister);
+  $("btn-passkey").addEventListener("click", doLogin);
+  $("btn-magic").addEventListener("click", doMagic);
+
+  // Capture return URL into sessionStorage so the magic-link landing page can use it.
+  getReturnUrl();
+})();
+</script>
+</body>
+</html>

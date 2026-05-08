@@ -24,25 +24,37 @@
 		{ "pattern": "proxy.ailedger.dev", "custom_domain": true }
 	],
 	"triggers": {
-		"crons": ["0 10 * * *"]
+		// Drain pending_log:* entries from KV durable buffer back into
+		// Supabase every 5 min. Closes the worker-crash-mid-flight gap
+		// (whiteboard 2026-04-27 side B; threat model §6.1). Empty drains
+		// (no pending entries) cost ~1 KV list op = negligible.
+		"crons": ["*/5 * * * *"]
 	},
-	"placement": { "mode": "smart" },
+	// "placement": { "mode": "smart" },  // TEMP DISABLED 2026-05-04 — testing 1101 hypothesis on custom-domain. Restore if test inconclusive.
 	"kv_namespaces": [
 		{ "binding": "AILEDGER_CACHE", "id": "993c05bf26ef4ac8a7f1d11b557d2d80" }
-	]
-	/**
-	 * Bindings
-	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-	 * databases, object storage, AI inference, real-time communication and more.
-	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
-	 */
-	// "vars": {  "MY_VARIABLE": "production_value" }
+	],
+	// Named environments — see docs/deploy-runbook.md.
+	// Deploy: `wrangler deploy --env staging`
+	// Bindings do NOT inherit from the top-level; every env redeclares what it needs.
+	"env": {
+		"staging": {
+			"name": "proxy-staging",
+			// staging lives on a workers.dev subdomain until staging.proxy.ailedger.dev is
+			// provisioned (see docs/staging-provisioning.md). Flip `workers_dev` off and
+			// uncomment the route once DNS is live.
+			"workers_dev": true,
+			// "routes": [
+			//   { "pattern": "staging.proxy.ailedger.dev", "custom_domain": true }
+			// ],
+			// Staging gets the same drain cadence as prod so the durable-buffer
+			// drain path is exercised on every deploy.
+			"triggers": { "crons": ["*/5 * * * *"] },
+			"kv_namespaces": [
+				{ "binding": "AILEDGER_CACHE", "id": "51d2b9f238a04bfcb9d765bda41a8b56" }
+			]
+		}
+	}
 	/**
 	 * Service Bindings (communicate between multiple Workers)
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings

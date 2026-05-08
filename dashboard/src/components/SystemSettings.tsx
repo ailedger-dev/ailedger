@@ -137,7 +137,41 @@ export default function SystemSettings({ customerId }: { customerId: string }) {
   }
 
   async function deleteSystem(id: string) {
-    await supabase.from('account_settings').delete().eq('id', id)
+    const { count } = await supabase
+      .from('api_keys')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_id', customerId)
+      .eq('system_id', id)
+    const refCount = count ?? 0
+    if (refCount > 0) {
+      const msg =
+        refCount === 1
+          ? '1 API key references this system and will be unassigned. Continue?'
+          : `${refCount} API keys reference this system and will be unassigned. Continue?`
+      if (!window.confirm(msg)) return
+    }
+    // .select() returns the rows actually deleted. Under RLS, a missing
+    // DELETE policy silently filters the row out and Postgres reports 0
+    // rows affected; PostgREST returns 204 regardless. Without this
+    // assertion the UI would appear to succeed while the row persists.
+    const { data, error } = await supabase
+      .from('account_settings')
+      .delete()
+      .eq('id', id)
+      .select('id')
+    if (error) {
+      console.error('delete system error:', error)
+      window.alert(`Could not delete system: ${error.message}`)
+      return
+    }
+    if (!data || data.length === 0) {
+      console.error('delete system: 0 rows affected for id', id)
+      window.alert(
+        'Delete did not persist (database declined the operation). Please reload and try again, or contact support if this repeats.'
+      )
+      await load()
+      return
+    }
     const remaining = systems.filter((s) => s.id !== id)
     setSystems(remaining)
     if (remaining.length > 0) {

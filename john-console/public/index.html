@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>John · Sales Console</title>
+<meta name="description" content="Sales sub-town contractor session entry — chat with John.">
+<meta name="theme-color" content="#0a0f14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #0a0f14;
+    --bg-1: #10161d;
+    --bg-2: #1a2430;
+    --bg-3: #243242;
+    --border: #2a3a4f;
+    --border-hi: #3b5070;
+    --fg-0: #f0f4f8;
+    --fg-1: #c7d1dd;
+    --fg-2: #7a8a9f;
+    --fg-3: #4a5a6f;
+    --accent: #5eead4;
+    --accent-hi: #99f6e4;
+    --accent-dim: #0d9488;
+    --user: #3b82f6;
+    --user-bg: #1e3a5f;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--fg-0); font-family: 'Inter', -apple-system, sans-serif; height: 100%; font-feature-settings: "cv02", "cv04", "cv11"; }
+  body { display: flex; flex-direction: column; height: 100vh; background: radial-gradient(ellipse at top, #0f1b26 0%, var(--bg-0) 60%); }
+
+  /* Header */
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); background: rgba(10, 15, 20, 0.72); position: sticky; top: 0; z-index: 10; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%); display: grid; place-items: center; font-weight: 700; font-size: 15px; color: var(--bg-0); letter-spacing: -0.02em; box-shadow: 0 2px 12px rgba(94, 234, 212, 0.25); }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-name { font-weight: 600; font-size: 14px; color: var(--fg-0); letter-spacing: -0.01em; }
+  .brand-sub { font-size: 11px; color: var(--fg-2); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+  .header-actions { display: flex; align-items: center; gap: 14px; }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-2); font-family: 'JetBrains Mono', monospace; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); animation: pulse 2s var(--ease) infinite; }
+  button.ghost { background: transparent; color: var(--fg-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 11px; font-size: 11.5px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; cursor: pointer; transition: all 0.15s var(--ease); }
+  button.ghost:hover { color: var(--fg-0); border-color: var(--border-hi); background: var(--bg-1); }
+  button.ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+  }
+
+  /* Messages */
+  #messages { flex: 1; overflow-y: auto; padding: 28px 22px 12px; display: flex; flex-direction: column; gap: 14px; }
+  #messages::-webkit-scrollbar { width: 8px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
+  #messages::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+  .msg { max-width: min(720px, 86ch); padding: 14px 18px; border-radius: var(--radius); line-height: 1.6; font-size: 15px; animation: slideUp 0.32s var(--ease); }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user { align-self: flex-end; background: var(--user-bg); color: var(--fg-0); border-bottom-right-radius: 4px; }
+  .msg.john { align-self: flex-start; background: var(--bg-1); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.system { align-self: center; color: var(--fg-2); font-style: italic; font-size: 12.5px; background: transparent; padding: 6px 14px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.01em; }
+  .msg .label { font-size: 10.5px; color: var(--fg-2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  .msg.john .label { color: var(--accent); }
+  .msg code { background: rgba(0, 0, 0, 0.4); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.88em; }
+  .msg pre { background: var(--bg-0); border: 1px solid var(--border); padding: 12px 14px; border-radius: var(--radius-sm); overflow-x: auto; font-size: 13px; margin: 10px 0; }
+  .msg pre code { background: transparent; padding: 0; }
+  .msg p { margin: 0; }
+  .msg p + p { margin-top: 10px; }
+
+  /* Typing indicator */
+  .typing { align-self: flex-start; display: flex; gap: 5px; padding: 16px 20px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); border-bottom-left-radius: 4px; }
+  .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: typing 1.4s var(--ease) infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30%           { opacity: 1; transform: translateY(-4px); }
+  }
+
+  /* Composer */
+  .composer-wrap { padding: 14px 22px 18px; background: linear-gradient(to top, var(--bg-0) 60%, transparent); position: sticky; bottom: 0; }
+  form { display: flex; gap: 10px; align-items: flex-end; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 6px 6px 14px; transition: border-color 0.2s var(--ease); }
+  form:focus-within { border-color: var(--border-hi); box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.08); }
+  textarea { flex: 1; resize: none; background: transparent; color: var(--fg-0); border: 0; padding: 10px 0; font-family: inherit; font-size: 15px; line-height: 1.5; min-height: 24px; max-height: 200px; outline: none; }
+  textarea::placeholder { color: var(--fg-3); }
+  button.send { background: var(--accent); color: var(--bg-0); border: none; border-radius: 10px; padding: 0 18px; height: 38px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform 0.12s var(--ease), background 0.15s var(--ease); font-family: inherit; }
+  button.send:hover:not(:disabled) { background: var(--accent-hi); transform: translateY(-1px); }
+  button.send:active:not(:disabled) { transform: translateY(0); }
+  button.send:disabled { opacity: 0.4; cursor: not-allowed; }
+  .hint { text-align: center; font-size: 11px; color: var(--fg-3); margin-top: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; }
+  kbd { background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--fg-1); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">J</div>
+    <div class="brand-text">
+      <div class="brand-name">John</div>
+      <div class="brand-sub">sales-console · v0.1</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="ghost" id="newSession" type="button" title="Clear history and start fresh">new session</button>
+    <div class="status">
+      <div class="pulse"></div>
+      <span>connected</span>
+    </div>
+  </div>
+</header>
+<div id="messages"></div>
+<div class="composer-wrap">
+  <form id="composer" autocomplete="off">
+    <textarea id="input" placeholder="Message John…" rows="1" autofocus></textarea>
+    <button class="send" id="send" type="submit">
+      Send
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M3.5 10.5 16 4l-4 12.5-2.5-5-6-1Z"/></svg>
+    </button>
+  </form>
+  <div class="hint"><kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> newline</div>
+</div>
+<script>
+const history = [];
+const $messages = document.getElementById('messages');
+const $input = document.getElementById('input');
+const $send = document.getElementById('send');
+const $form = document.getElementById('composer');
+const $newSession = document.getElementById('newSession');
+
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+// Minimal markdown → HTML for John's replies
+function renderMarkdown(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${code.trim()}</code></pre>`);
+  html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  // paragraph breaks on double newlines
+  html = html.split(/\n{2,}/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+  return html;
+}
+
+function renderMessage(role, text) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + role;
+  const lbl = document.createElement('div');
+  lbl.className = 'label';
+  lbl.textContent = role === 'user' ? 'you' : 'John';
+  const body = document.createElement('div');
+  if (role === 'john') body.innerHTML = renderMarkdown(text);
+  else body.textContent = text;
+  el.append(lbl, body);
+  $messages.append(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
+}
+
+function showTyping() {
+  const el = document.createElement('div');
+  el.className = 'typing';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  $messages.append(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
+}
+
+function setSystemLine(text) {
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  el.textContent = text;
+  $messages.append(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return el;
+}
+
+$input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $form.requestSubmit(); }
+});
+$input.addEventListener('input', () => {
+  $input.style.height = 'auto';
+  $input.style.height = Math.min($input.scrollHeight, 200) + 'px';
+});
+
+// Stable per-browser session id for the greeting cache (ai-9qy). Separate from
+// the httpOnly jc_session cookie used for /chat history (ai-b4q) — the former
+// keys the opener, the latter keys conversation turns.
+function getSessionId() {
+  const KEY = 'john-session-id';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2, 10));
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
+function getContractorParam() {
+  const p = new URL(window.location.href).searchParams.get('contractor');
+  if (!p) return null;
+  return /^[A-Za-z][A-Za-z0-9_.-]{0,31}$/.test(p) ? p : null;
+}
+
+async function fetchGreeting() {
+  const typingEl = showTyping();
+  try {
+    const r = await fetch('/greeting', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: getSessionId(), contractor: getContractorParam() }),
+    });
+    const data = await r.json();
+    typingEl.remove();
+    if (!r.ok || !data.content) {
+      setSystemLine('session ready · type below to begin');
+      return;
+    }
+    renderMessage('john', data.content);
+    history.push({ role: 'assistant', content: data.content });
+  } catch (err) {
+    typingEl.remove();
+    setSystemLine('session ready · type below to begin');
+  }
+}
+
+async function bootSession() {
+  $input.disabled = true;
+  $send.disabled = true;
+  try {
+    const r = await fetch('/session', { credentials: 'same-origin' });
+    if (r.ok) {
+      const data = await r.json();
+      const msgs = Array.isArray(data.messages) ? data.messages : [];
+      if (msgs.length > 0) {
+        setSystemLine('resumed · ' + msgs.length + ' message' + (msgs.length === 1 ? '' : 's'));
+        for (const m of msgs) {
+          const role = m.role === 'assistant' ? 'john' : 'user';
+          renderMessage(role, m.content || '');
+          history.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content || '' });
+        }
+        return;
+      }
+    }
+    // No prior history — John opens with a warm greeting.
+    await fetchGreeting();
+  } catch (err) {
+    await fetchGreeting();
+  } finally {
+    $input.disabled = false;
+    $send.disabled = false;
+    $input.focus();
+  }
+}
+
+$newSession.addEventListener('click', async () => {
+  if (history.length > 0 && !confirm('Clear this conversation and start a new session?')) return;
+  $newSession.disabled = true;
+  try {
+    await fetch('/session/new', { method: 'POST', credentials: 'same-origin' });
+  } catch (err) {
+    // best-effort; even if the server didn't acknowledge, blow away local state
+  }
+  history.length = 0;
+  $messages.innerHTML = '';
+  await fetchGreeting();
+  $newSession.disabled = false;
+  $input.focus();
+});
+
+
+$form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = $input.value.trim();
+  if (!text) return;
+  $input.value = '';
+  $input.style.height = 'auto';
+  $send.disabled = true;
+  renderMessage('user', text);
+  history.push({ role: 'user', content: text });
+
+  const typingEl = showTyping();
+  try {
+    const r = await fetch('/chat', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history }),
+    });
+    const data = await r.json();
+    typingEl.remove();
+    if (!r.ok) setSystemLine('error: ' + (data.error || r.status));
+    else { renderMessage('john', data.content); history.push({ role: 'assistant', content: data.content }); }
+  } catch (err) {
+    typingEl.remove();
+    setSystemLine('network: ' + err.message);
+  } finally {
+    $send.disabled = false;
+    $input.focus();
+  }
+});
+
+bootSession();
+</script>
+</body>
+</html>

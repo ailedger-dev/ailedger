@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import UpgradeModal from './UpgradeModal'
 import ChainIntegrityPanel from './ChainIntegrityPanel'
@@ -78,6 +78,8 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [systems, setSystems] = useState<AiSystem[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [total, setTotal] = useState(0)
   const [monthlyCount, setMonthlyCount] = useState(0)
   const [planTier, setPlanTier] = useState<'free' | 'pro' | 'scale'>('free')
@@ -86,6 +88,15 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
   const [chainRowCount, setChainRowCount] = useState<number>(0)
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
   const PAGE = 50
+  const sentinelRef = useRef<HTMLTableRowElement | null>(null)
+  // Ref mirror of logs so fetchMore can read the latest tail without re-binding
+  // the IntersectionObserver every render.
+  const logsRef = useRef<LogEntry[]>([])
+  logsRef.current = logs
+  const loadingMoreRef = useRef(false)
+  loadingMoreRef.current = loadingMore
+  const hasMoreRef = useRef(true)
+  hasMoreRef.current = hasMore
 
   useEffect(() => {
     supabase
@@ -113,25 +124,31 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
   }, [customerId])
 
   useEffect(() => {
-    async function fetchLogs() {
-      setLoading(true)
+    // Reset paging state when the customer changes
+    setLogs([])
+    setHasMore(true)
+    setLoading(true)
+
+    async function fetchInitial() {
       const { data, count, error } = await supabase
         .from('inference_logs')
         .select('*', { count: 'exact' })
         .eq('customer_id', customerId)
-        .order('logged_at', { ascending: false })
+        .order('id', { ascending: false })
         .limit(PAGE)
 
       if (!error && data) {
         setLogs(data)
         setTotal(count ?? 0)
+        setHasMore(data.length === PAGE)
       }
       setLoading(false)
     }
 
-    fetchLogs()
+    fetchInitial()
 
-    // Live updates - subscribe to new rows for this customer
+    // Live updates - subscribe to new rows for this customer. New rows prepend;
+    // we no longer slice the tail, so infinite scroll keeps the full window.
     const channel = supabase
       .channel('inference_logs')
       .on('postgres_changes', {
@@ -140,14 +157,53 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
         table: 'inference_logs',
         filter: `customer_id=eq.${customerId}`,
       }, (payload) => {
-        setLogs((prev) => [payload.new as LogEntry, ...prev.slice(0, PAGE - 1)])
+        const row = payload.new as LogEntry
+        setLogs((prev) => (prev.some((r) => r.id === row.id) ? prev : [row, ...prev]))
         setTotal((t) => t + 1)
         setLastInsertAt(new Date().toISOString())
+        setMonthlyCount((m) => m + 1)
       })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
   }, [customerId])
+
+  // Cursor pagination — load older rows when the sentinel scrolls into view.
+  useEffect(() => {
+    async function fetchMore() {
+      const current = logsRef.current
+      if (loadingMoreRef.current || !hasMoreRef.current || current.length === 0) return
+      loadingMoreRef.current = true
+      setLoadingMore(true)
+      const lastId = current[current.length - 1].id
+      const { data, error } = await supabase
+        .from('inference_logs')
+        .select('*')
+        .eq('customer_id', customerId)
+        .lt('id', lastId)
+        .order('id', { ascending: false })
+        .limit(PAGE)
+      if (!error && data) {
+        // Dedup in case a realtime INSERT landed a row inside the fetched range
+        setLogs((prev) => {
+          const seen = new Set(prev.map((r) => r.id))
+          const merged = [...prev, ...data.filter((r) => !seen.has(r.id))]
+          return merged
+        })
+        if (data.length < PAGE) setHasMore(false)
+      }
+      setLoadingMore(false)
+      loadingMoreRef.current = false
+    }
+
+    const node = sentinelRef.current
+    if (!node) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) fetchMore()
+    }, { rootMargin: '400px' })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [customerId, loading])
 
   const limit = PLAN_LIMITS[planTier]
   const pct = limit ? Math.min((monthlyCount / limit) * 100, 100) : 0
@@ -254,31 +310,42 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => {
-                  const position = computeChainPosition(log, logs, chainRowCount)
-                  return (
-                    <tr
-                      key={log.id}
-                      onClick={() => setSelectedLog(log)}
-                      style={{ cursor: 'pointer' }}
-                      className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
-                        {position !== null ? `#${position}` : '–'}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{formatDate(log.logged_at)}</td>
-                      <td className="px-4 py-3 text-slate-300 text-sm">
-                        {log.system_id ? (systems.find((s) => s.id === log.system_id)?.system_name ?? '-') : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-white capitalize">{log.provider}</td>
-                      <td className="px-4 py-3 text-slate-300">{log.model_name ?? '-'}</td>
-                      <td className={`px-4 py-3 font-mono font-medium ${statusColor(log.status_code)}`}>{log.status_code}</td>
-                      <td className="px-4 py-3 text-slate-400">{log.latency_ms}ms</td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500">{shortHash(log.input_hash)}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-500">{shortHash(log.output_hash)}</td>
-                    </tr>
-                  )
-                })
+                <>
+                  {logs.map((log) => {
+                    const position = computeChainPosition(log, logs, chainRowCount)
+                    return (
+                      <tr
+                        key={log.id}
+                        onClick={() => setSelectedLog(log)}
+                        style={{ cursor: 'pointer' }}
+                        className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
+                      >
+                        <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
+                          {position !== null ? `#${position}` : '–'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{formatDate(log.logged_at)}</td>
+                        <td className="px-4 py-3 text-slate-300 text-sm">
+                          {log.system_id ? (systems.find((s) => s.id === log.system_id)?.system_name ?? '-') : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-white capitalize">{log.provider}</td>
+                        <td className="px-4 py-3 text-slate-300">{log.model_name ?? '-'}</td>
+                        <td className={`px-4 py-3 font-mono font-medium ${statusColor(log.status_code)}`}>{log.status_code}</td>
+                        <td className="px-4 py-3 text-slate-400">{log.latency_ms}ms</td>
+                        <td className="px-4 py-3 font-mono text-xs text-slate-500">{shortHash(log.input_hash)}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-slate-500">{shortHash(log.output_hash)}</td>
+                      </tr>
+                    )
+                  })}
+                  <tr ref={sentinelRef} aria-hidden="true">
+                    <td colSpan={9} className="px-4 py-3 text-center text-xs text-slate-500">
+                      {loadingMore
+                        ? 'Loading more...'
+                        : hasMore
+                        ? `Scroll to load more (${logs.length.toLocaleString()} of ${total.toLocaleString()})`
+                        : `End of logs · ${logs.length.toLocaleString()} shown`}
+                    </td>
+                  </tr>
+                </>
               )}
             </tbody>
           </table>

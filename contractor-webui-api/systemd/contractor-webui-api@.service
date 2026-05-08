@@ -1,0 +1,29 @@
+[Unit]
+Description=contractor-webui-api (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/contractor-webui-api/%i.env
+WorkingDirectory=%h/contractor-webui-api
+ExecStart=%h/contractor-webui-api/.venv/bin/uvicorn app.main:app --host ${BIND_HOST} --port ${BIND_PORT} --log-level info
+Restart=on-failure
+RestartSec=5
+# Listen on localhost only. The CF tunnel is the public surface.
+# NOTE: this unit runs as the invoking user (systemd --user). Do not enable as
+# a root/system unit: it must run under the contractor's Linux user so its
+# process tree + cache directory respect the per-contractor silo boundary.
+#
+# NoNewPrivileges must stay false: Jo spawns claude via `sudo -u sales-agent`,
+# which is setuid. NoNewPrivileges=true causes sudo to abort with "no new
+# privileges flag is set" on the pty, the child EOFs, and the session is
+# marked closed before the first message can land — surfacing as
+# jo_stream_404 / jo_send_404 from the SPA.
+NoNewPrivileges=false
+PrivateTmp=false
+ProtectSystem=full
+ProtectHome=false
+
+[Install]
+WantedBy=default.target

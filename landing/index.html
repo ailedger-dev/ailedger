@@ -5,25 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="shortcut icon" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260418" />
+    <link rel="shortcut icon" href="/favicon.svg?v=20260418" />
+    <link rel="apple-touch-icon" href="/favicon.svg?v=20260418" />
 
     <!-- Primary SEO -->
-    <title>AILedger | EU AI Act Compliance Infrastructure</title>
-    <meta name="description" content="AILedger logs every AI inference as an immutable, tamper-evident audit record. Drop-in integration in 60 seconds. EU AI Act Article 12 compliant. GDPR compatible. Free to start." />
-    <meta name="keywords" content="AILedger, EU AI Act compliance, AI inference logging, Article 12, AI audit log, GDPR AI compliance, AI system logging, EU AI Act Article 12" />
+    <title>AILedger | Infrastructure for Auditing AI — EU AI Act Article 12 Audit Trail</title>
+    <meta name="description" content="AILedger is infrastructure for auditing AI systems: every inference your application makes becomes a hash-chained, SHA-256-fingerprinted audit record. Built for EU AI Act Article 12 compliance. 60-second drop-in integration. GDPR compatible. Free to start." />
+    <meta name="keywords" content="AILedger, infrastructure for auditing AI, AI audit trail, EU AI Act compliance, AI inference audit log, Article 12 audit trail, AI system audit, AI decision audit, Annex III compliance, high-risk AI logging, GDPR AI compliance, audit of AI" />
     <meta name="author" content="AILedger" />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://ailedger.dev" />
+    <link rel="canonical" href="https://ailedger.dev/" />
+    <link rel="alternate" type="text/markdown" title="LLM-friendly summary" href="/llms.txt" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ailedger.dev" />
     <meta property="og:site_name" content="AILedger" />
-    <meta property="og:title" content="AILedger | EU AI Act Compliance Infrastructure" />
-    <meta property="og:description" content="Log every AI inference as an immutable audit record. 60-second drop-in integration. EU AI Act Article 12 ready. Free to start." />
-    <meta property="og:image" content="https://ailedger.dev/og.png" />
+    <meta property="og:title" content="AILedger | Infrastructure for Auditing AI — EU AI Act Article 12" />
+    <meta property="og:description" content="Infrastructure for auditing AI systems. Every inference becomes a hash-chained, fingerprinted audit record. EU AI Act Article 12 ready. 60-second drop-in. Free to start." />
+    <meta property="og:image" content="https://ailedger.dev/og.png?v=20260418" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_US" />
@@ -31,18 +32,49 @@
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@ailedger" />
-    <meta name="twitter:title" content="AILedger | EU AI Act Compliance Infrastructure" />
-    <meta name="twitter:description" content="Log every AI inference as an immutable audit record. 60-second drop-in integration. EU AI Act Article 12 ready." />
-    <meta name="twitter:image" content="https://ailedger.dev/og.png" />
+    <meta name="twitter:title" content="AILedger | Infrastructure for Auditing AI — EU AI Act Article 12" />
+    <meta name="twitter:description" content="Infrastructure for auditing AI systems. Every inference becomes a hash-chained, fingerprinted audit record. EU AI Act Article 12 ready. 60-second drop-in. Free to start." />
+    <meta name="twitter:image" content="https://ailedger.dev/og.png?v=20260418" />
 
-    <!-- Site name for Google -->
+    <!-- Site name for Google — strengthened with Organization + logo + publisher link -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "AILedger",
-      "alternateName": "AI Ledger",
-      "url": "https://ailedger.dev"
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://ailedger.dev/#organization",
+          "name": "AILedger",
+          "alternateName": ["AI Ledger", "ailedger"],
+          "url": "https://ailedger.dev/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://ailedger.dev/logo-512.png?v=20260418",
+            "width": 512,
+            "height": 512
+          },
+          "sameAs": [
+            "https://github.com/jakejjoyner"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://ailedger.dev/#website",
+          "name": "AILedger",
+          "alternateName": "AI Ledger",
+          "url": "https://ailedger.dev/",
+          "inLanguage": "en",
+          "publisher": {"@id": "https://ailedger.dev/#organization"},
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://ailedger.dev/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
     }
     </script>
 
@@ -81,7 +113,7 @@
           "name": "What is the EU AI Act Article 12?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Article 12 of the EU AI Act (Regulation 2024/1689) requires operators of high-risk AI systems to maintain automatic logging of events throughout the system's lifetime. These logs must be tamper-evident and sufficient to enable post-hoc auditing."
+            "text": "Article 12 of the EU AI Act (Regulation 2024/1689) requires operators of high-risk AI systems to maintain automatic logging of events throughout the system's lifetime. These logs must be tamper-evident and sufficient to enable post-hoc auditing. AILedger is purpose-built to give you the audit trail Article 12 calls for."
           }
         },
         {
@@ -117,7 +149,7 @@
       <!-- SSR fallback for crawlers -->
       <noscript>
         <h1>AILedger | EU AI Act Compliance Infrastructure</h1>
-        <p>AILedger logs every AI inference as an immutable, tamper-evident audit record. 60-second drop-in integration for OpenAI, Anthropic, and Google Gemini. EU AI Act Article 12 compliant. GDPR compatible. Free to start.</p>
+        <p>AILedger logs every AI inference as an immutable, tamper-evident audit record. 60-second drop-in integration for OpenAI, Anthropic, and Google Gemini. Built for EU AI Act Article 12 audit logging. GDPR compatible. Free to start.</p>
         <a href="https://dash.ailedger.dev">Get started</a>
         <a href="https://ailedger.dev/docs">Documentation</a>
       </noscript>

@@ -1,0 +1,14 @@
+{
+  "name": "john-console",
+  "version": "0.1.0",
+  "description": "Sales sub-town session entry — Pasha chats with John via AILedger proxy",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

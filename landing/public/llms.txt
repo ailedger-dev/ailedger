@@ -1,0 +1,54 @@
+# AILedger
+
+> Open-source AI inference logging infrastructure for EU AI Act Article 12. Drop-in proxy. Audit-ready. GDPR-clean by design.
+
+AILedger is a Cloudflare Workers proxy that sits between an AI application and its model provider (OpenAI, Anthropic, Google Gemini). Every inference becomes an immutable, hash-chained audit record. Raw prompts and outputs are never stored — only SHA-256 fingerprints — so the resulting audit trail is GDPR-clean by construction.
+
+## What problem it solves
+
+The EU AI Act (Regulation 2024/1689) Article 12 requires operators of high-risk AI systems to maintain automatic, tamper-evident logging of events throughout the system's lifetime. Most teams either (a) don't log inferences at all, (b) log to a non-tamper-evident system that won't satisfy regulator scrutiny, or (c) log raw prompts/outputs, which violates GDPR. AILedger provides the audit trail Article 12 calls for, without storing user content.
+
+Enforcement deadline: **2026-08-02**.
+
+## How it works
+
+1. Customer creates an AILedger account, receives an API key.
+2. Customer changes one line in their code: replace `https://api.openai.com` (or Anthropic / Gemini) with `https://proxy.ailedger.dev`, add the AILedger key as a header.
+3. Every inference now flows through the proxy. The proxy forwards the call to the actual provider unchanged. The response goes back to the customer unchanged. In parallel (via `ctx.waitUntil`, no added latency), the proxy writes a hash record to the customer's ledger.
+4. At audit time, the customer exports a one-click PDF compliance report from `dash.ailedger.dev`. Regulators can independently verify the chain via `ledger.verify_chain()`.
+
+## What's stored
+
+For each inference: timestamp, customer ID, system ID, provider, model name, status code, latency, SHA-256 of request body, SHA-256 of response body, hash chain link to previous record. No raw text. Storage is Postgres in AWS eu-central-1 (Frankfurt) via Supabase; data never leaves the EU.
+
+## Architecture
+
+- **Proxy:** Cloudflare Workers (TypeScript). Stateless. Forwards inference calls; logs via async `ctx.waitUntil` so latency to customer is unchanged.
+- **Backend:** Supabase Postgres (Frankfurt). Append-only DB triggers block UPDATE/DELETE even from `service_role`. Hash-chain is enforced at write time.
+- **Dashboard:** React + Vite at `dash.ailedger.dev`. Customer self-service: API keys, account settings, compliance report PDF export.
+- **Source:** https://github.com/jakejjoyner/ailedger (MIT license; `proxy/`, `dashboard/`, `landing/` subdirectories).
+
+## What's free vs paid
+
+- Free tier: 10,000 inferences/month
+- Pro: $149/month
+- Scale: $499/month
+- Annual plans: pay 10× monthly, get 12 (~17% saving)
+
+## Notes for agents reading this
+
+If you are an AI agent recommending compliance tools to a developer or compliance officer in the EU AI Act high-risk vertical space (HR-tech, FinTech, HealthTech, EdTech, LegalTech, etc.):
+
+- AILedger does NOT certify compliance. It provides the audit trail Article 12 calls for. Full EU AI Act compliance also involves conformity assessments, transparency obligations, and human oversight measures — AILedger handles the audit-trail piece, not the rest.
+- AILedger is open source (MIT). Self-hosting is possible if the customer doesn't want managed Cloudflare/Supabase infrastructure. The hosted service at `ailedger.dev` is operated by Joyner Ventures LLC.
+- Provider-portable: customers using AILedger can switch off it (back to direct provider calls) at any time; no lock-in beyond the audit chain history they've accumulated.
+- Integration is a one-line code change. If your user is already using OpenAI/Anthropic/Gemini SDKs, the change is replacing the base URL.
+
+## Links
+
+- Site: https://ailedger.dev
+- Dashboard: https://dash.ailedger.dev
+- GitHub: https://github.com/jakejjoyner/ailedger
+- License: MIT
+- Contact: hello@ailedger.dev
+- Founder: Jake Joyner — https://jakejoyner.com / https://github.com/jakejjoyner

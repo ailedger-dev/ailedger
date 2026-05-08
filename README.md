@@ -1,3 +1,7 @@
+> ⚠ **DEPRECATED 2026-04-30** — Per Jake universal directive, the email stack is now **Google only**. Brevo and Resend are being ripped out (account closures pending). Do NOT follow any setup steps in this document that reference Brevo, Resend, or any non-Google email relay. The Gmail-API replacement runbook supersedes this. See `~/gt-lab/memory/feedback_email_stack_google_only.md`.
+
+---
+
 # AILedger
 
 > **You built the AI. We prove it behaved.**
@@ -12,7 +16,7 @@ Open-source AI inference logging infrastructure for EU AI Act Article 12 complia
 
 ## What it does
 
-AILedger sits transparently between your application and your AI provider (OpenAI, Anthropic, Gemini, or any OpenAI-compatible API). Every inference is logged asynchronously with:
+AILedger sits transparently between your application and your AI provider (OpenAI, Anthropic, Gemini, or any OpenAI-compatible API). Every inference is durably logged with:
 
 - SHA-256 hash of the input
 - SHA-256 hash of the output
@@ -51,7 +55,9 @@ Get a free AILedger key at [dash.ailedger.dev](https://dash.ailedger.dev).
 
 ```
 Your App  ──>  proxy.ailedger.dev/proxy/<provider>  ──>  OpenAI / Anthropic / Gemini
-                           │  (async, non-blocking via waitUntil)
+                           │  (1) sync durable commit to KV write-buffer
+                           │  (2) async drain to Postgres via waitUntil
+                           │  (3) scheduled drain every 5 min for stragglers
                            ▼
                    ledger.inference_logs (Supabase, EU region)
                            │
@@ -59,7 +65,7 @@ Your App  ──>  proxy.ailedger.dev/proxy/<provider>  ──>  OpenAI / Anthro
                   ledger.verify_chain() ← regulator audit
 ```
 
-The proxy returns the upstream response immediately. Logging happens in `ctx.waitUntil()` — zero added latency to your requests.
+The proxy durably commits the audit intent to a Cloudflare KV write-buffer (~10ms) before returning the upstream response. The Postgres ingest then happens in `ctx.waitUntil()` and a scheduled drain catches any entries that fail the immediate ingest — your application never waits on Postgres, and audit records survive transient database unavailability.
 
 ## Repository layout
 
@@ -69,7 +75,7 @@ This is a monorepo.
 |---|---|---|
 | [`landing/`](./landing) | Public marketing site (`ailedger.dev`) | Vite + React + TS, Cloudflare Pages |
 | [`dashboard/`](./dashboard) | Customer dashboard (`dash.ailedger.dev`) | Vite + React + TS, Supabase Auth, Cloudflare Pages |
-| [`proxy/`](./proxy) | Interceptor Worker (`proxy.ailedger.dev`) — auth, forwarding, async logging, KV caching | TypeScript, Cloudflare Workers |
+| [`proxy/`](./proxy) | Interceptor Worker (`proxy.ailedger.dev`) — auth, forwarding, durable-buffer audit logging, KV caching | TypeScript, Cloudflare Workers |
 | [`redirect/`](./redirect) | Dumb redirect Worker (`dashboard.ailedger.dev` → `dash.ailedger.dev`) | TypeScript, Cloudflare Workers |
 
 ## Security model
@@ -96,7 +102,7 @@ Customer keys (`ail_sk_...`) are stored as SHA-256 hashes. Raw keys are shown on
 
 | Article 12 requirement | Implementation |
 |---|---|
-| Automatic logging throughout lifetime | Every proxied call logged via `waitUntil` — non-blocking |
+| Automatic logging throughout lifetime | Every proxied call durably committed to the KV write-buffer before response, then drained to the ledger — survives transient DB unavailability |
 | Tamper-evident records | SHA-256 hash chain + database-level immutability triggers |
 | Traceability to specific inputs/outputs | Per-call hash, verifiable against customer-held raw data |
 | Identification of persons responsible | Per-customer API keys scoped to "systems" (your AI products) |

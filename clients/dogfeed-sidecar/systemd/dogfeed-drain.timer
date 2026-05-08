@@ -1,0 +1,15 @@
+[Unit]
+Description=AILedger dogfeed drain — every 5 minutes
+Documentation=https://github.com/ailedger-dev/ailedger/blob/main/clients/dogfeed-sidecar/README.md
+
+[Timer]
+# OnBootSec lets us catch the boot window without waiting a full 5min.
+OnBootSec=2min
+OnUnitActiveSec=5min
+# Persistent=true: if the laptop was asleep across a fire, run once on
+# resume so we don't lose a drain window.
+Persistent=true
+Unit=dogfeed-drain.service
+
+[Install]
+WantedBy=timers.target
