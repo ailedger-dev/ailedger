@@ -106,8 +106,16 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
       const headData = data as ChainHead
       setHead(headData)
       if (onHeadUpdate) onHeadUpdate(headData)
-      // If hydrated state exists and chain has extended since, mark stale.
-      if (hydrated && headData.row_count > hydrated.rowCountAtVerify) {
+      // Only auto-stale a previously verified-OK chain after rows have
+      // been added. A previously verified-BROKEN chain must NEVER be
+      // downgraded to "stale" on reload — a break is a load-bearing
+      // finding that has to stay visible until the user explicitly
+      // re-verifies. Anti-pattern caught by Jake 2026-05-08.
+      if (
+        hydrated &&
+        hydrated.verifyResult.ok &&
+        headData.row_count > hydrated.rowCountAtVerify
+      ) {
         setStatus('stale')
       }
     }
