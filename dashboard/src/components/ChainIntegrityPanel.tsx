@@ -49,6 +49,9 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
   const [copyFlash, setCopyFlash] = useState(false)
   const [throttleExpired, setThrottleExpired] = useState(true)
 
+  // localStorage key — per-customer so cross-customer state doesn't leak.
+  const lsKey = `ailedger:chain-verify:${customerId}`
+
   // Re-evaluate throttle every 5s so the Verify button re-enables in bounded time.
   // Done in an effect (not during render) to keep the component pure.
   useEffect(() => {
@@ -66,11 +69,32 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
 
   // Initial load: fetch the chain head only. Verification is manual-only
   // per Jake — users click "Verify" when they want a fresh integrity check.
-  // Auto-verifying on load was wrong: it consumes Postgres CPU on every
-  // dashboard mount, hides the explicit "I checked" affordance, and at
-  // scale (large customer chains) blocks the panel render.
+  //
+  // Hydrate the LAST verification result from localStorage so Verified-OK /
+  // Verified-broken state survives a page refresh. If the chain has grown
+  // since the last verify (current row_count > stored row_count), we
+  // restore the result but mark it stale; the user has to re-click to
+  // confirm against current state.
   useEffect(() => {
     let cancelled = false
+
+    // Hydrate first so we have something to compare against the head.
+    let hydrated: { verifyResult: VerifyChain; verifiedAt: string; rowCountAtVerify: number } | null = null
+    try {
+      const raw = localStorage.getItem(lsKey)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && parsed.verifyResult && parsed.verifiedAt && typeof parsed.rowCountAtVerify === 'number') {
+          hydrated = parsed
+          setVerifyResult(parsed.verifyResult)
+          setVerifiedAt(parsed.verifiedAt)
+          setStatus(parsed.verifyResult.ok ? 'verified-ok' : 'verified-broken')
+        }
+      }
+    } catch {
+      // localStorage unavailable or corrupted — silently ignore, start clean
+    }
+
     async function loadHead() {
       const { data, error } = await supabase.rpc('chain_head', { p_customer_id: customerId })
       if (cancelled) return
@@ -82,17 +106,23 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
       const headData = data as ChainHead
       setHead(headData)
       if (onHeadUpdate) onHeadUpdate(headData)
+      // If hydrated state exists and chain has extended since, mark stale.
+      if (hydrated && headData.row_count > hydrated.rowCountAtVerify) {
+        setStatus('stale')
+      }
     }
     loadHead()
     return () => { cancelled = true }
-  }, [customerId, onHeadUpdate])
+  }, [customerId, onHeadUpdate, lsKey])
 
-  // When a new row is inserted (parent debounces), refresh the head and mark
-  // existing verification stale.
+  // When a new row is inserted, refresh the head and mark existing
+  // verification stale. Debounced 3s so a high-frequency insert burst
+  // (e.g., the sidecar daemon shipping a backlog) doesn't fire one
+  // chain_head fetch per row — it fires once after writes settle.
   useEffect(() => {
     if (!lastInsertAt) return
     let cancelled = false
-    async function loadHead() {
+    const t = setTimeout(async () => {
       const { data, error } = await supabase.rpc('chain_head', { p_customer_id: customerId })
       if (cancelled) return
       if (error) return
@@ -100,9 +130,8 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
       setHead(headData)
       if (onHeadUpdate) onHeadUpdate(headData)
       setStatus((prev) => (prev === 'verified-ok' || prev === 'verified-broken' ? 'stale' : prev))
-    }
-    loadHead()
-    return () => { cancelled = true }
+    }, 3000)
+    return () => { cancelled = true; clearTimeout(t) }
   }, [lastInsertAt, customerId, onHeadUpdate])
 
   const canVerify = status !== 'verifying' && throttleExpired
@@ -118,8 +147,10 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
       return
     }
     const result = data as VerifyChain
+    const verifiedAtNow = new Date().toISOString()
+    const rowCountAtVerify = result.row_count
     setVerifyResult(result)
-    setVerifiedAt(new Date().toISOString())
+    setVerifiedAt(verifiedAtNow)
     setStatus(result.ok ? 'verified-ok' : 'verified-broken')
     if (result.chain_head_hash) {
       const updated: ChainHead = {
@@ -129,6 +160,19 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
       }
       setHead(updated)
       if (onHeadUpdate) onHeadUpdate(updated)
+    }
+    // Persist so Verified-OK survives a page refresh.
+    try {
+      localStorage.setItem(
+        lsKey,
+        JSON.stringify({
+          verifyResult: result,
+          verifiedAt: verifiedAtNow,
+          rowCountAtVerify,
+        }),
+      )
+    } catch {
+      /* localStorage quota / disabled — silently skip persistence */
     }
   }
 
