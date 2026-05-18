@@ -6,7 +6,7 @@ Open-source statistical primitives for AILedger Detection Event chains.
 **License:** Apache 2.0 (per posture v2; customer + regulator + adversarial-reviewer auditable)
 **Python:** 3.10+
 **Author:** Jake Joyner / Joyner Ventures LLC
-**Charter:** https://ailedger.com/charter
+**Charter:** https://ailedger.dev/charter
 
 ---
 

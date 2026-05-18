@@ -52,7 +52,7 @@ dev = [
 [project.urls]
 Homepage = "https://ailedger.dev"
 Repository = "https://github.com/jakejjoyner/ailedger"
-Charter = "https://ailedger.com/charter"
+Charter = "https://ailedger.dev/charter"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ailedger_detection"]

@@ -8,7 +8,7 @@ The Charter names the customers AILedger refuses, the features AILedger refuses 
 
 - **Canonical:** [`CHARTER.md`](./CHARTER.md) in this repository.
 - **Versioned:** the `v1.0` git tag in this repository anchors the v1.0 text. Future amendments are tagged sequentially (`v1.1`, `v2.0`, etc.) per the amendment procedure below.
-- **Rendered:** [`ailedger.com/charter`](https://ailedger.com/charter) renders the canonical text from this repository.
+- **Rendered:** [`ailedger.dev/charter`](https://ailedger.dev/charter) renders the canonical text from this repository.
 
 ## What this repository is
 
@@ -40,6 +40,6 @@ The Charter text is published under [Creative Commons Attribution 4.0 Internatio
 
 ## Contact
 
-For Charter-related questions: `charter@ailedger.com`.
+For Charter-related questions: `charter@ailedger.dev`.
 
 For product-related questions: see the AILedger product documentation.

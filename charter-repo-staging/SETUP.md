@@ -69,7 +69,7 @@ Then update the marketing site + jakejoyner.com references to point at `github.c
 
 ## After the repo is live
 
-- Update `ailedger.com/charter` to render this repo (Cloudflare Pages route or static page; see `~/workspace/dev/ailedger/landing/CHARTER-PAGE-STAGING.md` if Vernier created one).
+- Update `ailedger.dev/charter` to render this repo (Cloudflare Pages route or static page; see `~/workspace/dev/ailedger/landing/CHARTER-PAGE-STAGING.md` if Vernier created one).
 - Update `jakejoyner.com` to include the single-line reference (needs clone of `jakejjoyner/homepage` repo + edit + push; not done autonomously because the homepage repo wasn't cloned locally at staging time).
 - Update marketing-quote-bank.md QA-17 references and PITCH-ONE-PAGER.md "github.com/ailedger/charter" mention if the fallback URL was used.
 

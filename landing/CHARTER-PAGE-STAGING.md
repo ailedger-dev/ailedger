@@ -13,9 +13,9 @@ Vernier prepared the AILedger Charter v1.0 publication surface on the marketing 
 - **Decide on nav-link target.** Suggested copy: `<a href="/charter">Charter</a>`. Place between existing nav items (e.g. between "Pricing" and "Docs," or wherever fits the layout best per Jake's eye).
 - **Deploy to preview, verify, then deploy to production.** Standard `pnpm build` + Cloudflare Pages deploy. The static charter.html will be picked up from `public/` automatically by Vite's build.
 - **Verify checklist** (from publication handoff):
-  - [ ] `ailedger.com/charter` loads and renders the charter
+  - [ ] `ailedger.dev/charter` loads and renders the charter
   - [ ] `/charter/v1` resolves and matches `/charter`
-  - [ ] Main nav on `ailedger.com` includes "Charter" link (PENDING Jake)
+  - [ ] Main nav on `ailedger.dev` includes "Charter" link (PENDING Jake)
   - [ ] Link from charter page back to GitHub repo works (currently points to `github.com/ailedger/charter` — if Jake uses the `jakejjoyner/ailedger-charter` fallback URL, update the two `href="https://github.com/ailedger/charter"` references in `charter.html`)
   - [ ] CI/Playwright screenshots updated to reflect new nav item (PENDING Jake; will follow nav addition)
 
@@ -34,7 +34,7 @@ Vernier prepared the AILedger Charter v1.0 publication surface on the marketing 
 
 ## Why the charter ships at /charter.html instead of as a React page
 
-The existing site has no client-side router. Adding one introduces an architectural decision (routing library, sitemap mechanics, hydration patterns) that should be Jake's. A static page served at `/charter.html` with a Cloudflare Pages 200-rewrite from `/charter` gives the user-facing UX of "ailedger.com/charter renders the charter" without forcing any architectural change. If Jake later adds React Router for other reasons, the charter page can be migrated trivially.
+The existing site has no client-side router. Adding one introduces an architectural decision (routing library, sitemap mechanics, hydration patterns) that should be Jake's. A static page served at `/charter.html` with a Cloudflare Pages 200-rewrite from `/charter` gives the user-facing UX of "ailedger.dev/charter renders the charter" without forcing any architectural change. If Jake later adds React Router for other reasons, the charter page can be migrated trivially.
 
 ## Cross-references
 
