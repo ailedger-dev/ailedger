@@ -111,9 +111,11 @@ export default {
 		// hash_chain_self atomically; the populated row is returned.
 		//
 		// Authentication: x-ailedger-key header (existing API key plumbing).
-		// Tenant ownership: SDK supplies tenant_id; v0.2.0 trusts the supplied
-		// value (TODO before v0.2.1: validate tenant_id against a tenant_memberships
-		// lookup tied to the API key's owner).
+		// Tenant ownership (v0.2.1): the API key is bound to a specific tenant
+		// via ledger.api_keys.tenant_id (migration 20260518_api_keys_tenant_id.sql,
+		// Option B per docs/tenant-ownership-design-2026-05-18.md). The proxy
+		// validates payload.tenant_id == api_key.tenant_id; rejects with 403 on
+		// mismatch or on NULL tenant_id (legacy v1-only keys).
 		if (url.pathname === '/v2/detection-events') {
 			return handleDetectionEventIngest(request, env, ctx);
 		}
@@ -651,7 +653,7 @@ export async function resolveApiKey(
 	env: Env,
 	apiKey: string,
 	ctx: ExecutionContext,
-): Promise<{ supabaseUserId: string; systemId: string | null } | null> {
+): Promise<{ supabaseUserId: string; systemId: string | null; tenantId: string | null } | null> {
 	const keyHash = await sha256hex(apiKey);
 	if (!keyHash) return null;
 
@@ -660,10 +662,12 @@ export async function resolveApiKey(
 
 	// Check KV cache first (~5ms) before hitting Supabase (~150ms)
 	const cacheKey = `key:${keyHash}`;
-	const cached = (await env.AILEDGER_CACHE.get(cacheKey, 'json')) as { supabaseUserId: string; systemId: string | null } | null;
+	const cached = (await env.AILEDGER_CACHE.get(cacheKey, 'json')) as { supabaseUserId: string; systemId: string | null; tenantId: string | null } | null;
 	if (cached) return cached;
 
-	const res = await fetch(`${env.SUPABASE_URL}/rest/v1/api_keys?key_hash=eq.${keyHash}&select=customer_id,system_id`, {
+	// tenant_id added per Option B (docs/tenant-ownership-design-2026-05-18.md);
+	// migration 20260518_api_keys_tenant_id.sql. NULL for legacy v1-only keys.
+	const res = await fetch(`${env.SUPABASE_URL}/rest/v1/api_keys?key_hash=eq.${keyHash}&select=customer_id,system_id,tenant_id`, {
 		headers: {
 			apikey: env.SUPABASE_SERVICE_KEY,
 			Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
@@ -673,10 +677,10 @@ export async function resolveApiKey(
 
 	if (!res.ok) return null;
 
-	const rows = (await res.json()) as { customer_id: string; system_id: string | null }[];
+	const rows = (await res.json()) as { customer_id: string; system_id: string | null; tenant_id: string | null }[];
 	if (!rows.length) return null;
 
-	const result = { supabaseUserId: rows[0].customer_id, systemId: rows[0].system_id ?? null };
+	const result = { supabaseUserId: rows[0].customer_id, systemId: rows[0].system_id ?? null, tenantId: rows[0].tenant_id ?? null };
 
 	// Cache for 60s (defense-in-depth: faster invalidation than 300s) and update
 	// last_used_at — both fire-and-forget. Revocation tombstone above covers the
@@ -1817,7 +1821,20 @@ async function handleDetectionEventIngest(
 			headers: { 'Content-Type': 'application/json' },
 		});
 	}
-	const { supabaseUserId } = resolved;
+	const { supabaseUserId, tenantId: keyTenantId } = resolved;
+
+	// v0.2.1 tenant-ownership validation per docs/tenant-ownership-design-2026-05-18.md
+	// (Option B, Jake-ratified 2026-05-18). Legacy v1-only keys have NULL
+	// tenant_id and cannot ingest Decision Events; they must be re-provisioned
+	// via the v2 signup flow first.
+	if (keyTenantId === null) {
+		return new Response(
+			JSON.stringify({
+				error: 'API key not provisioned for v2 Detection Event ingest. Contact AILedger support to enable.',
+			}),
+			{ status: 403, headers: { 'Content-Type': 'application/json' } },
+		);
+	}
 
 	const limitHit = await checkUsageLimit(env, supabaseUserId);
 	if (limitHit) {
@@ -1857,6 +1874,20 @@ async function handleDetectionEventIngest(
 			status: 400,
 			headers: { 'Content-Type': 'application/json' },
 		});
+	}
+	// v0.2.1 Option B: payload.tenant_id must match the API key's bound tenant.
+	if (payload.tenant_id !== keyTenantId) {
+		console.error('detection-event-ingest:tenant-mismatch', {
+			eventId: payload.event_id,
+			keyTenantId,
+			payloadTenantId: payload.tenant_id,
+		});
+		return new Response(
+			JSON.stringify({
+				error: 'tenant_id does not match the API key\'s authorized tenant',
+			}),
+			{ status: 403, headers: { 'Content-Type': 'application/json' } },
+		);
 	}
 	if (!isUuid(payload.system_id)) {
 		return new Response(JSON.stringify({ error: 'system_id must be a UUID' }), {
