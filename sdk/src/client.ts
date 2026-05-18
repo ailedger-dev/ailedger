@@ -16,12 +16,26 @@
 import { computeInputsHash } from './hash.js';
 import { computeExtractorParamsHash } from './canonicalize.js';
 import { normalizeConfidence, normalizeTimestamp } from './normalize.js';
+import {
+  AILedgerAuthError,
+  AILedgerForbiddenError,
+  AILedgerRateLimitError,
+  AILedgerServerError,
+  AILedgerTransportError,
+  AILedgerValidationError,
+} from './errors.js';
 import type {
   DetectionEvent,
   InferredDetectionEvent,
   ExtractorMethod,
   ExtractorParams,
 } from './types.js';
+
+/** Response shape from POST /v2/detection-events */
+interface IngestResponse {
+  event: Record<string, unknown> | null;
+  deduped?: boolean;
+}
 
 export interface DetectionEventClientConfig {
   /** AILedger proxy base URL (e.g. https://proxy.ailedger.dev) */
@@ -104,7 +118,12 @@ export class DetectionEventClient {
       actions_taken: input.actionsTaken ?? [],
       chain_spec_version: 2,
     };
-    await this.transport(event);
+    const populated = await this.transport(event);
+    if (populated) {
+      // Merge server-populated fields (hash_chain_prev, hash_chain_self) back
+      // into the returned event so callers see chain state.
+      return { ...event, ...populated } as DetectionEvent;
+    }
     return event;
   }
 
@@ -143,7 +162,7 @@ export class DetectionEventClient {
       anchor_event_id: input.anchorEventId,
       extractor_method: input.extractorMethod,
       extractor_model: input.extractorModel,
-      extractor_params: input.extractorParams as Record<string, unknown>,
+      extractor_params: input.extractorParams as unknown as Record<string, unknown>,
       extractor_params_hash: extractorParamsHash,
       extraction_started_at: normalizeTimestamp(input.extractionStartedAt),
       extraction_compute_ms: input.extractionComputeMs,
@@ -154,26 +173,99 @@ export class DetectionEventClient {
       actions_taken: input.actionsTaken ?? [],
       chain_spec_version: 2,
     };
-    await this.transport(inferred);
+    const populated = await this.transport(inferred);
+    if (populated) {
+      return { ...inferred, ...populated } as InferredDetectionEvent;
+    }
     return inferred;
   }
 
   /**
-   * Transport stub. v0.1.0 logs to console; production wires this to the
-   * AILedger proxy ingest endpoint via fetch.
+   * Transport: POST the Detection Event to {baseUrl}/v2/detection-events.
    *
-   * TODO before v0.2.0:
-   *   - POST {baseUrl}/v2/detection-events with x-ailedger-key header
-   *   - Handle 429 (rate limit) with retry-after honoring
-   *   - Handle 5xx with exponential backoff + durable-buffer fallback
-   *   - Surface DB trigger errors (chain insert failures) clearly
-   *   - Return populated hash_chain_prev + hash_chain_self from response
+   * Returns the populated row from the proxy response (with hash_chain_prev +
+   * hash_chain_self computed by the DB trigger). Throws a typed error for
+   * non-2xx responses so callers can handle auth / validation / rate-limit /
+   * server failures distinctly.
+   *
+   * Retry policy: NOT implemented in v0.2.0. The caller is responsible for
+   * retry on AILedgerServerError and AILedgerRateLimitError. v0.2.1 follow-up
+   * adds opt-in exponential backoff + durable-buffer fallback.
    */
-  private async transport(event: DetectionEvent | InferredDetectionEvent): Promise<void> {
-    // Placeholder: logs the structured event. Production implementation TBD.
-    // Reference config to avoid TS6133 unused-private-member warning.
-    void this.config.baseUrl;
-    void this.config.apiKey;
-    void event;
+  private async transport(
+    event: DetectionEvent | InferredDetectionEvent,
+  ): Promise<Record<string, unknown> | null> {
+    const url = `${this.config.baseUrl.replace(/\/$/, '')}/v2/detection-events`;
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ailedger-key': this.config.apiKey,
+        },
+        body: JSON.stringify(event),
+      });
+    } catch (err) {
+      throw new AILedgerTransportError(
+        `Failed to reach AILedger proxy at ${url}`,
+        err,
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      body = await response.text();
+    }
+
+    if (response.status === 200 || response.status === 201) {
+      const ingestBody = body as IngestResponse;
+      return ingestBody.event;
+    }
+
+    if (response.status === 400 || response.status === 422) {
+      throw new AILedgerValidationError(
+        `Invalid Detection Event payload (HTTP ${response.status})`,
+        response.status,
+        body,
+      );
+    }
+
+    if (response.status === 401) {
+      throw new AILedgerAuthError('AILedger rejected the API key', body);
+    }
+
+    if (response.status === 403) {
+      throw new AILedgerForbiddenError(
+        'AILedger rejected the tenant ownership claim',
+        body,
+      );
+    }
+
+    if (response.status === 429) {
+      const retryAfterHeader = response.headers.get('retry-after');
+      const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : null;
+      throw new AILedgerRateLimitError(
+        'AILedger usage limit reached',
+        Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null,
+        body,
+      );
+    }
+
+    if (response.status >= 500) {
+      throw new AILedgerServerError(
+        `AILedger proxy returned ${response.status}`,
+        response.status,
+        body,
+      );
+    }
+
+    throw new AILedgerValidationError(
+      `Unexpected response from AILedger proxy (HTTP ${response.status})`,
+      response.status,
+      body,
+    );
   }
 }

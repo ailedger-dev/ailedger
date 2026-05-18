@@ -1,6 +1,6 @@
 {
   "name": "@ailedger/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AILedger SDK — Detection Event emission + extraction (4-rung method ladder) per param canonicalization spec v1.0",
   "type": "module",
   "main": "dist/index.js",

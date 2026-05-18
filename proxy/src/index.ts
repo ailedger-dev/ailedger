@@ -102,6 +102,22 @@ export default {
 			return handleSidecarLog(request, env, ctx);
 		}
 
+		// Route: POST /v2/detection-events — Detection Event ingest per v2
+		// schema (proxy/migrations/20260512_decision_events_schema.sql) plus
+		// inferred-event extension (proxy/migrations/20260518_inferred_detection_events.sql).
+		// SDK callers (@ailedger/sdk) POST a canonical or inferred Detection
+		// Event payload here; the proxy validates basic shape + inserts to
+		// ledger.decision_events; the DB trigger populates hash_chain_prev +
+		// hash_chain_self atomically; the populated row is returned.
+		//
+		// Authentication: x-ailedger-key header (existing API key plumbing).
+		// Tenant ownership: SDK supplies tenant_id; v0.2.0 trusts the supplied
+		// value (TODO before v0.2.1: validate tenant_id against a tenant_memberships
+		// lookup tied to the API key's owner).
+		if (url.pathname === '/v2/detection-events') {
+			return handleDetectionEventIngest(request, env, ctx);
+		}
+
 		// Route: /proxy/<provider>/<...path>
 		const match = url.pathname.match(/^\/proxy\/([^\/]+)(\/.*)?$/);
 		if (!match) {
@@ -1713,4 +1729,296 @@ async function handleDogfeedEvents(request: Request, env: Env, ctx: ExecutionCon
 		status: 200,
 		headers: { 'Content-Type': 'application/json' },
 	});
+}
+
+// ─── Detection Event Ingest (/v2/detection-events) ──────────────────────────
+//
+// SDK-facing ingest endpoint per param canonicalization spec v1.0
+// (gt-lab/docs/param-canonicalization-spec-v1.md, Jake-ratified 2026-05-18).
+//
+// Accepts both canonical (production-time) and inferred (extracted) Detection
+// Events. Discriminator: presence of `extractor_method` field on the payload
+// marks it as inferred. Both flow into ledger.decision_events as new rows;
+// the BEFORE INSERT trigger populates hash_chain_prev + hash_chain_self
+// atomically per spec §7.
+//
+// Auth: x-ailedger-key header (matches /proxy/* and /log paths).
+//
+// Tenant ownership: v0.2.0 trusts the SDK-supplied `tenant_id` if it's present
+// and a valid UUID. v0.2.1 follow-up: validate against a tenant_memberships
+// table tied to the API key owner. Tracked in bead hq-yr3 follow-up.
+//
+// Error mapping:
+//   400 Bad Request   — malformed JSON, missing required fields, schema violation
+//   401 Unauthorized  — missing or invalid x-ailedger-key
+//   403 Forbidden     — tenant_id ownership mismatch (future v0.2.1)
+//   409 Conflict      — duplicate insertion (idempotent: same event_id returns existing row)
+//   422 Unprocessable — Postgres CHECK constraint violation (e.g. extractor_method enum)
+//   500 Server Error  — DB trigger raise, network failure to Supabase
+//
+// Returns the inserted row as JSON with hash_chain_prev + hash_chain_self
+// populated, so the SDK caller can confirm Integrity Chain landing.
+
+interface DetectionEventIngestPayload {
+	event_id?: string;
+	timestamp?: string;
+	tenant_id?: string;
+	system_id?: string;
+	model_version?: string | null;
+	model_weights_hash?: string | null;
+	decision_type?: string | null;
+	subject_id?: string | null;
+	inputs_hash?: string | null;
+	output?: Record<string, unknown> | null;
+	confidence?: number | null;
+	human_in_loop?: boolean | null;
+	protected_class_context?: Record<string, unknown> | null;
+	protected_class_collection_method?: string | null;
+	flags_raised?: string[];
+	required_actions?: string[];
+	actions_taken?: string[];
+	chain_spec_version?: number;
+	// Inferred-event fields (presence of extractor_method discriminates)
+	extractor_model?: string;
+	extractor_method?: string;
+	extractor_params?: Record<string, unknown>;
+	extractor_params_hash?: string;
+	anchor_event_id?: string;
+	extraction_started_at?: string;
+	extraction_compute_ms?: number;
+}
+
+function isUuid(value: unknown): value is string {
+	if (typeof value !== 'string') return false;
+	return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function handleDetectionEventIngest(
+	request: Request,
+	env: Env,
+	ctx: ExecutionContext,
+): Promise<Response> {
+	if (request.method !== 'POST') {
+		return new Response('Method Not Allowed', { status: 405 });
+	}
+
+	const apiKey = request.headers.get('x-ailedger-key');
+	if (!apiKey) {
+		return new Response(JSON.stringify({ error: 'Missing x-ailedger-key header' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const resolved = await resolveApiKey(env, apiKey, ctx);
+	if (!resolved) {
+		return new Response(JSON.stringify({ error: 'Invalid API key' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	const { supabaseUserId } = resolved;
+
+	const limitHit = await checkUsageLimit(env, supabaseUserId);
+	if (limitHit) {
+		return new Response(
+			JSON.stringify({
+				error: 'Monthly inference limit reached. Upgrade at https://dash.ailedger.dev/billing',
+			}),
+			{ status: 429, headers: { 'Content-Type': 'application/json' } },
+		);
+	}
+
+	let payload: DetectionEventIngestPayload;
+	try {
+		payload = await request.json();
+	} catch {
+		return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	// ─── Validate required fields ──────────────────────────────────────────
+	if (!isUuid(payload.event_id)) {
+		return new Response(JSON.stringify({ error: 'event_id must be a UUID' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	if (typeof payload.timestamp !== 'string' || !payload.timestamp) {
+		return new Response(JSON.stringify({ error: 'timestamp required (ISO-8601 UTC)' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	if (!isUuid(payload.tenant_id)) {
+		return new Response(JSON.stringify({ error: 'tenant_id must be a UUID' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+	if (!isUuid(payload.system_id)) {
+		return new Response(JSON.stringify({ error: 'system_id must be a UUID' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	const isInferred = typeof payload.extractor_method === 'string';
+	if (isInferred) {
+		const validMethods = [
+			'detection.parse',
+			'detection.restructure',
+			'detection.replay',
+			'detection.perturb',
+		];
+		if (!validMethods.includes(payload.extractor_method as string)) {
+			return new Response(
+				JSON.stringify({
+					error: `extractor_method must be one of: ${validMethods.join(', ')}`,
+				}),
+				{ status: 400, headers: { 'Content-Type': 'application/json' } },
+			);
+		}
+		if (
+			typeof payload.extractor_model !== 'string'
+			|| typeof payload.extractor_params_hash !== 'string'
+			|| !isUuid(payload.anchor_event_id)
+		) {
+			return new Response(
+				JSON.stringify({
+					error: 'inferred event requires extractor_model, extractor_params_hash, and anchor_event_id (uuid)',
+				}),
+				{ status: 400, headers: { 'Content-Type': 'application/json' } },
+			);
+		}
+	}
+
+	// ─── INSERT into ledger.decision_events ────────────────────────────────
+	// The DB trigger populates hash_chain_prev + hash_chain_self atomically
+	// per spec §5. Prefer: return=representation returns the populated row.
+	const insertBody = {
+		event_id: payload.event_id,
+		timestamp: payload.timestamp,
+		tenant_id: payload.tenant_id,
+		system_id: payload.system_id,
+		model_version: payload.model_version ?? null,
+		model_weights_hash: payload.model_weights_hash ?? null,
+		decision_type: payload.decision_type ?? null,
+		subject_id: payload.subject_id ?? null,
+		inputs_hash: payload.inputs_hash ?? null,
+		output: payload.output ?? null,
+		confidence: payload.confidence ?? null,
+		human_in_loop: payload.human_in_loop ?? null,
+		protected_class_context: payload.protected_class_context ?? null,
+		protected_class_collection_method: payload.protected_class_collection_method ?? null,
+		flags_raised: payload.flags_raised ?? [],
+		required_actions: payload.required_actions ?? [],
+		actions_taken: payload.actions_taken ?? [],
+		chain_spec_version: payload.chain_spec_version ?? 2,
+		// Inferred-event fields (null for canonical events)
+		extractor_model: payload.extractor_model ?? null,
+		extractor_method: payload.extractor_method ?? null,
+		extractor_params: payload.extractor_params ?? null,
+		extractor_params_hash: payload.extractor_params_hash ?? null,
+		anchor_event_id: payload.anchor_event_id ?? null,
+		extraction_started_at: payload.extraction_started_at ?? null,
+		extraction_compute_ms: payload.extraction_compute_ms ?? null,
+	};
+
+	let res: Response;
+	try {
+		res = await fetch(`${env.SUPABASE_URL}/rest/v1/decision_events`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				apikey: env.SUPABASE_SERVICE_KEY,
+				Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+				Prefer: 'return=representation',
+				'Content-Profile': 'ledger',
+			},
+			body: JSON.stringify(insertBody),
+		});
+	} catch (err) {
+		console.error('detection-event-ingest:supabase-fetch-failed', {
+			eventId: payload.event_id,
+			error: String(err),
+		});
+		return new Response(
+			JSON.stringify({ error: 'Upstream storage failed; please retry' }),
+			{ status: 500, headers: { 'Content-Type': 'application/json' } },
+		);
+	}
+
+	if (res.status === 201 || res.status === 200) {
+		const rows = (await res.json()) as Record<string, unknown>[];
+		const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+		return new Response(JSON.stringify({ event: row }), {
+			status: 201,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	// Map Postgres / PostgREST errors to HTTP semantics.
+	const errBody = await res.text();
+	let pgCode: string | null = null;
+	try {
+		const parsed = JSON.parse(errBody) as { code?: string };
+		pgCode = parsed.code ?? null;
+	} catch {
+		// errBody isn't JSON; leave pgCode null.
+	}
+
+	if (pgCode === '23505') {
+		// Duplicate event_id (idempotent dedupe). Re-fetch the existing row
+		// and return it with 200 so the SDK caller sees the existing chain
+		// state without re-attempting.
+		console.log('detection-event-ingest:dedupe-409', {
+			eventId: payload.event_id,
+			supabaseUserId,
+		});
+		const existing = await fetch(
+			`${env.SUPABASE_URL}/rest/v1/decision_events?event_id=eq.${payload.event_id}&select=*`,
+			{
+				method: 'GET',
+				headers: {
+					apikey: env.SUPABASE_SERVICE_KEY,
+					Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+					'Accept-Profile': 'ledger',
+				},
+			},
+		);
+		const rows = (await existing.json()) as Record<string, unknown>[];
+		const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+		return new Response(JSON.stringify({ event: row, deduped: true }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
+
+	if (pgCode === '23514') {
+		// CHECK constraint violation (e.g. invalid decision_type, invalid
+		// extractor_method, inferred-event consistency violation).
+		console.error('detection-event-ingest:check-constraint', {
+			eventId: payload.event_id,
+			pgCode,
+			body: errBody,
+		});
+		return new Response(
+			JSON.stringify({ error: 'Schema constraint violated', detail: errBody }),
+			{ status: 422, headers: { 'Content-Type': 'application/json' } },
+		);
+	}
+
+	console.error('detection-event-ingest:supabase-error', {
+		eventId: payload.event_id,
+		status: res.status,
+		pgCode,
+		body: errBody,
+	});
+	return new Response(
+		JSON.stringify({ error: 'Upstream storage error', detail: errBody }),
+		{ status: 500, headers: { 'Content-Type': 'application/json' } },
+	);
 }

@@ -2,7 +2,7 @@
 
 Producer-side SDK for AILedger Detection Event emission.
 
-**Version:** 0.1.0 (skeleton)
+**Version:** 0.2.0
 **License:** MIT
 **Spec:** `gt-lab/docs/param-canonicalization-spec-v1.md` (Jake-ratified 2026-05-18)
 
@@ -19,7 +19,7 @@ Producers (Wilhelm-style federated AI pipelines, in-firm AI deployments, or any 
 
 The SDK never computes hash chain values; the database trigger populates `hash_chain_prev` and `hash_chain_self` atomically at insert time.
 
-## v0.1.0 scope
+## v0.2.0 scope
 
 This release ships:
 
@@ -28,15 +28,15 @@ This release ships:
 - Canonical-serialization for extractor params (per spec §7.2) and method-specific param schemas (parse / restructure / replay / perturb per spec §6).
 - Confidence normalization to 4-decimal precision and timestamp normalization to microsecond-padded ISO-8601 UTC.
 - `DetectionEventClient` class with `emit()` and `emitInferred()` methods.
-- Sanity tests for hashing, canonicalization, and normalization invariants.
+- **NEW in v0.2.0:** HTTP transport wired to `POST {baseUrl}/v2/detection-events` on the AILedger proxy. Returns the populated row (with `hash_chain_prev` + `hash_chain_self` from the DB trigger) merged onto the local Detection Event.
+- **NEW in v0.2.0:** Typed error hierarchy (`AILedgerAuthError`, `AILedgerValidationError`, `AILedgerForbiddenError`, `AILedgerRateLimitError` with `retryAfterSeconds`, `AILedgerServerError`, `AILedgerTransportError`).
 
-Not yet shipped (v0.2.0+):
+Not yet shipped (v0.3.0+):
 
-- HTTP transport to the AILedger proxy ingest endpoint (currently a stub).
-- Retry handling for 429 and 5xx.
-- Durable-buffer fallback for transient transport failures.
+- Opt-in retry policy for 429 + 5xx (exponential backoff + durable-buffer fallback). v0.2.0 throws; caller retries.
 - Verification helper that fetches a row back and re-computes the canonical hash via the dispatcher (`decision_events_canonical_hash`).
-- Multi-language ports (Python, Rust); v0.1.0 is TypeScript only.
+- Tenant-ownership validation at the proxy (v0.2.0 trusts SDK-supplied `tenant_id`).
+- Multi-language ports (Python, Rust); current is TypeScript only.
 
 ## Install
 

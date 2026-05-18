@@ -10,6 +10,16 @@
 export { DetectionEventClient } from './client.js';
 export type { DetectionEventClientConfig } from './client.js';
 
+export {
+  AILedgerError,
+  AILedgerAuthError,
+  AILedgerForbiddenError,
+  AILedgerRateLimitError,
+  AILedgerServerError,
+  AILedgerTransportError,
+  AILedgerValidationError,
+} from './errors.js';
+
 export type {
   DetectionEvent,
   InferredDetectionEvent,
