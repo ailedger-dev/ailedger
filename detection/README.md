@@ -2,7 +2,7 @@
 
 Open-source statistical primitives for AILedger Detection Event chains.
 
-**Version:** 0.1.0 (skeleton)
+**Version:** 0.2.0
 **License:** Apache 2.0 (per posture v2; customer + regulator + adversarial-reviewer auditable)
 **Python:** 3.10+
 **Author:** Jake Joyner / Joyner Ventures LLC
@@ -22,7 +22,7 @@ Per the AILedger Charter v1.1 anti-theater commitments:
 
 This package is the substrate that makes those commitments verifiable.
 
-## What v0.1.0 ships
+## What v0.2.0 ships
 
 Three production statistical primitives:
 
@@ -30,11 +30,32 @@ Three production statistical primitives:
 - `statistical_parity_difference` — absolute difference between group positive-outcome rates. Complementary to disparate impact ratio (stable when one group has very low rates).
 - `model_drift_between_versions` — Population Stability Index (PSI) across decision type distribution between two cohorts. FDIC/OCC threshold ladder.
 
-Three additional primitives stubbed for v0.2.0:
+Typed contracts:
+
+- `DetectionEvent` and `InferredDetectionEvent` TypedDicts mirroring `ledger.decision_events` schema + the 2026-05-18 inferred-event extension (matches `@ailedger/sdk` TypeScript types)
+- `ExtractorMethod` Literal type for the 4-rung method ladder
+- `ProtectedClassCollectionMethod` Literal type (`direct` / `inferred` / `blind`)
+
+TypedDict is structural, so existing callers passing untyped `dict` continue to work; the types add static-analysis + IDE assistance without runtime cost.
+
+Three additional primitives stubbed for v0.3.0:
 
 - `confidence_stratified_outcome_analysis` — outcome distribution sliced by confidence bucket
 - `unresolved_flag_accumulation` — pattern detection on flags raised but never resolved
 - `subject_repeated_decision_patterns` — repeated-decision detection at subject level
+
+Each stub raises `NotImplementedError` with a pointer to the open design questions in its module docstring.
+
+## Test coverage
+
+v0.2.0 ships:
+
+- `tests/test_disparate_impact.py` — 8 tests covering baseline / threshold / borderline / custom-tighter / single-group / no-positive-outcomes / invalid-threshold / inspectable-stats
+- `tests/test_parity.py` — 7 tests covering parity / large gap / borderline / custom-threshold / invalid-threshold / disparate-impact complement / single-group
+- `tests/test_drift.py` — 9 tests covering FDIC/OCC threshold ladder / no-drift / moderate / significant / custom-extractor / empty cohorts / invalid thresholds / new-bucket / sum-to-psi
+- `tests/test_stubs.py` — 3 tests confirming stubs raise NotImplementedError with v0.3.0 pointer
+
+Total: 27 tests. Run with `pytest`.
 
 ## Why these specific primitives
 
