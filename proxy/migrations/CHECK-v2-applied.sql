@@ -36,10 +36,12 @@ with checks as (
     ) as decision_type_taxonomy_exists,
 
     -- 20260512_protected_class_taxonomy_seed.sql
+    -- Actual table name is `protected_class_field_taxonomy` per
+    -- proxy/migrations/20260512_protected_class_taxonomy_seed.sql line 17.
     exists (
       select 1 from information_schema.tables
-      where table_schema = 'ledger' and table_name = 'protected_class_taxonomy'
-    ) as protected_class_taxonomy_exists,
+      where table_schema = 'ledger' and table_name = 'protected_class_field_taxonomy'
+    ) as protected_class_field_taxonomy_exists,
 
     -- 20260512_subject_pseudonymization.sql
     exists (
@@ -90,7 +92,7 @@ select
   canonical_hash_function_exists,
   chain_trigger_exists,
   decision_type_taxonomy_exists,
-  protected_class_taxonomy_exists,
+  protected_class_field_taxonomy_exists,
   pseudonymization_function_exists,
   extractor_method_column_exists,
   chain_spec_version_column_exists,
