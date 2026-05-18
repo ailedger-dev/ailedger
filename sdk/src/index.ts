@@ -37,13 +37,15 @@ export { computeInputsHash, sha256hex, sha256jcs, isJsonContentType } from './ha
 export { computeExtractorParamsHash } from './canonicalize.js';
 export { normalizeConfidence, normalizeTimestamp } from './normalize.js';
 
-// Extractors — 4-rung method ladder (v0.2.0: parse full impl + restructure
-// scaffold; rungs 3-4 documented in src/extractors/index.ts)
+// Extractors — 4-rung method ladder (v0.2.0: parse full impl + rungs 2-4
+// scaffolds, all caller-supplied LLMClient)
 export {
   parseExtractor,
   parseExplicitChoice,
   parseConfidence,
   makeRestructureExtractor,
+  makeReplayExtractor,
+  makePerturbExtractor,
 } from './extractors/index.js';
 export type {
   LLMClient,
