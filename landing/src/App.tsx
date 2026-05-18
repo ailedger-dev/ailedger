@@ -214,7 +214,7 @@ function Hero() {
           AILedger makes AI decisions in high-risk industries substantively auditable. We catch bias, drift, and disparate impact in production. Harm gets prevented before any compounding effects, not after a regulator or lawsuit forces the conversation.
         </p>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
-          AILedger is a proxy that sits between your application and your AI provider. Every inference routes through it and becomes a hash-chained entry in an append-only log your compliance team can export for the Article&nbsp;12 audit trail.
+          AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule 707 admissibility and EU AI Act Articles 12, 19, 26.
         </p>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
           No prompts are stored. No outputs are stored. Only SHA-256 fingerprints + metadata. The evidence a regulator or auditor can verify, without AILedger holding your customers' data.
