@@ -5,7 +5,7 @@
 -- high-risk categories. Spec at ~/workspace/dev/ailedger/CLAUDE.md.
 --
 -- Note: `law_enforcement` is kept in the taxonomy for completeness but is
--- refused at intake per Charter v1.0 ("Customers we refuse"). The ingest
+-- refused at intake per Charter v1.1 ("Customers we refuse"). The ingest
 -- API must reject decision_events with decision_type='law_enforcement'.
 --
 -- Idempotent: safe to re-run. Adding rows uses on-conflict-do-nothing so
@@ -88,10 +88,10 @@ values
   (
     'law_enforcement',
     'Law enforcement (refused at intake)',
-    'AI systems for predictive policing, individual risk assessment of natural persons committing or recommitting offenses, polygraph and similar tools, evaluation of reliability of evidence, profiling of natural persons. Listed in taxonomy for completeness; AILedger refuses customers in this category per Charter v1.0.',
+    'AI systems for predictive policing, individual risk assessment of natural persons committing or recommitting offenses, polygraph and similar tools, evaluation of reliability of evidence, profiling of natural persons. Listed in taxonomy for completeness; AILedger refuses customers in this category per Charter v1.1.',
     'Annex III 6',
     '["12", "19", "26"]'::jsonb,
-    true  -- REFUSED AT INTAKE per Charter v1.0
+    true  -- REFUSED AT INTAKE per Charter v1.1
   ),
   (
     'migration_asylum_border',

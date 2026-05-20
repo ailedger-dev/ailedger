@@ -1,10 +1,10 @@
 # Charter page staging — handoff (2026-05-12, Vernier)
 
-Vernier prepared the AILedger Charter v1.0 publication surface on the marketing site autonomously while Jake slept through his move-out.
+Vernier prepared the AILedger Charter v1.1 publication surface on the marketing site autonomously while Jake slept through his move-out.
 
 ## What's staged
 
-- **`public/charter.html`** — self-contained static HTML rendering of Charter v1.0. Matches the site's Inter + IBM Plex Mono typography and dark/light theme. Loads independently of the React SPA; no routing changes to App.tsx. Includes canonical meta, og tags, and a back-to-AILedger nav.
+- **`public/charter.html`** — self-contained static HTML rendering of Charter v1.1. Matches the site's Inter + IBM Plex Mono typography and dark/light theme. Loads independently of the React SPA; no routing changes to App.tsx. Includes canonical meta, og tags, and a back-to-AILedger nav.
 - **`public/_redirects`** — extended with `/charter` → `/charter.html` (200) and `/charter/v1` → `/charter.html` (200) before the SPA catch-all.
 
 ## What still needs Jake

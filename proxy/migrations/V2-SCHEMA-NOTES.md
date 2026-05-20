@@ -227,7 +227,7 @@ insert into ledger.decision_events (
 ## Cross-references
 
 - `~/workspace/dev/ailedger/CLAUDE.md` — v2 implementation spec.
-- `~/workspace/dev/ailedger/CHARTER.md` — Charter v1.0 public commitment.
+- `~/workspace/dev/ailedger/CHARTER.md` — Charter v1.1 public commitment.
 - `memory/project_ailedger_posture_v2_2026_05_12.md` [FOUNDATIONAL] — canonical posture.
 - `docs/ailedger-threat-model.md` §10 — v2-specific threats (including the salt-rotation gap).
 - `docs/ailedger-test-plan.md` "Posture v2 test surfaces" — what these migrations need to be tested against.

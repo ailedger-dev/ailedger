@@ -201,7 +201,7 @@ function Hero() {
       <div style={{ maxWidth: 'min(92vw, 1280px)', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div className={`hero-eyebrow fade-in fade-1 ${anim}`}>
           <span className="hero-eyebrow-dot" aria-hidden="true" />
-          August 2, 2026 · EU AI Act enforcement
+          August 2, 2026 · EU AI Act Article 50 + FRIA enforcement
         </div>
         <h1 className="hero-title" style={{
           fontSize: 'clamp(44px, 6.5vw, 76px)', fontWeight: 700, color: 'var(--fg-primary)',
@@ -214,7 +214,7 @@ function Hero() {
           AILedger makes AI decisions in high-risk industries substantively auditable. We catch bias, drift, and disparate impact in production. Harm gets prevented before any compounding effects, not after a regulator or lawsuit forces the conversation.
         </p>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
-          AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule 707 admissibility and EU AI Act Articles 12, 19, 26.
+          AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule 707 admissibility and EU AI Act Articles 12, 19, 26, 27 (FRIA), and 50 (transparency).
         </p>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
           No prompts are stored. No outputs are stored. Only SHA-256 fingerprints + metadata. The evidence a regulator or auditor can verify, without AILedger holding your customers' data.
@@ -253,7 +253,7 @@ function TrustBar() {
           What AILedger stores: SHA-256 fingerprints of inputs and outputs, plus metadata (timestamp, model, latency, status). What it doesn't store: the raw prompts or responses themselves. Records are hash-chained and append-only; data resides in EU-central-1 (Frankfurt).
         </p>
         <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
-          The EU AI Act enters full enforcement on August 2, 2026. High-risk AI systems face up to €35M in administrative fines for Article 12 violations. Industry estimates put compliance readiness at under 30% across EU AI operators today.
+          The EU AI Act phases in starting August 2, 2026, with Article 27 Fundamental Rights Impact Assessment (FRIA) for deployers in credit, insurance, public services, education, and employment; Article 50 transparency obligations; financial-sector high-risk AI; and GPAI provider duties binding on that date. The May 2026 Digital Omnibus moved most other Annex III high-risk obligations to December 2, 2027, and Annex I product-embedded systems to August 2, 2028. FRIAs are living documents — continuous evidence infrastructure is what makes them defensible.
         </p>
       </div>
     </section>
@@ -446,7 +446,7 @@ function Pricing() {
     {
       name: 'Audit',
       band: 'From $80,000 / year · custom-scoped',
-      body: 'For regulated verticals (BaFin MaRisk, FCA SYSC, AMF RG, Solvency II, MiCA) approaching the August 2026 deadline. Sectoral overlays configured to your binding retention floor; MSA with custom order form.',
+      body: 'For regulated verticals (BaFin MaRisk, FCA SYSC, AMF RG, Solvency II, MiCA) plus EU AI Act financial-sector high-risk obligations binding August 2, 2026. Sectoral overlays configured to your binding retention floor; MSA with custom order form.',
       cta: 'Talk to us',
       href: '/contact',
       highlight: false,

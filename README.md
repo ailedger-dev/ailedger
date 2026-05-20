@@ -27,7 +27,7 @@ AILedger is a substrate, not a logging tool. The unit of analysis is the **Decis
 | Regime | Articles / Standards | Status |
 |---|---|---|
 | Federal Rule of Evidence 707 (United States) | AI-generated evidence to Rule 702 admissibility standard | Approved Judicial Conference 2025; on track to take effect |
-| EU AI Act (European Union) | Articles 12 (logging), 19 (deployer obligations), 26 (high-risk operator duties), Annex III (high-risk categories) | Enforceable from 2026-08-02 |
+| EU AI Act (European Union) | Articles 12 (logging), 19 (deployer obligations), 26 (high-risk operator duties), 27 (FRIA), 50 (transparency), Annex III (high-risk categories) | Phased from 2026-08-02 (Article 50 transparency, GPAI provider duties, financial-sector high-risk) through 2027-12-02 (Annex III standalone high-risk) and 2028-08-02 (Annex I product-embedded), per the May 2026 Digital Omnibus |
 | ISO/IEC 42001 | AI Management Systems | Standards-anchored |
 | NIST AI RMF 1.0 | AI Risk Management Framework | Standards-anchored |
 | GDPR Article 22 | Right to explanation for automated decisions | Compatible by design (subject pseudonymization + per-decision audit) |

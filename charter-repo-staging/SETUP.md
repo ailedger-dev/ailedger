@@ -4,7 +4,7 @@ Vernier prepared this staging directory autonomously 2026-05-12 because the `jak
 
 ## Files staged
 
-- `CHARTER.md` — copied verbatim from `~/workspace/dev/ailedger/CHARTER.md` (Charter v1.0)
+- `CHARTER.md` — copied verbatim from `~/workspace/dev/ailedger/CHARTER.md` (Charter v1.1)
 - `README.md` — repository README per the publication handoff
 - `LICENSE` — Creative Commons Attribution 4.0 International (CC BY 4.0)
 
@@ -27,23 +27,23 @@ Vernier prepared this staging directory autonomously 2026-05-12 because the `jak
    git init
    git remote add origin git@github.com:ailedger/charter.git
    git add CHARTER.md README.md LICENSE
-   git commit -m "Publish AILedger Charter v1.0"
+   git commit -m "Publish AILedger Charter v1.1"
    git branch -M main
    git push -u origin main
    ```
 
-4. **Tag v1.0:**
+4. **Tag v1.1:**
 
    ```bash
-   git tag -a v1.0 -m "Charter v1.0 — initial public publication"
-   git push origin v1.0
+   git tag -a v1.1 -m "Charter v1.1 — initial public publication"
+   git push origin v1.1
    ```
 
 5. **Verify:**
 
    - Visit https://github.com/ailedger/charter
    - Confirm `CHARTER.md` renders correctly
-   - Confirm the v1.0 tag is visible in the Releases sidebar
+   - Confirm the v1.1 tag is visible in the Releases sidebar
    - Confirm the repo is public + accessible without login
 
 ## Alternative if `ailedger` org access is blocked
@@ -58,11 +58,11 @@ cd ~/workspace/dev/ailedger/charter-repo-staging
 git init
 git remote add origin git@github.com:jakejjoyner/ailedger-charter.git
 git add CHARTER.md README.md LICENSE
-git commit -m "Publish AILedger Charter v1.0"
+git commit -m "Publish AILedger Charter v1.1"
 git branch -M main
 git push -u origin main
-git tag -a v1.0 -m "Charter v1.0 — initial public publication"
-git push origin v1.0
+git tag -a v1.1 -m "Charter v1.1 — initial public publication"
+git push origin v1.1
 ```
 
 Then update the marketing site + jakejoyner.com references to point at `github.com/jakejjoyner/ailedger-charter` instead of `github.com/ailedger/charter`.

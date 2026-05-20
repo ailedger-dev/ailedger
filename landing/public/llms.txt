@@ -8,7 +8,7 @@ AILedger is a Cloudflare Workers proxy that sits between an AI application and i
 
 The EU AI Act (Regulation 2024/1689) Article 12 requires operators of high-risk AI systems to maintain automatic, tamper-evident logging of events throughout the system's lifetime. Most teams either (a) don't log inferences at all, (b) log to a non-tamper-evident system that won't satisfy regulator scrutiny, or (c) log raw prompts/outputs, which violates GDPR. AILedger provides the audit trail Article 12 calls for, without storing user content.
 
-Enforcement deadline: **2026-08-02**.
+Enforcement is phased. From **2026-08-02**: Article 27 FRIA (deployer obligations in credit, insurance, public services, education, employment), Article 50 transparency, financial-sector high-risk AI, and GPAI provider duties. From **2027-12-02**: most other Annex III standalone high-risk obligations. From **2028-08-02**: Annex I product-embedded high-risk. Postponements per the May 2026 Digital Omnibus (Council/Parliament political agreement 2026-05-07).
 
 ## How it works
 
