@@ -24,6 +24,11 @@ export interface Env {
 	// to send a break-detected alert to support@ailedger.dev (and the
 	// affected customer's email, if available). Per anti-Resend memory.
 	POSTMARK_API_KEY?: string;
+	// CSV of auth.users UUIDs that bypass the monthly usage cap regardless of
+	// subscription state. Use for internal tenants only (e.g., vernier-internal
+	// sidecar). Logs and chain extension still occur — only the quota check
+	// is skipped. Empty/unset = no exemptions.
+	INTERNAL_TENANT_IDS?: string;
 }
 
 // Supported upstream providers
@@ -783,6 +788,16 @@ async function handleSignupHook(request: Request, env: Env): Promise<Response> {
 }
 
 async function checkUsageLimit(env: Env, supabaseUserId: string): Promise<boolean> {
+	// Internal tenants (e.g., vernier-internal sidecar) bypass the cap entirely.
+	// Logs + chain still extend; only the quota check is skipped. The list is
+	// env-driven (CSV of auth.users UUIDs) so production internal accounts can
+	// be exempted without a DB write — and so the bypass surface is visible in
+	// `wrangler secret list` for audit.
+	if (env.INTERNAL_TENANT_IDS) {
+		const internalIds = env.INTERNAL_TENANT_IDS.split(',').map((s) => s.trim()).filter(Boolean);
+		if (internalIds.includes(supabaseUserId)) return false;
+	}
+
 	// Paid customers: cache "no limit" for 5 minutes
 	const paidCacheKey = `paid:${supabaseUserId}`;
 	const isPaidCached = await env.AILEDGER_CACHE.get(paidCacheKey);

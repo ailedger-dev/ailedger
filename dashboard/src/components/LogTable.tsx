@@ -387,8 +387,14 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
                           {position !== null ? `#${position}` : '–'}
                         </td>
                         <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{formatDate(log.logged_at)}</td>
-                        <td className="px-4 py-3 text-slate-300 text-sm">
-                          {log.system_id ? (systems.find((s) => s.id === log.system_id)?.system_name ?? '-') : '-'}
+                        <td className="px-4 py-3 text-sm">
+                          {log.system_id ? (
+                            <span className="text-slate-300">
+                              {systems.find((s) => s.id === log.system_id)?.system_name ?? '-'}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic">(no system)</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-white capitalize">{log.provider}</td>
                         <td className="px-4 py-3 text-slate-300">{log.model_name ?? '-'}</td>
