@@ -163,10 +163,17 @@ describe('POST /v1/events — idempotency', () => {
 		const firstBody = (await first.json()) as { accepted: number };
 		expect(firstBody.accepted).toBe(1);
 
-		// Wait briefly so the waitUntil KV write can settle. SELF.fetch awaits
-		// waitUntil work, but we reach into the same KV namespace directly.
+		// The dedupe marker is written via ctx.waitUntil (fire-and-forget) and
+		// SELF.fetch does NOT await waitUntil work before resolving, so poll
+		// the KV namespace briefly until the marker lands.
 		const key = `dogfeed_evt:${tenant}:${eventId}`;
-		expect(await env.AILEDGER_CACHE.get(key)).toBe('1');
+		let marker: string | null = null;
+		for (let i = 0; i < 50; i++) {
+			marker = await env.AILEDGER_CACHE.get(key);
+			if (marker === '1') break;
+			await new Promise((r) => setTimeout(r, 20));
+		}
+		expect(marker).toBe('1');
 
 		const second = await postEvents([ev], { 'x-ailedger-key': apiKey });
 		expect(second.status).toBe(200);
