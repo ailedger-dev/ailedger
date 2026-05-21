@@ -1,0 +1,23 @@
+[project]
+name = "grafana-ailedger"
+version = "0.1.0"
+description = "AILedger Grafana dashboards (panels-as-code) + tests"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "requests>=2.32"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "live: requires SUPABASE_PAT env var; live integration against Supabase Management API",
+]

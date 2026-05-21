@@ -90,6 +90,23 @@ jobs:
         run: npm run build
         working-directory: dashboard
 
+      # monitoring — Grafana dashboards-as-code + tests.
+      # Structure tests always run (no network). Live tests against Supabase
+      # are skipped automatically unless SUPABASE_PAT is wired up as a repo
+      # secret. The dashboard POST to live Grafana is operator-triggered,
+      # not run from CI.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: monitoring install
+        run: python -m pip install -e ".[dev]"
+        working-directory: monitoring
+      - name: monitoring test
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+        run: pytest -v
+        working-directory: monitoring
+
   deploy-staging:
     name: Deploy Workers → staging
     needs: gates
