@@ -2,11 +2,16 @@ name: Deploy
 
 # Environment promotion flow (see docs/deploy-runbook.md):
 #
-#   PR opened/synced  →  staging deploy + gates
-#                        (Cloudflare Pages auto-previews landing + dashboard
-#                         on each PR via Git integration — not run here.)
-#   Merge to main     →  staging re-deploy (clean-main confirm)
-#   Release tag v*    →  production deploy
+#   PR opened/synced  →  Workers staging deploy + Pages preview deploys + gates
+#   Merge to main     →  Workers staging re-deploy + Pages production deploys
+#   Release tag v*    →  Workers production deploy
+#
+# Pages deploys run from this workflow (not via the CF Pages Git integration):
+# the integration silently stopped firing on merges in May 2026 (no commit
+# statuses, no deployments — diagnosed in PR that added these jobs), so the
+# main → ailedger.dev path is wired through wrangler-action here to make
+# failures loud and observable in GitHub Actions. The Pages project's Git
+# integration should remain DISCONNECTED to avoid racing this workflow.
 #
 # Secrets required (set in GitHub repo settings → Secrets and variables → Actions):
 #   CLOUDFLARE_API_TOKEN    Worker-scoped API token (edit Workers + Pages,
@@ -203,3 +208,68 @@ jobs:
           wranglerVersion: '4.84.1'
           workingDirectory: redirect
           command: deploy
+
+  # Pages deploys — replaces the CF Pages Git integration (see top-of-file note).
+  # Matrix runs landing + dashboard in parallel; fail-fast off so one project's
+  # failure doesn't kill the other's deploy.
+  deploy-pages-preview:
+    name: Deploy Pages → preview (${{ matrix.project }})
+    needs: gates
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [landing, dashboard]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      - name: install
+        run: npm ci
+        working-directory: ${{ matrix.project }}
+      - name: build
+        run: npm run build
+        working-directory: ${{ matrix.project }}
+      - name: pages deploy (preview)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
+          workingDirectory: ${{ matrix.project }}
+          command: pages deploy dist --project-name=ailedger-${{ matrix.project }} --branch=${{ github.head_ref }}
+
+  deploy-pages-production:
+    name: Deploy Pages → production (${{ matrix.project }})
+    needs: gates
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [landing, dashboard]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      - name: install
+        run: npm ci
+        working-directory: ${{ matrix.project }}
+      - name: build
+        run: npm run build
+        working-directory: ${{ matrix.project }}
+      - name: pages deploy (production)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.84.1'
+          workingDirectory: ${{ matrix.project }}
+          command: pages deploy dist --project-name=ailedger-${{ matrix.project }} --branch=main
