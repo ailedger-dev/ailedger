@@ -75,6 +75,13 @@ jobs:
       - name: landing build
         run: npm run build
         working-directory: landing
+      - name: landing SEO guardrail
+        # Asserts the built homepage matches landing/seo.config.json (title,
+        # description, keywords, canonical, OG) and that no sitemap <loc> is a
+        # soft-404. Blocks regressions like Google rewriting the title to the
+        # bare domain. Runs against dist/ from the build step above.
+        run: npm run seo:check
+        working-directory: landing
 
       # dashboard — typecheck + lint via build.
       - name: dashboard install
@@ -273,3 +280,19 @@ jobs:
           wranglerVersion: '4.84.1'
           workingDirectory: ${{ matrix.project }}
           command: pages deploy dist --project-name=ailedger-${{ matrix.project }} --branch=main
+
+      # Google exposes no public indexing API — re-crawl is a manual step.
+      # Surface the reminder on every landing production deploy.
+      - name: Search Console reminder (manual re-crawl)
+        if: matrix.project == 'landing'
+        run: |
+          {
+            echo "## ⚠️ Manual step: request Google re-crawl"
+            echo ""
+            echo "Google has **no public indexing API**, so the SEO changes just deployed"
+            echo "will not appear in search results until you trigger a re-crawl by hand:"
+            echo ""
+            echo "1. Open <https://search.google.com/search-console> (property: \`ailedger.dev\`)"
+            echo "2. **URL Inspection** → enter \`https://ailedger.dev/\` → **Request Indexing**"
+            echo "3. **Sitemaps** → confirm \`https://ailedger.dev/sitemap.xml\` is submitted"
+          } >> "$GITHUB_STEP_SUMMARY"
