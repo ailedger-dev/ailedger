@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  GENERATED FILE — do not edit by hand.
+  Rendered from ailedger-dev/charter (CHARTER.md) by scripts/build-charter.mjs.
+  To change the charter text, amend it in the ailedger-dev/charter repo; to
+  publish a new version here, bump CHARTER_REF in scripts/build-charter.mjs.
+  Chrome/styling lives in scripts/charter-template.html.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AILedger Charter — v{{VERSION}}</title>
+<meta name="description" content="The public commitment document that governs how AILedger operates. Names the customers refused, the features refused, the decisions requiring board review." />
+<link rel="canonical" href="https://ailedger.dev/charter" />
+<meta property="og:title" content="AILedger Charter — v{{VERSION}}" />
+<meta property="og:description" content="The public commitment document that governs how AILedger operates." />
+<meta property="og:url" content="https://ailedger.dev/charter" />
+<meta property="og:image" content="https://ailedger.dev/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg-page:    #ffffff;
+  --bg-card:    #f4f4f5;
+  --bg-rule:    #e4e4e7;
+  --fg-primary: #0a0b0f;
+  --fg-body:    #27272a;
+  --fg-muted:   #52525b;
+  --fg-subtle:  #71717a;
+  --accent:     #4f46e5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page:    #0a0b0f;
+    --bg-card:    rgba(255,255,255,0.03);
+    --bg-rule:    rgba(255,255,255,0.08);
+    --fg-primary: #ffffff;
+    --fg-body:    #e2e8f0;
+    --fg-muted:   #94a3b8;
+    --fg-subtle:  #71717a;
+    --accent:     #8b5cf6;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg-page); color: var(--fg-body); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 64px 28px 96px; }
+.metabar { display: flex; flex-wrap: wrap; gap: 14px 24px; font-size: 13px; color: var(--fg-subtle); margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--bg-rule); letter-spacing: 0.02em; }
+.metabar a { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 3px; }
+.metabar a:hover { color: var(--fg-primary); text-decoration-color: var(--accent); }
+h1 { font-size: clamp(34px, 5vw, 44px); font-weight: 700; letter-spacing: -0.025em; color: var(--fg-primary); line-height: 1.1; margin: 0 0 12px; }
+h1 .version { font-weight: 400; color: var(--fg-muted); font-size: 0.55em; letter-spacing: 0; margin-left: 8px; }
+h2 { font-size: clamp(22px, 3vw, 26px); font-weight: 600; letter-spacing: -0.015em; color: var(--fg-primary); margin: 56px 0 16px; line-height: 1.25; }
+p { margin: 0 0 18px; color: var(--fg-body); }
+ul { padding-left: 24px; margin: 0 0 18px; }
+ul li { margin-bottom: 8px; color: var(--fg-body); }
+.lead { font-size: 19px; color: var(--fg-body); margin-bottom: 32px; }
+.footer-meta { margin-top: 80px; padding-top: 28px; border-top: 1px solid var(--bg-rule); font-size: 13px; color: var(--fg-subtle); line-height: 1.7; }
+.footer-meta a { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 3px; }
+.footer-meta a:hover { color: var(--fg-primary); text-decoration-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="metabar">
+  <span>AILedger</span>
+  <span>Version {{VERSION}}</span>
+  <a href="https://github.com/ailedger-dev/charter/blob/main/CHARTER.md">Source on GitHub</a>
+  <a href="/">Back to AILedger</a>
+</nav>
+
+<h1>AILedger Charter <span class="version">v{{VERSION}}</span></h1>
+
+{{CHARTER_BODY}}
+
+<div class="footer-meta">
+<p>This is the canonical rendering of the AILedger Charter v{{VERSION}}. The git-tagged source lives at <a href="https://github.com/ailedger-dev/charter/">github.com/ailedger-dev/charter</a>. Charter text is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>.</p>
+<p>Amendments require unanimous Board of Directors approval per the Charter itself. Proposed amendments are filed as public pull requests on the source repository.</p>
+</div>
+
+</div>
+</body>
+</html>
