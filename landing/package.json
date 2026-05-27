@@ -8,7 +8,8 @@
     "build:charter": "node scripts/build-charter.mjs",
     "predev": "npm run build:charter",
     "prebuild": "npm run build:charter",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/seo.mjs stamp",
+    "seo:check": "node scripts/seo.mjs check",
     "lint": "eslint .",
     "preview": "vite preview"
   },
