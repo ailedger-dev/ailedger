@@ -113,7 +113,7 @@ A consumer call site that passes a looser threshold receives a `ValueError`. The
 - Detection Event schema: `proxy/migrations/20260512_decision_events_schema.sql`
 - Param canonicalization spec: `gt-lab/docs/param-canonicalization-spec-v1.md`
 - Detection taxonomy: `gt-lab/docs/compliance-architecture/ARCHITECTURE-detection-taxonomy.md`
-- Charter: `CHARTER.md` v1.2 (Jake-authored, ratified 2026-05-17; regulatory-context update 2026-05-20)
+- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md) v1.2 (Jake-authored, ratified 2026-05-17; regulatory-context update 2026-05-20)
 
 ## Testing
 
@@ -139,5 +139,5 @@ The Apache 2.0 license is unchanged when the package extracts to its own repo. I
 
 - Spec: `gt-lab/docs/param-canonicalization-spec-v1.md`
 - Posture: `gt-lab/memory/project_ailedger_posture_v2_2026_05_12.md`
-- Charter: `CHARTER.md` v1.2
+- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md) v1.2
 - Competitive matrix: `gt-lab/docs/ailedger-competitive-matrix-v2.md`
