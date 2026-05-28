@@ -93,8 +93,8 @@ jobs:
         run: npm ci
         working-directory: dashboard
       - name: dashboard lint
-        # Non-fatal: 9 pre-existing errors tracked in ai-5h6 cleanup bead.
-        # Unblocks PR #17 (env-separation) without dropping lint visibility.
+        # Non-fatal until the dashboard's pre-existing lint errors are
+        # cleaned up; keeps lint visible without blocking unrelated work.
         continue-on-error: true
         run: npm run lint
         working-directory: dashboard
@@ -111,61 +111,36 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: staging
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # wrangler-action@v3 defaults to wrangler@3.90, which ignores `env:` blocks
-      # in wrangler.jsonc (only wrangler.toml was supported for envs in v3). Every
-      # worker here uses jsonc + env.staging, so pin to wrangler@4.x.
-      # JCS canary (threat model §6.8): runs in the same install context as
-      # the deploy that follows, so a broken node_modules (the 2026-04-29
-      # outage cause) blocks the deploy instead of shipping a chain that
-      # silently forks future hashes.
-      - name: proxy — wrangler deploy --env staging
-        uses: cloudflare/wrangler-action@v3
+      # JCS canary (threat model §6.8): runs in proxy's install context, so a
+      # broken node_modules (the 2026-04-29 outage cause) fails the deploy
+      # instead of shipping a chain that silently forks future hashes.
+      - uses: ./.github/actions/wrangler-deploy
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: proxy
+          worker: proxy
+          command: deploy --env staging
           preCommands: npm run canary
-          command: deploy --env staging
 
-      # Non-fatal: onboard-auth + john-console wrangler.jsonc still carry
-      # REPLACE_WITH_*_ID placeholders for staging KV/D1 bindings. Until
-      # those are provisioned and filled, these deploys fail. continue-on-error
-      # keeps `redirect` (below) running and the overall job green so real
-      # failures aren't lost in noise.
-      - name: onboard-auth — wrangler deploy --env staging
-        continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
+      # onboard-auth/wrangler.jsonc still carries REPLACE_WITH_*_ID placeholders
+      # for staging KV/D1 bindings; soft-fail keeps `redirect` running and the
+      # overall job green until those land.
+      - uses: ./.github/actions/wrangler-deploy
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: onboard-auth
+          worker: onboard-auth
           command: deploy --env staging
+          soft-fail: 'true'
 
-      - name: john-console — wrangler deploy --env staging
-        continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
+      - uses: ./.github/actions/wrangler-deploy
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: john-console
-          command: deploy --env staging
-
-      - name: redirect — wrangler deploy --env staging
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: redirect
+          worker: redirect
           command: deploy --env staging
 
   deploy-production:
@@ -177,48 +152,30 @@ jobs:
       # GitHub "production" environment enforces required-reviewers before
       # this job runs. Configure reviewers in repo Settings → Environments.
       name: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # JCS canary (threat model §6.8) — see staging job for context.
-      - name: proxy — wrangler deploy (prod)
-        uses: cloudflare/wrangler-action@v3
+      # JCS canary on proxy — see staging job for context.
+      - uses: ./.github/actions/wrangler-deploy
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: proxy
+          worker: proxy
+          command: deploy
           preCommands: npm run canary
+
+      - uses: ./.github/actions/wrangler-deploy
+        with:
+          worker: onboard-auth
           command: deploy
 
-      - name: onboard-auth — wrangler deploy (prod)
-        uses: cloudflare/wrangler-action@v3
+      - uses: ./.github/actions/wrangler-deploy
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: onboard-auth
-          command: deploy
-
-      - name: john-console — wrangler deploy (prod)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: john-console
-          command: deploy
-
-      - name: redirect — wrangler deploy (prod)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
-          workingDirectory: redirect
+          worker: redirect
           command: deploy
 
   # Pages deploys — replaces the CF Pages Git integration (see top-of-file note).
