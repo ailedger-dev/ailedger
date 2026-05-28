@@ -8,7 +8,7 @@ import './HiringPage.css'
  * Sections:
  *   1. Hero          — node 5:4   ✓
  *   2. Principles    — node 5:9   ✓
- *   3. Refusals      — node 7:45  (TODO)
+ *   3. Refusals      — node 7:45  ✓
  *   4. Open roles    — node 11:67 (TODO)
  *   5. CTA           — node 13:83 (TODO)
  *
@@ -21,6 +21,7 @@ export default function HiringPage() {
       <main>
         <HiringHero />
         <HiringPrinciples />
+        <HiringRefusals />
         {/* Future sections render here, in the order above. */}
       </main>
     </div>
@@ -85,5 +86,56 @@ function HiringPrinciples() {
         ))}
       </div>
     </section>
+  )
+}
+
+/* Refusals copy mirrors CHARTER.md in this same public repo and the published
+   Charter at ailedger.dev/charter — sourced verbatim from Figma node 7:45. */
+const REFUSED_CUSTOMERS: readonly string[] = [
+  'Companies whose underlying AI use is itself the harm: predictive policing, social scoring, deceptive targeting of vulnerable populations.',
+  'Companies that request detection configurations designed to suppress findings.',
+  'Companies whose primary purpose is paperwork generation rather than catching problems.',
+  'Companies under active enforcement action seeking AILedger as bad-faith litigation defense.',
+]
+
+const REFUSED_FEATURES: readonly string[] = [
+  'Configurable thresholds that allow suppression below standards-aligned defaults.',
+  '“Compliance mode” that generates reports without underlying detection.',
+  'Removal of required-action workflows for detected events.',
+  'Selective logging that excludes decision categories at customer request.',
+]
+
+function HiringRefusals() {
+  return (
+    <section
+      className="hiring-section hiring-refusals"
+      aria-labelledby="hiring-refusals-heading"
+    >
+      <header className="hiring-refusals__header">
+        <p className="hiring-eyebrow">THE CHARTER</p>
+        <h2 id="hiring-refusals-heading" className="hiring-display-md">
+          What we won&rsquo;t do
+        </h2>
+      </header>
+      <div className="hiring-refusals__columns">
+        <RefusalsColumn title="Customers we refuse" items={REFUSED_CUSTOMERS} />
+        <RefusalsColumn title={'Features we won’t build'} items={REFUSED_FEATURES} />
+      </div>
+    </section>
+  )
+}
+
+function RefusalsColumn({ title, items }: { title: string; items: readonly string[] }) {
+  return (
+    <div className="hiring-refusals__column">
+      <h3 className="hiring-display-md">{title}</h3>
+      <ul className="hiring-refusals__items">
+        {items.map((item) => (
+          <li key={item} className="hiring-refusals__item">
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

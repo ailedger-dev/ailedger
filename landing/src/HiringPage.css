@@ -133,6 +133,25 @@
   white-space: nowrap;
 }
 
+/* ----- Shared display/md heading (Figma display/md token) ----- */
+/* Used by section headings + column headings in Refusals, Open roles, CTA */
+.hiring-display-md {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 38px;
+  letter-spacing: -0.32px;
+  color: var(--hp-text);
+}
+@media (max-width: 600px) {
+  .hiring-display-md {
+    font-size: 26px;
+    line-height: 32px;
+    letter-spacing: -0.26px;
+  }
+}
+
 /* ----- Principles ----- */
 .hiring-principles {
   padding-top: 120px;
@@ -173,6 +192,70 @@
 }
 
 .hiring-principles__body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--hp-text-2);
+}
+
+/* ----- Refusals ----- */
+.hiring-refusals {
+  padding-top: 120px;
+  padding-bottom: 120px;
+  gap: 64px;
+}
+@media (max-width: 900px) {
+  .hiring-refusals { padding-top: 80px; padding-bottom: 80px; gap: 48px; }
+}
+
+.hiring-refusals__header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+  max-width: 720px;
+  width: 100%;
+}
+
+.hiring-refusals__columns {
+  display: flex;
+  flex-direction: row;
+  gap: 80px;
+  align-items: flex-start;
+  width: 100%;
+}
+@media (max-width: 1100px) {
+  .hiring-refusals__columns { gap: 48px; }
+}
+@media (max-width: 760px) {
+  .hiring-refusals__columns { flex-direction: column; gap: 48px; }
+}
+
+.hiring-refusals__column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 440px;
+}
+@media (max-width: 760px) {
+  .hiring-refusals__column { max-width: 640px; width: 100%; }
+}
+
+.hiring-refusals__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.hiring-refusals__item {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-weight: 400;
