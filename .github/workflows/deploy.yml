@@ -29,6 +29,11 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+  # Fired by ailedger-dev/charter's notify-site workflow when CHARTER.md (or a
+  # sibling .md the page renders) changes on main. Lets us rebuild the
+  # generated /charter page without waiting for an unrelated commit here.
+  repository_dispatch:
+    types: [charter-updated]
 
 concurrency:
   # PR runs may stomp each other on shared staging — that is acceptable and by
@@ -253,12 +258,17 @@ jobs:
   deploy-pages-production:
     name: Deploy Pages → production (${{ matrix.project }})
     needs: gates
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Run on main pushes (full matrix) and on a charter-updated dispatch from
+    # ailedger-dev/charter (landing only — dashboard doesn't render charter).
+    # The matrix is set per-event below.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'repository_dispatch' && github.event.action == 'charter-updated')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        project: [landing, dashboard]
+        project: ${{ github.event_name == 'repository_dispatch' && fromJSON('["landing"]') || fromJSON('["landing","dashboard"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
