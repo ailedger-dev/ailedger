@@ -1,0 +1,39 @@
+name: Wrangler deploy
+description: Deploy a worker via cloudflare/wrangler-action with the repo's pinned wrangler version.
+
+# Pin wrangler@4.x: wrangler-action@v3 defaults to wrangler@3.90, which ignores
+# `env:` blocks in wrangler.jsonc (only wrangler.toml was supported for envs in
+# v3). Every worker here uses jsonc + env.staging.
+#
+# CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are read from the calling
+# job's env (wrangler-action picks them up automatically). Composite actions
+# cannot reach `secrets.*` directly, so set them as job-level env mapped from
+# secrets in the workflow.
+
+inputs:
+  worker:
+    description: Worker directory under the repo root (e.g. proxy, onboard-auth, redirect).
+    required: true
+  command:
+    description: 'Wrangler command, e.g. "deploy --env staging" or "deploy".'
+    required: true
+  preCommands:
+    description: 'Commands run before wrangler, e.g. "npm run canary" for the JCS chain-integrity canary.'
+    required: false
+    default: ''
+  soft-fail:
+    description: 'If "true", deploy failures do not fail the calling step. Used for workers with placeholder bindings until IDs land.'
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: ${{ inputs.worker }} — wrangler ${{ inputs.command }}
+      continue-on-error: ${{ inputs.soft-fail == 'true' }}
+      uses: cloudflare/wrangler-action@v3
+      with:
+        wranglerVersion: '4.84.1'
+        workingDirectory: ${{ inputs.worker }}
+        preCommands: ${{ inputs.preCommands }}
+        command: ${{ inputs.command }}
