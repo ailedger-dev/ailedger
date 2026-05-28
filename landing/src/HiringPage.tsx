@@ -51,6 +51,12 @@ export default function HiringPage() {
 
   return (
     <div ref={pageRef} className="hiring-page">
+      <header className="hiring-section hiring-topbar">
+        <a className="hiring-home" href="/" aria-label="Back to AILedger home">
+          <span className="hiring-home__arrow" aria-hidden="true">←</span>
+          AILedger
+        </a>
+      </header>
       <main>
         <HiringHero />
         <HiringPrinciples />
@@ -90,7 +96,7 @@ const PRINCIPLES: { title: string; body: string }[] = [
   },
   {
     title: 'Detection thresholds anchor to standards.',
-    body: 'EEOC four-fifths rule. FDIC SR 11-7. OCC 2011-12. Customers can tighten thresholds toward stricter detection. They cannot loosen them. The refusal is structural, not policy.',
+    body: 'EEOC four-fifths rule. Federal Reserve SR 11-7. OCC 2011-12. Customers can tighten thresholds toward stricter detection. They cannot loosen them. The refusal is structural, not policy.',
   },
   {
     title: 'Immutability is structural.',
