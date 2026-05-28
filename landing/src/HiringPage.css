@@ -119,3 +119,64 @@
   outline-offset: 3px;
   border-radius: 2px;
 }
+
+/* ----- Shared section eyebrow (WHAT WE BELIEVE, THE CHARTER, OPEN ROLES) ----- */
+.hiring-eyebrow {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 17px;
+  letter-spacing: 0.195px;
+  text-transform: uppercase;
+  color: var(--hp-text-3);
+  white-space: nowrap;
+}
+
+/* ----- Principles ----- */
+.hiring-principles {
+  padding-top: 120px;
+  padding-bottom: 120px;
+  /* gap between the eyebrow row and the principles list */
+  gap: 10px;
+}
+@media (max-width: 900px) {
+  .hiring-principles {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+}
+
+.hiring-principles__list {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  width: 100%;
+  max-width: 640px;
+}
+
+.hiring-principles__item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.hiring-principles__title {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 26px;
+  letter-spacing: -0.1px;
+  color: var(--hp-text);
+}
+
+.hiring-principles__body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--hp-text-2);
+}
