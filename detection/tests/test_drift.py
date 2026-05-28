@@ -16,8 +16,8 @@ def _event(decision_type: str) -> dict:
 
 
 class TestModelDriftBetweenVersions:
-    def test_thresholds_match_fdic_occ(self) -> None:
-        # FDIC SR 11-7 / OCC 2011-12 thresholds.
+    def test_thresholds_match_fed_occ(self) -> None:
+        # Federal Reserve SR 11-7 / OCC 2011-12 thresholds.
         assert PSI_NO_DRIFT_THRESHOLD == 0.10
         assert PSI_ACTION_THRESHOLD == 0.25
 

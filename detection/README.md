@@ -15,7 +15,7 @@ Open-source statistical primitives for AILedger Detection Event chains.
 The Apache-2.0 Detection layer of AILedger. The open-source artifact that customers, regulators, and adversarial reviewers can read, audit, and run independently against any Detection Event chain.
 
 Per the AILedger Charter v1.2 anti-theater commitments:
-- Detection thresholds are anchored to published standards (EEOC four-fifths rule = 0.8; FDIC SR 11-7 / OCC 2011-12 PSI ladder)
+- Detection thresholds are anchored to published standards (EEOC four-fifths rule = 0.8; Federal Reserve SR 11-7 / OCC 2011-12 PSI ladder)
 - Customers TIGHTEN thresholds (toward stricter detection), never loosen
 - Per-customer detection disablement is REFUSED at the schema level
 - "Compliance mode" that bypasses detection is REFUSED at the schema level
@@ -28,7 +28,7 @@ Three production statistical primitives:
 
 - `disparate_impact_ratio` — four-fifths-rule baseline (EEOC Uniform Guidelines 29 CFR 1607). Returns minimum cross-group positive-outcome ratio + flag.
 - `statistical_parity_difference` — absolute difference between group positive-outcome rates. Complementary to disparate impact ratio (stable when one group has very low rates).
-- `model_drift_between_versions` — Population Stability Index (PSI) across decision type distribution between two cohorts. FDIC/OCC threshold ladder.
+- `model_drift_between_versions` — Population Stability Index (PSI) across decision type distribution between two cohorts. Fed/OCC threshold ladder.
 
 Typed contracts:
 
@@ -52,7 +52,7 @@ v0.2.0 ships:
 
 - `tests/test_disparate_impact.py` — 8 tests covering baseline / threshold / borderline / custom-tighter / single-group / no-positive-outcomes / invalid-threshold / inspectable-stats
 - `tests/test_parity.py` — 7 tests covering parity / large gap / borderline / custom-threshold / invalid-threshold / disparate-impact complement / single-group
-- `tests/test_drift.py` — 9 tests covering FDIC/OCC threshold ladder / no-drift / moderate / significant / custom-extractor / empty cohorts / invalid thresholds / new-bucket / sum-to-psi
+- `tests/test_drift.py` — 9 tests covering Fed/OCC threshold ladder / no-drift / moderate / significant / custom-extractor / empty cohorts / invalid thresholds / new-bucket / sum-to-psi
 - `tests/test_stubs.py` — 3 tests confirming stubs raise NotImplementedError with v0.3.0 pointer
 
 Total: 27 tests. Run with `pytest`.
@@ -104,7 +104,7 @@ This package's threshold defaults follow the AILedger Charter v1.2:
 |---|---|---|---|---|
 | `disparate_impact_ratio` | 0.80 | EEOC Uniform Guidelines (29 CFR 1607) | Yes (raise toward 1.0) | **No** |
 | `statistical_parity_difference` | 0.10 | AILedger default | Yes (lower toward 0) | **No** |
-| `model_drift_between_versions` | PSI ≥ 0.25 = action | FDIC SR 11-7 / OCC 2011-12 | Yes (lower action threshold) | **No** |
+| `model_drift_between_versions` | PSI ≥ 0.25 = action | Federal Reserve SR 11-7 / OCC 2011-12 | Yes (lower action threshold) | **No** |
 
 A consumer call site that passes a looser threshold receives a `ValueError`. The refusal is structural, not policy.
 
