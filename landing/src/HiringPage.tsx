@@ -10,10 +10,9 @@ import './HiringPage.css'
  *   2. Principles    — node 5:9   ✓
  *   3. Refusals      — node 7:45  ✓
  *   4. Open roles    — node 11:67 ✓
- *   5. CTA           — node 13:83 (TODO)
+ *   5. CTA           — node 13:83 ✓
  *
- * Each section is its own component and is a direct child of <main>, so future
- * sections drop in without restructuring the page.
+ * Each section is its own component and is a direct child of <main>.
  */
 export default function HiringPage() {
   return (
@@ -23,7 +22,7 @@ export default function HiringPage() {
         <HiringPrinciples />
         <HiringRefusals />
         <HiringOpenRoles />
-        {/* Future sections render here, in the order above. */}
+        <HiringCTA />
       </main>
     </div>
   )
@@ -187,6 +186,23 @@ function HiringOpenRoles() {
           </li>
         ))}
       </ul>
+    </section>
+  )
+}
+
+function HiringCTA() {
+  return (
+    <section className="hiring-section hiring-cta" aria-labelledby="hiring-cta-heading">
+      <h2 id="hiring-cta-heading" className="hiring-display-md hiring-cta__question">
+        Want to work on this?
+      </h2>
+      <p className="hiring-cta__body">
+        See the open roles above, or send a note to{' '}
+        <a className="hiring-cta__email" href="mailto:careers@ailedger.dev">
+          careers@ailedger.dev
+        </a>
+        {' '}if you want to work on something we haven&rsquo;t posted yet.
+      </p>
     </section>
   )
 }

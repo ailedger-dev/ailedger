@@ -361,3 +361,46 @@
 @media (prefers-reduced-motion: reduce) {
   .hiring-open-roles__arrow { transition: none; }
 }
+
+/* ----- CTA ----- */
+.hiring-cta {
+  padding-top: 120px;
+  padding-bottom: 160px;
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .hiring-cta { padding-top: 80px; padding-bottom: 112px; }
+}
+
+.hiring-cta__question {
+  max-width: 720px;
+}
+
+.hiring-cta__body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 38px;
+  letter-spacing: -0.32px;
+  color: var(--hp-text-2);
+  max-width: 640px;
+}
+@media (max-width: 600px) {
+  .hiring-cta__body {
+    font-size: 26px;
+    line-height: 32px;
+    letter-spacing: -0.26px;
+  }
+}
+
+.hiring-cta__email {
+  color: var(--hp-accent);
+  text-decoration: none;
+}
+.hiring-cta__email:hover { text-decoration: underline; }
+.hiring-cta__email:focus-visible {
+  outline: 2px solid var(--hp-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
