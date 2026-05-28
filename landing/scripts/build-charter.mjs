@@ -12,6 +12,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { marked } from 'marked';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -62,10 +63,22 @@ let body = marked.parse(bodyMd);
 body = rewriteRepoLinks(body);
 body = markFootnotes(body);
 
+// Build provenance, stamped into the page footer. Doubles as an end-to-end
+// smoketest for the charter → site mirror: the fingerprint is a hash of the
+// exact CHARTER.md bytes this build fetched, so it changes if and only if the
+// charter content changed — proving content actually propagated, not just that
+// a rebuild ran. The publish timestamp advances on every rebuild regardless.
+const fingerprint = createHash('sha256').update(md).digest('hex').slice(0, 10);
+const now = new Date();
+const pad = (n) => String(n).padStart(2, '0');
+const publishedAt = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())} UTC`;
+
 const html = readFileSync(TEMPLATE, 'utf8')
   .replaceAll('{{VERSION}}', version)
+  .replaceAll('{{PUBLISHED}}', publishedAt)
+  .replaceAll('{{FINGERPRINT}}', fingerprint)
   .replace('{{CHARTER_BODY}}', body.trim());
 
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, html);
-console.log(`charter: rendered ${REPO}@${REF} (v${version}) → public/charter/index.html`);
+console.log(`charter: rendered ${REPO}@${REF} (v${version}) fp=${fingerprint} @ ${publishedAt} → public/charter/index.html`);
