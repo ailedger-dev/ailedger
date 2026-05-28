@@ -54,8 +54,8 @@ body:has(.hiring-page) {
  * sequence (each child gets its own transition-delay).
  *
  * Container sections themselves do NOT translate — only the inner content
- * does. Per-item 1350ms duration, 140ms stagger, opacity-dominant with a
- * 2px upward translate. Easing has a slight overshoot for a soft "settle".
+ * does. Per-item 600ms duration, 100ms stagger, with a 24px upward translate.
+ * Easing is a clean ease-out — cubic-bezier(0.22, 1, 0.36, 1), no overshoot.
  * -------------------------------------------------------------------------- */
 
 /* Animatable elements: the meaningful children of each section. */
@@ -73,10 +73,10 @@ body:has(.hiring-page) {
 .hiring-page .hiring-cta__question,
 .hiring-page .hiring-cta__body {
   opacity: 0;
-  transform: translateY(2px);
+  transform: translateY(24px);
   transition:
-    opacity 1350ms cubic-bezier(0.59, 0.28, 0.79, 1.1),
-    transform 1350ms cubic-bezier(0.59, 0.28, 0.79, 1.1);
+    opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
 
@@ -98,38 +98,38 @@ body:has(.hiring-page) {
   transform: translateY(0);
 }
 
-/* Stagger: 140ms per item, in document order within each section. */
+/* Stagger: 100ms per item, in document order within each section. */
 
 /* Hero: title → lede → cta */
 .hiring-page .hiring-hero.is-visible .hiring-hero__title { transition-delay: 0ms; }
-.hiring-page .hiring-hero.is-visible .hiring-hero__lede  { transition-delay: 140ms; }
-.hiring-page .hiring-hero.is-visible .hiring-hero__cta   { transition-delay: 280ms; }
+.hiring-page .hiring-hero.is-visible .hiring-hero__lede  { transition-delay: 100ms; }
+.hiring-page .hiring-hero.is-visible .hiring-hero__cta   { transition-delay: 200ms; }
 
 /* Principles: eyebrow → each card */
 .hiring-page .hiring-principles.is-visible > .hiring-eyebrow { transition-delay: 0ms; }
-.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(1) { transition-delay: 140ms; }
-.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(2) { transition-delay: 280ms; }
-.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(3) { transition-delay: 420ms; }
-.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(4) { transition-delay: 560ms; }
-.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(n+5) { transition-delay: 700ms; }
+.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(1) { transition-delay: 100ms; }
+.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(2) { transition-delay: 200ms; }
+.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(3) { transition-delay: 300ms; }
+.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(4) { transition-delay: 400ms; }
+.hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(n+5) { transition-delay: 500ms; }
 
 /* Refusals: eyebrow → heading → col 1 → col 2 */
 .hiring-page .hiring-refusals.is-visible .hiring-refusals__header > .hiring-eyebrow     { transition-delay: 0ms; }
-.hiring-page .hiring-refusals.is-visible .hiring-refusals__header > .hiring-display-md  { transition-delay: 140ms; }
-.hiring-page .hiring-refusals.is-visible .hiring-refusals__column:nth-child(1)           { transition-delay: 280ms; }
-.hiring-page .hiring-refusals.is-visible .hiring-refusals__column:nth-child(2)           { transition-delay: 420ms; }
+.hiring-page .hiring-refusals.is-visible .hiring-refusals__header > .hiring-display-md  { transition-delay: 100ms; }
+.hiring-page .hiring-refusals.is-visible .hiring-refusals__column:nth-child(1)           { transition-delay: 200ms; }
+.hiring-page .hiring-refusals.is-visible .hiring-refusals__column:nth-child(2)           { transition-delay: 300ms; }
 
 /* Open roles: eyebrow → heading → each row */
 .hiring-page .hiring-open-roles.is-visible .hiring-open-roles__header > .hiring-eyebrow    { transition-delay: 0ms; }
-.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__header > .hiring-display-md { transition-delay: 140ms; }
-.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(1)            { transition-delay: 280ms; }
-.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(2)            { transition-delay: 420ms; }
-.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(3)            { transition-delay: 560ms; }
-.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(n+4)          { transition-delay: 700ms; }
+.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__header > .hiring-display-md { transition-delay: 100ms; }
+.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(1)            { transition-delay: 200ms; }
+.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(2)            { transition-delay: 300ms; }
+.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(3)            { transition-delay: 400ms; }
+.hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(n+4)          { transition-delay: 500ms; }
 
 /* CTA: question → body */
 .hiring-page .hiring-cta.is-visible .hiring-cta__question { transition-delay: 0ms; }
-.hiring-page .hiring-cta.is-visible .hiring-cta__body     { transition-delay: 140ms; }
+.hiring-page .hiring-cta.is-visible .hiring-cta__body     { transition-delay: 100ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .hiring-page .hiring-hero__title,
