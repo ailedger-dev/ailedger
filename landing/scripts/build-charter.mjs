@@ -4,10 +4,10 @@
 // (CHARTER.md). This page is a generated artifact — never hand-edit
 // public/charter/index.html; it is rebuilt on every `npm run build`.
 //
-// To publish a new charter version, tag it in ailedger-dev/charter and bump
-// CHARTER_REF below (or pass CHARTER_REF=<tag|branch|sha> in the environment).
-// The version string shown on the page is read from the CHARTER.md H1, so it
-// always reflects the pinned source rather than a hardcoded value here.
+// The default ref is `main`, so the page mirrors whatever's live in the
+// charter repo on the next site rebuild. Override with CHARTER_REF=<tag|sha>
+// when a build must pin to a specific release. The version string shown on
+// the page is read from the CHARTER.md H1, so it tracks the source.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -18,7 +18,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const landingRoot = resolve(here, '..');
 
 const REPO = 'ailedger-dev/charter';
-const REF = process.env.CHARTER_REF || 'v1.2';
+const REF = process.env.CHARTER_REF || 'main';
 const SRC_URL = `https://raw.githubusercontent.com/${REPO}/${REF}/CHARTER.md`;
 const TEMPLATE = resolve(here, 'charter-template.html');
 const OUT = resolve(landingRoot, 'public/charter/index.html');
