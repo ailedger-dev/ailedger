@@ -14,8 +14,8 @@
   --hp-bg:          #08090A;
   --hp-text:        #F7F8F8;  /* primary */
   --hp-text-2:      #8A8F98;  /* secondary */
-  --hp-text-3:      #62666D;  /* tertiary / eyebrow */
-  --hp-accent:      #5E6AD2;
+  --hp-text-3:      #62666D;  /* tertiary (decorative open-roles arrow) */
+  --hp-accent:      #6B77DB;  /* link/accent — lightened from Linear's #5E6AD2 to clear WCAG AA (4.5:1) on 13px link text */
 
   background: var(--hp-bg);
   color: var(--hp-text);
@@ -166,13 +166,53 @@ body:has(.hiring-page) {
   .hiring-section { padding-left: 20px; padding-right: 20px; }
 }
 
+/* ----- Top bar — back-to-site (home) link -----
+   The /hiring route renders standalone (no global <Nav>), so this is the only
+   in-page path back to the rest of the site. Lives in document flow above the
+   hero; not part of the reveal animation (site chrome stays visible on load). */
+.hiring-topbar {
+  padding-top: 40px;
+}
+@media (max-width: 900px) {
+  .hiring-topbar { padding-top: 28px; }
+}
+
+.hiring-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 17px;
+  letter-spacing: -0.07px;
+  color: var(--hp-text-2);  /* 6.13:1 — AA */
+  text-decoration: none;
+}
+.hiring-home:hover { color: var(--hp-text); }
+.hiring-home:hover .hiring-home__arrow { transform: translateX(-3px); }
+.hiring-home:focus-visible {
+  outline: 2px solid var(--hp-accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.hiring-home__arrow {
+  display: inline-block;
+  transition: transform 180ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hiring-home__arrow { transition: none; }
+}
+
 /* ----- Hero ----- */
+/* padding-top trimmed (160→96 / 112→64) to absorb the new top bar above it. */
 .hiring-hero {
-  padding-top: 160px;
+  padding-top: 96px;
   padding-bottom: 0;
 }
 @media (max-width: 900px) {
-  .hiring-hero { padding-top: 112px; }
+  .hiring-hero { padding-top: 64px; }
 }
 
 .hiring-hero__intro {
@@ -246,7 +286,7 @@ body:has(.hiring-page) {
   line-height: 17px;
   letter-spacing: 0.195px;
   text-transform: uppercase;
-  color: var(--hp-text-3);
+  color: var(--hp-text-2);  /* was --hp-text-3 (3.46:1) — eyebrows are content (one is an aria-labelledby target); --hp-text-2 = 6.13:1 */
   white-space: nowrap;
 }
 
