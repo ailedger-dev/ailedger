@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import HiringPage from './HiringPage'
 
 // Sign-up vs log-in URLs are split so the nav "Log in" CTA lands
 // returning users on the sign-in view, while primary CTAs (hero "Set it
@@ -29,6 +30,7 @@ const CANONICAL_PATHS: Record<string, string> = {
   '/terms': '/legal',   // /terms + /privacy collapse to /legal (same component)
   '/privacy': '/legal',
   '/pricing': '/pricing',
+  '/hiring': '/hiring',
 }
 if (typeof window !== 'undefined') {
   const raw = window.location.pathname
@@ -64,6 +66,7 @@ function App() {
   if (path === '/docs') return <Docs />
   if (path === '/pricing') return <PricingPage />
   if (path === '/about') return <About />
+  if (path === '/hiring') return <HiringPage />
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-page)", color: "var(--fg-body)", fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Nav />
@@ -101,6 +104,7 @@ function Nav() {
         <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <a href="/pricing" style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500, cursor: 'pointer' }}>Pricing</a>
           <a href="/docs" style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
+          <a href="/hiring" style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Hiring</a>
           <a href={LOGIN_URL} style={{
             padding: '8px 18px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
             fontSize: 14, fontWeight: 500, borderRadius: 10, textDecoration: 'none',
@@ -162,6 +166,7 @@ function Nav() {
       >
         <a href="/pricing" onClick={closeMenu} style={{ color: 'var(--fg-body)', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Pricing</a>
         <a href="/docs" onClick={() => setMenuOpen(false)} style={{ color: 'var(--fg-body)', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Docs</a>
+        <a href="/hiring" onClick={() => setMenuOpen(false)} style={{ color: 'var(--fg-body)', fontSize: 16, textDecoration: 'none', fontWeight: 500 }}>Hiring</a>
         <a href="/legal" onClick={() => setMenuOpen(false)} style={{ color: 'var(--fg-subtle)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}>Legal</a>
         <a href={LOGIN_URL} onClick={() => setMenuOpen(false)} style={{
           padding: '12px 18px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
