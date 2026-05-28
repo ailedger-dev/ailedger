@@ -25,13 +25,109 @@
   text-rendering: optimizeLegibility;
 }
 
+/* index.css sets `overflow-x: hidden` on both html and body. Per spec,
+   `overflow-x: hidden` forces the element to become a scroll container in
+   BOTH axes (overflow-y silently becomes auto). With it on html AND body,
+   you get two scroll containers — and on /hiring (which is long enough
+   that the inner one actually has somewhere to scroll) two scrollbars.
+   `overflow: clip` clips overflow without creating a scroll container, so
+   only the natural html-level scrollbar remains. Scoped to /hiring via
+   :has() so the rest of the landing keeps its current behavior. */
+html:has(.hiring-page),
+body:has(.hiring-page) {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
 /* Vertical rhythm between sections. Each section provides its own padding;
-   the page itself is just a stacking context. Future sections (Principles,
-   Refusals, Open roles, CTA) will be appended as siblings of .hiring-hero. */
-.hiring-page > section {
+   the page itself is just a stacking context. */
+.hiring-page section {
   width: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* ----------------------------------------------------------------------------
+ * Reveal animation — Apple-style staggered children. As each section
+ * crosses the viewport, the IntersectionObserver in HiringPage.tsx toggles
+ * `.is-visible` on the <section>, and that cascades to its children which
+ * fade + lift in sequence (each child gets its own transition-delay).
+ *
+ * Container sections themselves do NOT translate — only the inner content
+ * does. Per-item ~700ms duration, ~80ms stagger, opacity-dominant with a
+ * 16–20px upward translate. Eased to feel like a settle, not a slide.
+ * -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* Animatable elements: the meaningful children of each section. */
+  .hiring-page .hiring-hero__title,
+  .hiring-page .hiring-hero__lede,
+  .hiring-page .hiring-hero__cta,
+  .hiring-page .hiring-principles > .hiring-eyebrow,
+  .hiring-page .hiring-principles__item,
+  .hiring-page .hiring-refusals__header > .hiring-eyebrow,
+  .hiring-page .hiring-refusals__header > .hiring-display-md,
+  .hiring-page .hiring-refusals__column,
+  .hiring-page .hiring-open-roles__header > .hiring-eyebrow,
+  .hiring-page .hiring-open-roles__header > .hiring-display-md,
+  .hiring-page .hiring-open-roles__row,
+  .hiring-page .hiring-cta__question,
+  .hiring-page .hiring-cta__body {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    transition:
+      opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+
+  /* Visible state — same selectors, but only inside .is-visible sections. */
+  .hiring-page .is-visible .hiring-hero__title,
+  .hiring-page .is-visible .hiring-hero__lede,
+  .hiring-page .is-visible .hiring-hero__cta,
+  .hiring-page .is-visible > .hiring-eyebrow,
+  .hiring-page .is-visible .hiring-principles__item,
+  .hiring-page .is-visible .hiring-refusals__header > .hiring-eyebrow,
+  .hiring-page .is-visible .hiring-refusals__header > .hiring-display-md,
+  .hiring-page .is-visible .hiring-refusals__column,
+  .hiring-page .is-visible .hiring-open-roles__header > .hiring-eyebrow,
+  .hiring-page .is-visible .hiring-open-roles__header > .hiring-display-md,
+  .hiring-page .is-visible .hiring-open-roles__row,
+  .hiring-page .is-visible .hiring-cta__question,
+  .hiring-page .is-visible .hiring-cta__body {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* Hero: title → lede → cta @ 80ms */
+  .hiring-page .hiring-hero.is-visible .hiring-hero__title { transition-delay: 0ms; }
+  .hiring-page .hiring-hero.is-visible .hiring-hero__lede  { transition-delay: 100ms; }
+  .hiring-page .hiring-hero.is-visible .hiring-hero__cta   { transition-delay: 200ms; }
+
+  /* Principles: eyebrow → each card @ 80ms */
+  .hiring-page .hiring-principles.is-visible > .hiring-eyebrow { transition-delay: 0ms; }
+  .hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(1) { transition-delay: 80ms; }
+  .hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(2) { transition-delay: 160ms; }
+  .hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(3) { transition-delay: 240ms; }
+  .hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(4) { transition-delay: 320ms; }
+  .hiring-page .hiring-principles.is-visible .hiring-principles__item:nth-child(n+5) { transition-delay: 400ms; }
+
+  /* Refusals: eyebrow → heading → col 1 → col 2 @ 80ms */
+  .hiring-page .hiring-refusals.is-visible .hiring-refusals__header > .hiring-eyebrow     { transition-delay: 0ms; }
+  .hiring-page .hiring-refusals.is-visible .hiring-refusals__header > .hiring-display-md  { transition-delay: 80ms; }
+  .hiring-page .hiring-refusals.is-visible .hiring-refusals__column:nth-child(1)           { transition-delay: 160ms; }
+  .hiring-page .hiring-refusals.is-visible .hiring-refusals__column:nth-child(2)           { transition-delay: 240ms; }
+
+  /* Open roles: eyebrow → heading → each row @ 80ms */
+  .hiring-page .hiring-open-roles.is-visible .hiring-open-roles__header > .hiring-eyebrow    { transition-delay: 0ms; }
+  .hiring-page .hiring-open-roles.is-visible .hiring-open-roles__header > .hiring-display-md { transition-delay: 80ms; }
+  .hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(1)            { transition-delay: 160ms; }
+  .hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(2)            { transition-delay: 240ms; }
+  .hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(3)            { transition-delay: 320ms; }
+  .hiring-page .hiring-open-roles.is-visible .hiring-open-roles__row:nth-child(n+4)          { transition-delay: 400ms; }
+
+  /* CTA: question → body @ 100ms */
+  .hiring-page .hiring-cta.is-visible .hiring-cta__question { transition-delay: 0ms; }
+  .hiring-page .hiring-cta.is-visible .hiring-cta__body     { transition-delay: 100ms; }
 }
 
 /* ----- Section padding (shared across hiring sections) ----- */

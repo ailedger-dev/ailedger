@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import './HiringPage.css'
 
 /**
@@ -12,11 +13,44 @@ import './HiringPage.css'
  *   4. Open roles    — node 11:67 ✓
  *   5. CTA           — node 13:83 ✓
  *
- * Each section is its own component and is a direct child of <main>.
+ * Each section is its own component and is a direct child of <main>. The
+ * page uses the normal single document scroll (no snap, no nested scroll
+ * container); an IntersectionObserver toggles the .is-visible class as
+ * sections cross the viewport to drive a fade + translate entrance (CSS
+ * handles the transition). The hero is pre-marked visible on mount so it
+ * animates in on page load.
  */
 export default function HiringPage() {
+  const pageRef = useRef<HTMLDivElement>(null)
+
+  // Reveal each section as it enters the viewport. The hero is in view on
+  // mount, so the observer fires for it on the first tick — that produces
+  // the page-load entry animation. One-way: once revealed, a section stays
+  // revealed (no flicker on scroll-up).
+  useEffect(() => {
+    const sections = pageRef.current?.querySelectorAll('section')
+    if (!sections || sections.length === 0) return
+    if (typeof IntersectionObserver === 'undefined') {
+      sections.forEach((s) => s.classList.add('is-visible'))
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible')
+            observer.unobserve(entry.target)
+          }
+        }
+      },
+      { threshold: 0.18, rootMargin: '0px 0px -8% 0px' },
+    )
+    sections.forEach((s) => observer.observe(s))
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <div className="hiring-page">
+    <div ref={pageRef} className="hiring-page">
       <main>
         <HiringHero />
         <HiringPrinciples />
