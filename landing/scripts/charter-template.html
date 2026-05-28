@@ -61,6 +61,8 @@ ul li { margin-bottom: 8px; color: var(--fg-body); }
 .footer-meta { margin-top: 80px; padding-top: 28px; border-top: 1px solid var(--bg-rule); font-size: 13px; color: var(--fg-subtle); line-height: 1.7; }
 .footer-meta a { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 3px; }
 .footer-meta a:hover { color: var(--fg-primary); text-decoration-color: var(--accent); }
+.provenance { font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--fg-subtle); margin-top: 22px; letter-spacing: 0; }
+.provenance .fp { color: var(--fg-muted); }
 </style>
 </head>
 <body>
@@ -80,6 +82,7 @@ ul li { margin-bottom: 8px; color: var(--fg-body); }
 <div class="footer-meta">
 <p>This is the canonical rendering of the AILedger Charter v{{VERSION}}. The git-tagged source lives at <a href="https://github.com/ailedger-dev/charter/">github.com/ailedger-dev/charter</a>. Charter text is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International</a>.</p>
 <p>Amendments require unanimous Board of Directors approval per the Charter itself. Proposed amendments are filed as public pull requests on the source repository.</p>
+<p class="provenance">Published {{PUBLISHED}} · source fingerprint <span class="fp">{{FINGERPRINT}}</span></p>
 </div>
 
 </div>
