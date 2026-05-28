@@ -263,3 +263,101 @@
   line-height: 24px;
   color: var(--hp-text-2);
 }
+
+/* ----- Open roles ----- */
+.hiring-open-roles {
+  padding-top: 120px;
+  padding-bottom: 120px;
+  gap: 64px;
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .hiring-open-roles { padding-top: 80px; padding-bottom: 80px; gap: 48px; }
+}
+
+.hiring-open-roles__header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.hiring-open-roles__list {
+  list-style: none;
+  margin: 0;
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.hiring-open-roles__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 0;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 4px;
+}
+.hiring-open-roles__link:focus-visible {
+  outline: 2px solid var(--hp-accent);
+  outline-offset: 6px;
+}
+
+.hiring-open-roles__content {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hiring-open-roles__title {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 31px;
+  letter-spacing: -0.12px;
+  color: var(--hp-text);
+}
+
+.hiring-open-roles__meta {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--hp-text-2);
+}
+
+.hiring-open-roles__description {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--hp-text-2);
+  width: 100%;
+}
+
+.hiring-open-roles__arrow {
+  flex-shrink: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 31px;
+  letter-spacing: -0.12px;
+  color: var(--hp-text-3);
+  transition: color 180ms ease, transform 180ms ease;
+}
+.hiring-open-roles__link:hover .hiring-open-roles__arrow {
+  color: var(--hp-text);
+  transform: translateX(4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hiring-open-roles__arrow { transition: none; }
+}

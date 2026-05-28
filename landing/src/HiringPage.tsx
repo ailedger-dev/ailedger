@@ -9,7 +9,7 @@ import './HiringPage.css'
  *   1. Hero          — node 5:4   ✓
  *   2. Principles    — node 5:9   ✓
  *   3. Refusals      — node 7:45  ✓
- *   4. Open roles    — node 11:67 (TODO)
+ *   4. Open roles    — node 11:67 ✓
  *   5. CTA           — node 13:83 (TODO)
  *
  * Each section is its own component and is a direct child of <main>, so future
@@ -22,6 +22,7 @@ export default function HiringPage() {
         <HiringHero />
         <HiringPrinciples />
         <HiringRefusals />
+        <HiringOpenRoles />
         {/* Future sections render here, in the order above. */}
       </main>
     </div>
@@ -137,5 +138,55 @@ function RefusalsColumn({ title, items }: { title: string; items: readonly strin
         ))}
       </ul>
     </div>
+  )
+}
+
+type Role = {
+  title: string
+  meta: string
+  description: string
+  href: string
+}
+
+const ROLES: readonly Role[] = [
+  {
+    title: 'Founding Sales',
+    meta: 'Go-to-market · Remote (US / EU)',
+    description:
+      "Identify regulated-industry buyers whose AI compliance posture matches AILedger's substrate. Build the pipeline from scratch. Refuse the wrong customers cheerfully.",
+    href: 'mailto:careers@ailedger.dev?subject=Founding%20Sales',
+  },
+]
+
+function HiringOpenRoles() {
+  return (
+    <section
+      id="open-roles"
+      className="hiring-section hiring-open-roles"
+      aria-labelledby="hiring-open-roles-heading"
+    >
+      <header className="hiring-open-roles__header">
+        <p className="hiring-eyebrow">OPEN ROLES</p>
+        <h2 id="hiring-open-roles-heading" className="hiring-display-md">
+          Work on something that refuses easy answers.
+        </h2>
+      </header>
+      <ul className="hiring-open-roles__list">
+        {ROLES.map((role) => (
+          <li key={role.title} className="hiring-open-roles__row">
+            <a className="hiring-open-roles__link" href={role.href}>
+              <div className="hiring-open-roles__content">
+                <h3 className="hiring-open-roles__title">{role.title}</h3>
+                <p className="hiring-open-roles__meta">{role.meta}</p>
+                <p className="hiring-open-roles__description">{role.description}</p>
+              </div>
+              <span className="hiring-open-roles__arrow" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
