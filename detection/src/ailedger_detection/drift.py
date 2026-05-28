@@ -8,12 +8,12 @@ Events (e.g. cohort A from model v1.0, cohort B from model v1.1) and reports
 a population-stability-index (PSI) score over the decision_type distribution.
 
 PSI is the canonical drift metric used in financial-services model governance
-(per FDIC SR 11-7 / OCC 2011-12 guidance). Thresholds:
+(per Federal Reserve SR 11-7 / OCC 2011-12 guidance). Thresholds:
 - PSI < 0.10 → no significant drift
 - 0.10 ≤ PSI < 0.25 → moderate drift; investigate
 - PSI ≥ 0.25 → significant drift; action required
 
-AILedger ships the FDIC/OCC threshold ladder as default. Customers tighten
+AILedger ships the Fed/OCC threshold ladder as default. Customers tighten
 (lower the action threshold), never loosen.
 """
 
@@ -24,7 +24,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
-# FDIC SR 11-7 / OCC 2011-12 PSI threshold ladder.
+# Federal Reserve SR 11-7 / OCC 2011-12 PSI threshold ladder.
 PSI_NO_DRIFT_THRESHOLD: float = 0.10
 PSI_ACTION_THRESHOLD: float = 0.25
 
