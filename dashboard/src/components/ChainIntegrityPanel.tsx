@@ -16,7 +16,7 @@ type VerifyChain = {
   row_count: number
 }
 
-type Status = 'idle' | 'verifying' | 'verified-ok' | 'verified-broken' | 'stale' | 'error'
+type Status = 'idle' | 'verifying' | 'verified-ok' | 'verified-broken' | 'error'
 
 type ChainHealth = {
   customer_id: string
@@ -29,8 +29,6 @@ type ChainHealth = {
   actual_hash: string | null
   last_alerted_at: string | null
 }
-
-const VERIFY_THROTTLE_MS = 60_000
 
 function shortHash(hash: string | null | undefined, prefixLen = 8) {
   if (!hash) return '-'
@@ -60,59 +58,33 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
   const [verifiedAt, setVerifiedAt] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [copyFlash, setCopyFlash] = useState(false)
-  const [throttleExpired, setThrottleExpired] = useState(true)
 
   // localStorage key — per-customer so cross-customer state doesn't leak.
   const lsKey = `ailedger:chain-verify:${customerId}`
-
-  // Re-evaluate throttle every 5s so the Verify button re-enables in bounded time.
-  // Done in an effect (not during render) to keep the component pure.
-  useEffect(() => {
-    const recompute = () => {
-      if (verifiedAt === null) {
-        setThrottleExpired(true)
-        return
-      }
-      setThrottleExpired(Date.now() - new Date(verifiedAt).getTime() > VERIFY_THROTTLE_MS)
-    }
-    recompute()
-    const interval = setInterval(recompute, 5_000)
-    return () => clearInterval(interval)
-  }, [verifiedAt])
 
   // Initial load: fetch the chain head only. Verification is manual-only
   // per Jake — users click "Verify" when they want a fresh integrity check.
   //
   // Hydrate the LAST verification result from localStorage so Verified-OK /
-  // Verified-broken state survives a page refresh. If the chain head hash
-  // has moved since the last verify, we restore the result but mark it
-  // stale; the user has to re-click to confirm against current state.
-  // (Hash comparison instead of row_count comparison: verify_chain's
-  // row_count means "post-disclosure rows walked" while chain_head's
-  // row_count means "total chained rows" — comparing them was a bug that
-  // marked vernier-internal stale-on-load every time.)
+  // Verified-broken state survives a page refresh. We do NOT auto-flip a
+  // hydrated verified-ok to "stale" on head movement: in a busy tenant
+  // (vernier-internal writes every few seconds) the head moves continuously
+  // and the AFTER INSERT trigger (20260519_chain_insert_verification_trigger)
+  // re-walks chain_prev_hash on every insert and RAISEs on tamper, so the
+  // chain is still tamper-evidently verified once it's been walked. The
+  // server-side chain_health monitor (cron) remains the authoritative break
+  // signal. Removing the stale-flip also fixes the post-click flash where
+  // the badge would briefly read "Verified" and then immediately turn
+  // yellow because the head fetched in this effect had already advanced
+  // past the verify_chain RPC's frozen-in-time chain_head_hash.
   useEffect(() => {
     let cancelled = false
 
-    // Hydrate first so we have something to compare against the head.
-    let hydrated: { verifyResult: VerifyChain; verifiedAt: string; chainHeadHashAtVerify: string | null } | null = null
     try {
       const raw = localStorage.getItem(lsKey)
       if (raw) {
         const parsed = JSON.parse(raw)
-        // Accept legacy persisted entries (`rowCountAtVerify`) and current
-        // ones (`chainHeadHashAtVerify`). Legacy entries get re-saved on the
-        // next verify, so this fallback path eventually clears itself.
-        const headHashAtVerify =
-          typeof parsed?.chainHeadHashAtVerify === 'string'
-            ? parsed.chainHeadHashAtVerify
-            : parsed?.verifyResult?.chain_head_hash ?? null
         if (parsed && parsed.verifyResult && parsed.verifiedAt) {
-          hydrated = {
-            verifyResult: parsed.verifyResult,
-            verifiedAt: parsed.verifiedAt,
-            chainHeadHashAtVerify: headHashAtVerify,
-          }
           setVerifyResult(parsed.verifyResult)
           setVerifiedAt(parsed.verifiedAt)
           setStatus(parsed.verifyResult.ok ? 'verified-ok' : 'verified-broken')
@@ -166,20 +138,6 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
         }
       }
 
-      // Only auto-stale a previously verified-OK chain when the chain head
-      // hash has moved since verify. A previously verified-BROKEN chain
-      // must NEVER be downgraded to "stale" on reload — a break is a
-      // load-bearing finding that has to stay visible until the user
-      // explicitly re-verifies. Anti-pattern caught by Jake 2026-05-08.
-      if (
-        hydrated &&
-        hydrated.verifyResult.ok &&
-        hydrated.chainHeadHashAtVerify !== null &&
-        headData.chain_head_hash !== null &&
-        headData.chain_head_hash !== hydrated.chainHeadHashAtVerify
-      ) {
-        setStatus('stale')
-      }
     }
     loadHead()
     return () => { cancelled = true }
@@ -208,7 +166,12 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
     return () => { cancelled = true; clearTimeout(t) }
   }, [lastInsertAt, customerId, onHeadUpdate])
 
-  const canVerify = status !== 'verifying' && throttleExpired
+  // No throttle: the in-flight `verifying` state alone gates double-clicks,
+  // and `setStatus('verifying')` flips synchronously so two clicks in the
+  // same tick can't both pass. Removing the 60s post-verify lockout was a
+  // direct ask from Jake — for an 8k-row tenant verify_chain returns in
+  // under a second and there's no reason to make the user wait.
+  const canVerify = status !== 'verifying'
 
   const handleVerify = async () => {
     if (!canVerify) return
@@ -357,12 +320,6 @@ export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUp
             </div>
           )}
 
-          {status === 'stale' && (
-            <div className="mt-3 text-xs text-yellow-400">
-              New records inserted since last verify. Re-verify to refresh integrity status.
-            </div>
-          )}
-
           {status === 'error' && errorMsg && (
             <div className="mt-3 text-xs text-red-400">Verification error: {errorMsg}</div>
           )}
@@ -378,7 +335,6 @@ function StatusBadge({ status }: { status: Status }) {
     verifying: { label: 'Verifying…', cls: 'text-slate-300 border-slate-600', dot: 'bg-indigo-400 animate-pulse' },
     'verified-ok': { label: 'Verified', cls: 'text-emerald-400 border-emerald-900/60', dot: 'bg-emerald-400' },
     'verified-broken': { label: 'Break detected', cls: 'text-red-400 border-red-900/60', dot: 'bg-red-400' },
-    stale: { label: 'Stale (new records)', cls: 'text-yellow-400 border-yellow-900/60', dot: 'bg-yellow-400' },
     error: { label: 'Error', cls: 'text-red-400 border-red-900/60', dot: 'bg-red-400' },
   }
   const c = config[status]
