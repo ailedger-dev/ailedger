@@ -43,7 +43,7 @@ function formatRelative(iso: string | null) {
   if (sec < 60) return `${sec}s ago`
   if (sec < 3600) return `${Math.floor(sec / 60)}m ago`
   if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`
-  return d.toLocaleDateString()
+  return d.toISOString().slice(0, 10) + ' UTC'
 }
 
 export default function ChainIntegrityPanel({ customerId, lastInsertAt, onHeadUpdate }: {
