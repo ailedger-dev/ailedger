@@ -52,7 +52,6 @@ test_proxy.py
 /.claude/
 /.logs/
 /state.json
-/CLAUDE.md
 /CLAUDE.local.md
 
 # Python editable-install artifacts

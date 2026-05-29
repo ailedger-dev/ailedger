@@ -1,0 +1,95 @@
+/* ============================================================================
+ * Design-system tokens — extracted from /hiring (the design-language source of
+ * truth). Dark, single-palette, theme-INDEPENDENT (no prefers-color-scheme flip
+ * — /hiring has no light mode). Namespaced --ds-* so they never collide with
+ * index.css's :root system (--bg-*/--fg-*/--accent*), which the legacy
+ * /, /docs, /pricing, /about still consume. Scoped to .ds-root so they only
+ * resolve where a design-system page mounts.
+ *
+ * Units are px (NOT rem, NOT em — including letter-spacing) on purpose:
+ * converting risks sub-pixel drift if the root font-size ever changes, and
+ * /hiring must stay pixel-identical.
+ *
+ * NB: .ds-root is intentionally defined in TWO files — variables here, surface
+ * paint + font in primitives.css — so a page can opt into tokens-only.
+ * ============================================================================ */
+
+.ds-root {
+  /* ---- Color (from HiringPage.css) ---- */
+  --ds-bg:        #08090A;  /* page surface — single surface, no card/elevated variants */
+  --ds-text-1:    #F7F8F8;  /* primary / headings / hover-bright targets */
+  --ds-text-2:    #8A8F98;  /* secondary / body / eyebrow (6.13:1 AA — load-bearing) */
+  --ds-text-3:    #62666D;  /* tertiary — DECORATIVE ONLY (open-roles arrow rest, 3.46:1) */
+  --ds-accent:    #6B77DB;  /* link text AND every focus ring — lightened from Linear
+                               #5E6AD2 to clear 4.5:1 AA on 13px. Do not drift. */
+
+  /* ---- Type families & weights (only two weights exist: 400, 500) ---- */
+  --ds-font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+  --ds-fw-regular: 400;
+  --ds-fw-medium:  500;
+
+  /* ---- Type scale (font-size / line-height / letter-spacing, all px) ----
+     The RESPONSIVE contract lives in the .ds-display-*/.ds-lede utility classes
+     (primitives.css), NOT in these raw tokens. A consumer that uses a raw
+     --ds-fs-* token directly gets a FIXED size with no responsive steps. */
+  --ds-fs-display-xl: 56px;  --ds-lh-display-xl: 62px;  --ds-ls-display-xl: -1.12px;
+  --ds-fs-display-md: 32px;  --ds-lh-display-md: 38px;  --ds-ls-display-md: -0.32px;
+  --ds-fs-title-lg:   24px;  --ds-lh-title-lg:   31px;  --ds-ls-title-lg:  -0.12px;
+  --ds-fs-title-md:   20px;  --ds-lh-title-md:   26px;  --ds-ls-title-md:  -0.10px;
+  --ds-fs-lede:       18px;  --ds-lh-lede:       27px;  /* no letter-spacing */
+  --ds-fs-body:       16px;  --ds-lh-body:       24px;  /* no letter-spacing */
+  --ds-fs-label:      14px;  --ds-lh-label:      21px;  /* no letter-spacing */
+  --ds-fs-link-md:    14px;  --ds-lh-link-md:    17px;  --ds-ls-link-md:   -0.07px;
+  --ds-fs-eyebrow:    13px;  --ds-lh-eyebrow:    17px;  --ds-ls-eyebrow:    0.195px;
+  --ds-fs-link-sm:    13px;  --ds-lh-link-sm:    17px;  /* no letter-spacing */
+
+  /* ---- Spacing scale (8px grid + explicit off-grid members; preserve all) ---- */
+  --ds-space-6:    6px;    /* reveal lift (motion) — off-grid */
+  --ds-space-8:    8px;
+  --ds-space-10:   10px;   /* principles eyebrow→list gap — off-grid, unique */
+  --ds-space-12:   12px;
+  --ds-space-16:   16px;
+  --ds-space-20:   20px;   /* xs gutter — off-grid */
+  --ds-space-24:   24px;
+  --ds-space-28:   28px;   /* topbar mobile pad-top — off-grid */
+  --ds-space-32:   32px;
+  --ds-space-40:   40px;
+  --ds-space-48:   48px;
+  --ds-space-64:   64px;
+  --ds-space-80:   80px;
+  --ds-space-96:   96px;
+  --ds-space-112:  112px;  /* cta mobile bottom — off-grid */
+  --ds-space-120:  120px;
+  --ds-space-160:  160px;
+  --ds-space-240:  240px;  /* base gutter — off-grid */
+
+  /* ---- Content measures ---- */
+  --ds-measure-narrow: 440px;  /* refusals column (row layout) */
+  --ds-measure:        640px;  /* lede, body, cta body, stacked column */
+  --ds-measure-wide:   720px;  /* hero title, section headers, cta question */
+
+  /* ---- Radii (only two; focus-ring corners + one interactive box) ---- */
+  --ds-radius-focus:       2px;  /* focus-ring corner on text links */
+  --ds-radius-interactive: 4px;  /* open-roles row link box (only resting radius) */
+
+  /* ---- Focus ring (uniform; offset is a per-element param, NOT in the token) ---- */
+  --ds-focus-width: 2px;
+  --ds-focus-style: solid;
+  --ds-focus-color: var(--ds-accent);
+  --ds-focus-offset: 3px;  /* default; override per element: home 4px, row link 6px (--bare) */
+
+  /* ---- Motion ---- */
+  --ds-reveal-distance: 6px;
+  --ds-reveal-duration: 1000ms;
+  --ds-reveal-ease:     cubic-bezier(0.32, 0, 0.67, 0);  /* ease-IN (distinct from legacy hero ease-out) */
+  --ds-reveal-stagger:  510ms;
+  --ds-hover-duration:  180ms;
+  --ds-hover-ease:      ease;
+  --ds-nudge-back:      -3px;  /* home back-arrow translateX on hover */
+  --ds-nudge-fwd:        4px;  /* open-roles arrow translateX on hover */
+
+  /* ---- Responsive breakpoints (comments; @media cannot read custom props) ----
+     --ds-bp-xl 1280px  --ds-bp-lg 1100px  --ds-bp-md 900px
+     --ds-bp-sm 760px   --ds-bp-xs 600px
+     Disjoint from index.css's single 768px breakpoint — keep both sets. */
+}

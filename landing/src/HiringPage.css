@@ -3,24 +3,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
 
 /* ----------------------------------------------------------------------------
- * Hiring page — own design language. Tokens come from the Figma file at
- *   figma.com/design/XyN2MXiVyGm4ZlriQlATnX (frame 5:3)
- * and are intentionally NOT shared with the existing landing's CSS variables.
- * If the new design language proves out and is adopted elsewhere, promote
- * these into index.css under a new namespace.
+ * Hiring page — the design-language SOURCE OF TRUTH. Its tokens are extracted
+ * into the shared foundation at ds/tokens.css (the --ds-* namespace, imported
+ * by HiringPage.tsx). Below, the page's local --hp-* names now ALIAS those
+ * shared tokens, so every existing var(--hp-*) reference is untouched and the
+ * page renders identically. New pages should consume ds/tokens.css +
+ * ds/primitives.css (and the PageShell/Section/… primitives) directly.
  * -------------------------------------------------------------------------- */
 
 .hiring-page {
-  --hp-bg:          #08090A;
-  --hp-text:        #F7F8F8;  /* primary */
-  --hp-text-2:      #8A8F98;  /* secondary */
-  --hp-text-3:      #62666D;  /* tertiary (decorative open-roles arrow) */
-  --hp-accent:      #6B77DB;  /* link/accent — lightened from Linear's #5E6AD2 to clear WCAG AA (4.5:1) on 13px link text */
+  --hp-bg:          var(--ds-bg);      /* #08090A */
+  --hp-text:        var(--ds-text-1);  /* #F7F8F8 */
+  --hp-text-2:      var(--ds-text-2);  /* #8A8F98 */
+  --hp-text-3:      var(--ds-text-3);  /* #62666D */
+  --hp-accent:      var(--ds-accent);  /* #6B77DB */
 
   background: var(--hp-bg);
   color: var(--hp-text);
   min-height: 100vh;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--ds-font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
