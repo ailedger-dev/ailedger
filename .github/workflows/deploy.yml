@@ -167,7 +167,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
+          wranglerVersion: '4.95.0'
           workingDirectory: ${{ matrix.project }}
           command: pages deploy dist --project-name=ailedger-${{ matrix.project }} --branch=${{ github.head_ref }}
 
@@ -203,7 +203,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.84.1'
+          wranglerVersion: '4.95.0'
           workingDirectory: ${{ matrix.project }}
           command: pages deploy dist --project-name=ailedger-${{ matrix.project }} --branch=main
 

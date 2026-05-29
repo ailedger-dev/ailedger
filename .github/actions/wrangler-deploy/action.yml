@@ -41,7 +41,7 @@ runs:
       with:
         apiToken: ${{ inputs.apiToken }}
         accountId: ${{ inputs.accountId }}
-        wranglerVersion: '4.84.1'
+        wranglerVersion: '4.95.0'
         workingDirectory: ${{ inputs.worker }}
         preCommands: ${{ inputs.preCommands }}
         command: ${{ inputs.command }}

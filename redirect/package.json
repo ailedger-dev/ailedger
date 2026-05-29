@@ -12,6 +12,6 @@
   "type": "commonjs",
   "devDependencies": {
     "typescript": "^6.0.2",
-    "wrangler": "^4.81.1"
+    "wrangler": "^4.95.0"
   }
 }
