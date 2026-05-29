@@ -162,6 +162,15 @@ jobs:
       - name: build
         run: npm run build
         working-directory: ${{ matrix.project }}
+        env:
+          # Vite inlines import.meta.env.VITE_* at BUILD time. The dashboard's
+          # Supabase client (dashboard/src/supabase.ts) throws "supabaseUrl is
+          # required" at module load if these are empty, which blanks the page
+          # before React mounts. These are the PUBLIC anon (role:anon) creds —
+          # designed to ship in the browser bundle; access is gated by RLS, not
+          # by hiding the key. landing ignores them (no VITE_SUPABASE_* refs).
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - name: pages deploy (preview)
         uses: cloudflare/wrangler-action@v3
         with:
@@ -198,6 +207,15 @@ jobs:
       - name: build
         run: npm run build
         working-directory: ${{ matrix.project }}
+        env:
+          # Vite inlines import.meta.env.VITE_* at BUILD time. The dashboard's
+          # Supabase client (dashboard/src/supabase.ts) throws "supabaseUrl is
+          # required" at module load if these are empty, which blanks the page
+          # before React mounts. These are the PUBLIC anon (role:anon) creds —
+          # designed to ship in the browser bundle; access is gated by RLS, not
+          # by hiding the key. landing ignores them (no VITE_SUPABASE_* refs).
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - name: pages deploy (production)
         uses: cloudflare/wrangler-action@v3
         with:
