@@ -22,7 +22,11 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
-	"workers_dev": true,
+	// workers_dev disabled: proxy is reached only via the custom domain
+	// proxy.ailedger.dev. Leaving the *.workers.dev subdomain on would expose a
+	// second public, unmonitored ingress to this (privileged) worker — see
+	// docs/deploy-runbook.md on avoiding open workers.dev surfaces.
+	"workers_dev": false,
 	"routes": [
 		{ "pattern": "proxy.ailedger.dev", "custom_domain": true }
 	],

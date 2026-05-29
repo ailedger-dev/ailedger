@@ -5,5 +5,8 @@
   "compatibility_date": "2026-04-10",
   "routes": [
     { "pattern": "dashboard.ailedger.dev", "custom_domain": true }
-  ]
+  ],
+  // Explicit (already the effective default with a custom_domain route): no
+  // public *.workers.dev ingress. Pins both workers to custom-domain-only.
+  "workers_dev": false
 }
