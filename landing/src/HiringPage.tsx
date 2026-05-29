@@ -129,8 +129,9 @@ function HiringPrinciples() {
   )
 }
 
-/* Refusals copy mirrors CHARTER.md in this same public repo and the published
-   Charter at ailedger.dev/charter — sourced verbatim from Figma node 7:45. */
+/* Refusals copy mirrors the canonical Charter in ailedger-dev/charter
+   (CHARTER.md) and the published Charter at ailedger.dev/charter —
+   sourced verbatim from Figma node 7:45. */
 const REFUSED_CUSTOMERS: readonly string[] = [
   'Companies whose underlying AI use is itself the harm: predictive policing, social scoring, deceptive targeting of vulnerable populations.',
   'Companies that request detection configurations designed to suppress findings.',
