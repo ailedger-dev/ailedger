@@ -14,7 +14,7 @@ Open-source statistical primitives for AILedger Detection Event chains.
 
 The Apache-2.0 Detection layer of AILedger. The open-source artifact that customers, regulators, and adversarial reviewers can read, audit, and run independently against any Detection Event chain.
 
-Per the AILedger Charter v1.2 anti-theater commitments:
+Per the AILedger Charter anti-theater commitments:
 - Detection thresholds are anchored to published standards (EEOC four-fifths rule = 0.8; Federal Reserve SR 11-7 / OCC 2011-12 PSI ladder)
 - Customers TIGHTEN thresholds (toward stricter detection), never loosen
 - Per-customer detection disablement is REFUSED at the schema level
@@ -98,7 +98,7 @@ print(f"Low group: {result.low_group} ({result.low_rate:.3f})")
 
 ## Charter posture
 
-This package's threshold defaults follow the AILedger Charter v1.2:
+This package's threshold defaults follow the AILedger Charter:
 
 | Primitive | Default threshold | Source | Customer can tighten? | Customer can loosen? |
 |---|---|---|---|---|
@@ -113,7 +113,7 @@ A consumer call site that passes a looser threshold receives a `ValueError`. The
 - Detection Event schema: `proxy/migrations/20260512_decision_events_schema.sql`
 - Param canonicalization spec: `gt-lab/docs/param-canonicalization-spec-v1.md`
 - Detection taxonomy: `gt-lab/docs/compliance-architecture/ARCHITECTURE-detection-taxonomy.md`
-- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md) v1.2 (Jake-authored, ratified 2026-05-17; regulatory-context update 2026-05-20)
+- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md)
 
 ## Testing
 
@@ -139,5 +139,5 @@ The Apache 2.0 license is unchanged when the package extracts to its own repo. I
 
 - Spec: `gt-lab/docs/param-canonicalization-spec-v1.md`
 - Posture: `gt-lab/memory/project_ailedger_posture_v2_2026_05_12.md`
-- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md) v1.2
+- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md)
 - Competitive matrix: `gt-lab/docs/ailedger-competitive-matrix-v2.md`
