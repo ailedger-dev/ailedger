@@ -14,7 +14,7 @@
 //   npx tsx scripts/smoke-test.ts
 //
 // Defaults to https://proxy.ailedger.dev. Override AILEDGER_BASE_URL for
-// staging or local dev.
+// local dev (e.g. a `wrangler dev` URL).
 
 import { randomUUID } from 'node:crypto';
 import { DetectionEventClient } from '../src/index.js';

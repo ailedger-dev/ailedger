@@ -2,9 +2,13 @@ name: Deploy
 
 # Environment promotion flow (see docs/deploy-runbook.md):
 #
-#   PR opened/synced  →  Workers staging deploy + Pages preview deploys + gates
-#   Merge to main     →  Workers staging re-deploy + Pages production deploys
+#   PR opened/synced  →  gates + Pages preview deploys
+#   Merge to main     →  Pages production deploys
 #   Release tag v*    →  Workers production deploy
+#
+# Workers have NO remote staging tier — develop locally with `wrangler dev`
+# and ship to production on a v* tag (removed 2026-05-28 to avoid a public,
+# unmonitored *.workers.dev surface; see docs/deploy-runbook.md).
 #
 # Pages deploys run from this workflow (not via the CF Pages Git integration):
 # the integration silently stopped firing on merges in May 2026 (no commit
@@ -15,13 +19,11 @@ name: Deploy
 #
 # Secrets required (set in GitHub repo settings → Secrets and variables → Actions):
 #   CLOUDFLARE_API_TOKEN    Worker-scoped API token (edit Workers + Pages,
-#                           edit KV, edit D1). Distinct tokens for staging and
-#                           prod recommended but not required.
+#                           edit KV, edit D1).
 #   CLOUDFLARE_ACCOUNT_ID   Jake's CF account ID.
 #
-# All Worker staging/production secrets (RESEND_API_KEY, SESSION_JWT_SECRET,
-# ANTHROPIC_API_KEY, etc.) are managed via `wrangler secret put --env <env>`
-# and NEVER live in this workflow.
+# All Worker production secrets (SESSION_JWT_SECRET, ANTHROPIC_API_KEY, etc.)
+# are managed via `wrangler secret put` and NEVER live in this workflow.
 
 on:
   pull_request:
@@ -36,8 +38,8 @@ on:
     types: [charter-updated]
 
 concurrency:
-  # PR runs may stomp each other on shared staging — that is acceptable and by
-  # design. Prod and main have their own lane per ref.
+  # One lane per (event, ref). PR preview runs may cancel each other; prod and
+  # main have their own lane.
   group: deploy-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -102,47 +104,6 @@ jobs:
         run: npm run build
         working-directory: dashboard
 
-  deploy-staging:
-    name: Deploy Workers → staging
-    needs: gates
-    if: >-
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      # JCS canary (threat model §6.8): runs in proxy's install context, so a
-      # broken node_modules (the 2026-04-29 outage cause) fails the deploy
-      # instead of shipping a chain that silently forks future hashes.
-      - uses: ./.github/actions/wrangler-deploy
-        with:
-          worker: proxy
-          command: deploy --env staging
-          preCommands: npm run canary
-
-      # onboard-auth/wrangler.jsonc still carries REPLACE_WITH_*_ID placeholders
-      # for staging KV/D1 bindings; soft-fail keeps `redirect` running and the
-      # overall job green until those land.
-      - uses: ./.github/actions/wrangler-deploy
-        with:
-          worker: onboard-auth
-          command: deploy --env staging
-          soft-fail: 'true'
-
-      - uses: ./.github/actions/wrangler-deploy
-        with:
-          worker: redirect
-          command: deploy --env staging
-
   deploy-production:
     name: Deploy Workers → production
     needs: gates
@@ -161,17 +122,14 @@ jobs:
         with:
           node-version: '20'
 
-      # JCS canary on proxy — see staging job for context.
+      # JCS canary (threat model §6.8): runs in proxy's install context, so a
+      # broken node_modules (the 2026-04-29 outage cause) fails the deploy
+      # instead of shipping a chain that silently forks future hashes.
       - uses: ./.github/actions/wrangler-deploy
         with:
           worker: proxy
           command: deploy
           preCommands: npm run canary
-
-      - uses: ./.github/actions/wrangler-deploy
-        with:
-          worker: onboard-auth
-          command: deploy
 
       - uses: ./.github/actions/wrangler-deploy
         with:

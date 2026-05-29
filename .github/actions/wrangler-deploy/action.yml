@@ -1,21 +1,19 @@
 name: Wrangler deploy
 description: Deploy a worker via cloudflare/wrangler-action with the repo's pinned wrangler version.
 
-# Pin wrangler@4.x: wrangler-action@v3 defaults to wrangler@3.90, which ignores
-# `env:` blocks in wrangler.jsonc (only wrangler.toml was supported for envs in
-# v3). Every worker here uses jsonc + env.staging.
+# Pin wrangler@4.x for reproducible deploys (wrangler-action@v3 otherwise
+# defaults to an older wrangler).
 #
 # CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are read from the calling
-# job's env (wrangler-action picks them up automatically). Composite actions
-# cannot reach `secrets.*` directly, so set them as job-level env mapped from
-# secrets in the workflow.
+# job's env (set as job-level env mapped from secrets in the workflow);
+# composite actions cannot reach `secrets.*` directly.
 
 inputs:
   worker:
-    description: Worker directory under the repo root (e.g. proxy, onboard-auth, redirect).
+    description: Worker directory under the repo root (e.g. proxy, redirect).
     required: true
   command:
-    description: 'Wrangler command, e.g. "deploy --env staging" or "deploy".'
+    description: 'Wrangler command, e.g. "deploy".'
     required: true
   preCommands:
     description: 'Commands run before wrangler, e.g. "npm run canary" for the JCS chain-integrity canary.'
