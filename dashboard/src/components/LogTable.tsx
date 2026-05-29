@@ -55,6 +55,19 @@ function formatDate(iso: string) {
   return new Date(iso).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 }
 
+// Mirrors the canonical UTC format (YYYY-MM-DD HH:MM:SS) in the viewer's
+// timezone for the hover tooltip. en-CA + h23 keeps it symmetric so operators
+// can compare directly. UTC remains the source of truth in the cell text.
+function formatLocalTooltip(iso: string) {
+  const formatted = new Date(iso).toLocaleString('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+    timeZoneName: 'short',
+  })
+  return 'Local: ' + formatted.replace(',', '')
+}
+
 // Position within the chain. Visible logs are the most-recent N rows ordered
 // by logged_at DESC; the chain orders by id ASC. We approximate by assuming
 // the newest visible chained row is at position chainRowCount, the next is
@@ -391,7 +404,7 @@ export default function LogTable({ customerId, onUpgrade }: { customerId: string
                         <td className="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
                           {position !== null ? `#${position}` : '–'}
                         </td>
-                        <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{formatDate(log.logged_at)}</td>
+                        <td title={formatLocalTooltip(log.logged_at)} className="px-4 py-3 text-slate-400 whitespace-nowrap">{formatDate(log.logged_at)}</td>
                         {showSystemColumn && (
                           <td className="px-4 py-3 text-sm">
                             {log.system_id ? (
