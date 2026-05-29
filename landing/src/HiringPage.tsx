@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import './ds/tokens.css'
 import './HiringPage.css'
 
 /**
@@ -50,7 +51,7 @@ export default function HiringPage() {
   }, [])
 
   return (
-    <div ref={pageRef} className="hiring-page">
+    <div ref={pageRef} className="hiring-page ds-root">
       <header className="hiring-section hiring-topbar">
         <a className="hiring-home" href="/" aria-label="Back to AILedger home">
           <span className="hiring-home__arrow" aria-hidden="true">←</span>

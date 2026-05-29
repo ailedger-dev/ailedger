@@ -1,0 +1,156 @@
+/* ============================================================================
+ * Design-system primitives — utility classes, reveal convention, single-scroll
+ * fix, and the Inter @import. Pairs with tokens.css. A design-system PAGE
+ * imports BOTH tokens.css and this file; a tokens-only consumer imports just
+ * tokens.css.
+ *
+ * The Inter @import MUST stay the first statement in this file (CSS spec: any
+ * rule before an @import voids it and silently drops the font). It is loaded
+ * here — never globally / in index.html — so legacy pages stay on system-ui.
+ *
+ * DEPENDENCY: assumes the global `* { box-sizing: border-box }` reset from
+ * index.css (always loaded via main.tsx). The gutter/padding math relies on it.
+ * .ds-* class names avoid index.css's legacy .hero-*/.section-*/.sr-only.
+ * ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+
+/* ---- Page shell (tokens are defined on .ds-root in tokens.css; this paints it) ---- */
+.ds-root {
+  background: var(--ds-bg);
+  color: var(--ds-text-1);
+  min-height: 100vh;  /* page floor, NOT a per-section viewport — no scroll-snap anywhere */
+  font-family: var(--ds-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Single-document-scroll fix — overrides index.css's global overflow-x:hidden
+   (which silently makes html+body two scroll containers → double scrollbar)
+   ONLY when a .ds-root page is mounted. Scoped via :has() so legacy pages keep
+   their behavior. Touches ONLY overflow-x/overflow-y; the inherited
+   `max-width:100vw` from index.css is intentionally left in place. */
+html:has(.ds-root),
+body:has(.ds-root) {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+/* Sections are content-sized flex columns; the page adds only horizontal gutter. */
+.ds-root section { width: 100%; display: flex; flex-direction: column; }
+
+/* ---- Horizontal gutter ladder ---- */
+.ds-section { padding-left: 240px; padding-right: 240px; }
+@media (max-width: 1280px) { .ds-section { padding-left: 96px; padding-right: 96px; } }
+@media (max-width: 900px)  { .ds-section { padding-left: 32px; padding-right: 32px; } }
+@media (max-width: 600px)  { .ds-section { padding-left: 20px; padding-right: 20px; } }
+
+/* ---- Vertical-rhythm tiers ---- */
+.ds-section--standard { padding-top: 120px; padding-bottom: 120px; }
+@media (max-width: 900px) { .ds-section--standard { padding-top: 80px; padding-bottom: 80px; } }
+
+.ds-section--hero { padding-top: 96px; padding-bottom: 0; }
+@media (max-width: 900px) { .ds-section--hero { padding-top: 64px; } }
+
+.ds-section--cta { padding-top: 120px; padding-bottom: 160px; }
+@media (max-width: 900px) { .ds-section--cta { padding-top: 80px; padding-bottom: 112px; } }
+
+.ds-section--topbar { padding-top: 40px; }
+@media (max-width: 900px) { .ds-section--topbar { padding-top: 28px; } }
+
+/* ---- Type utilities ----
+   The .ds-display-*/.ds-lede classes carry the RESPONSIVE ladder; the raw
+   --ds-fs-* tokens are fixed-size escape hatches. Use the classes for type. */
+.ds-display-xl {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-medium);
+  font-size: 56px; line-height: 62px; letter-spacing: -1.12px;
+  color: var(--ds-text-1); text-wrap: balance;
+}
+@media (max-width: 900px) { .ds-display-xl { font-size: 44px; line-height: 50px; letter-spacing: -0.88px; } }
+@media (max-width: 600px) { .ds-display-xl { font-size: 36px; line-height: 42px; letter-spacing: -0.72px; } }
+
+.ds-display-md {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-medium);
+  font-size: 32px; line-height: 38px; letter-spacing: -0.32px; color: var(--ds-text-1);
+}
+@media (max-width: 600px) { .ds-display-md { font-size: 26px; line-height: 32px; letter-spacing: -0.26px; } }
+
+.ds-display-md--muted { color: var(--ds-text-2); }  /* CTA body reuses display-md metrics, muted */
+
+.ds-title-lg {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-medium);
+  font-size: 24px; line-height: 31px; letter-spacing: -0.12px; color: var(--ds-text-1);
+}
+.ds-title-md {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-medium);
+  font-size: 20px; line-height: 26px; letter-spacing: -0.10px; color: var(--ds-text-1);
+}
+.ds-lede {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-regular);
+  font-size: 18px; line-height: 27px; color: var(--ds-text-2);
+}
+@media (max-width: 600px) { .ds-lede { font-size: 16px; line-height: 24px; } }
+.ds-body {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-regular);
+  font-size: 16px; line-height: 24px; color: var(--ds-text-2);
+}
+.ds-label {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-regular);
+  font-size: 14px; line-height: 21px; color: var(--ds-text-2);
+}
+.ds-eyebrow {
+  margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-regular);
+  font-size: 13px; line-height: 17px; letter-spacing: 0.195px; text-transform: uppercase;
+  color: var(--ds-text-2); white-space: nowrap;
+}
+.ds-link-sm {
+  font-family: var(--ds-font-sans); font-weight: var(--ds-fw-regular);
+  font-size: 13px; line-height: 17px; color: var(--ds-accent);
+  text-decoration: none; white-space: nowrap;
+}
+.ds-link-sm:hover { text-decoration: underline; }
+
+/* ---- Focus ring (offset is per-element; default 3px) ---- */
+.ds-focus:focus-visible {
+  outline: var(--ds-focus-width) var(--ds-focus-style) var(--ds-focus-color);
+  outline-offset: var(--ds-focus-offset);
+  border-radius: var(--ds-radius-focus);
+}
+/* Row-link variant: 6px offset, NO border-radius (matches open-roles asymmetry) */
+.ds-focus--bare:focus-visible {
+  outline: var(--ds-focus-width) var(--ds-focus-style) var(--ds-focus-color);
+  outline-offset: 6px;
+}
+
+/* ---- Reveal convention (for marketing pages; opt-in per element) ----
+   The useReveal hook toggles .is-visible on each <section>; CSS cascades to
+   .ds-reveal children. The consuming page owns per-item stagger via
+   transition-delay (it knows its own document order). This generic convention
+   reveals ALL tagged descendants uniformly — if a page needs direct-child
+   selectivity (as /hiring does for its principles eyebrow), it must add
+   page-local selectors. /hiring keeps its OWN reveal CSS and does not use this. */
+.ds-root .ds-reveal {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 1000ms cubic-bezier(0.32, 0, 0.67, 0),
+    transform 1000ms cubic-bezier(0.32, 0, 0.67, 0);
+  will-change: opacity, transform;
+}
+.ds-root .is-visible .ds-reveal { opacity: 1; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-root .ds-reveal { transition: none; transform: none; opacity: 1; }
+}
+
+/* ---- Back-to-site link (the only nav chrome on a standalone DS page) ---- */
+.ds-home {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--ds-font-sans); font-weight: var(--ds-fw-medium);
+  font-size: 14px; line-height: 17px; letter-spacing: -0.07px;
+  color: var(--ds-text-2); text-decoration: none;
+}
+.ds-home:hover { color: var(--ds-text-1); }
+.ds-home:hover .ds-home__arrow { transform: translateX(-3px); }
+.ds-home__arrow { display: inline-block; transition: transform 180ms ease; }
+@media (prefers-reduced-motion: reduce) { .ds-home__arrow { transition: none; } }
