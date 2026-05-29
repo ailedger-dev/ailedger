@@ -2,7 +2,7 @@
  * Design-system tokens — extracted from /hiring (the design-language source of
  * truth). Dark, single-palette, theme-INDEPENDENT (no prefers-color-scheme flip
  * — /hiring has no light mode). Namespaced --ds-* so they never collide with
- * index.css's :root system (--bg-*/--fg-*/--accent*), which the legacy
+ * index.css's :root system (--bg-*, --fg-*, --accent*), which the legacy
  * /, /docs, /pricing, /about still consume. Scoped to .ds-root so they only
  * resolve where a design-system page mounts.
  *
@@ -29,7 +29,7 @@
   --ds-fw-medium:  500;
 
   /* ---- Type scale (font-size / line-height / letter-spacing, all px) ----
-     The RESPONSIVE contract lives in the .ds-display-*/.ds-lede utility classes
+     The RESPONSIVE contract lives in the .ds-display-* and .ds-lede utility classes
      (primitives.css), NOT in these raw tokens. A consumer that uses a raw
      --ds-fs-* token directly gets a FIXED size with no responsive steps. */
   --ds-fs-display-xl: 56px;  --ds-lh-display-xl: 62px;  --ds-ls-display-xl: -1.12px;

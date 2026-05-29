@@ -10,7 +10,7 @@
  *
  * DEPENDENCY: assumes the global `* { box-sizing: border-box }` reset from
  * index.css (always loaded via main.tsx). The gutter/padding math relies on it.
- * .ds-* class names avoid index.css's legacy .hero-*/.section-*/.sr-only.
+ * .ds-* class names avoid index.css's legacy .hero-*, .section-*, .sr-only.
  * ============================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
@@ -59,7 +59,7 @@ body:has(.ds-root) {
 @media (max-width: 900px) { .ds-section--topbar { padding-top: 28px; } }
 
 /* ---- Type utilities ----
-   The .ds-display-*/.ds-lede classes carry the RESPONSIVE ladder; the raw
+   The .ds-display-* and .ds-lede classes carry the RESPONSIVE ladder; the raw
    --ds-fs-* tokens are fixed-size escape hatches. Use the classes for type. */
 .ds-display-xl {
   margin: 0; font-family: var(--ds-font-sans); font-weight: var(--ds-fw-medium);
