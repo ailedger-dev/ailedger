@@ -4,9 +4,11 @@ description: Deploy a worker via cloudflare/wrangler-action with the repo's pinn
 # Pin wrangler@4.x for reproducible deploys (wrangler-action@v3 otherwise
 # defaults to an older wrangler).
 #
-# CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are read from the calling
-# job's env (set as job-level env mapped from secrets in the workflow);
-# composite actions cannot reach `secrets.*` directly.
+# Auth: the Cloudflare token/account are passed in as `apiToken`/`accountId`
+# inputs and forwarded to wrangler-action explicitly. wrangler-action@v3 does
+# NOT pick up an ambient CLOUDFLARE_API_TOKEN from the job env on its own — it
+# authenticates from these inputs — so the caller must pass them from
+# `secrets.*`. (Composite actions can't read `secrets.*` directly.)
 
 inputs:
   worker:
@@ -14,6 +16,12 @@ inputs:
     required: true
   command:
     description: 'Wrangler command, e.g. "deploy".'
+    required: true
+  apiToken:
+    description: 'Cloudflare API token — pass ${{ secrets.CLOUDFLARE_API_TOKEN }}.'
+    required: true
+  accountId:
+    description: 'Cloudflare account ID — pass ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.'
     required: true
   preCommands:
     description: 'Commands run before wrangler, e.g. "npm run canary" for the JCS chain-integrity canary.'
@@ -31,6 +39,8 @@ runs:
       continue-on-error: ${{ inputs.soft-fail == 'true' }}
       uses: cloudflare/wrangler-action@v3
       with:
+        apiToken: ${{ inputs.apiToken }}
+        accountId: ${{ inputs.accountId }}
         wranglerVersion: '4.84.1'
         workingDirectory: ${{ inputs.worker }}
         preCommands: ${{ inputs.preCommands }}
