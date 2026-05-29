@@ -113,9 +113,6 @@ jobs:
       # GitHub "production" environment enforces required-reviewers before
       # this job runs. Configure reviewers in repo Settings → Environments.
       name: production
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -130,11 +127,15 @@ jobs:
           worker: proxy
           command: deploy
           preCommands: npm run canary
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - uses: ./.github/actions/wrangler-deploy
         with:
           worker: redirect
           command: deploy
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   # Pages deploys — replaces the CF Pages Git integration (see top-of-file note).
   # Matrix runs landing + dashboard in parallel; fail-fast off so one project's
