@@ -132,4 +132,4 @@ SQL identifiers retain `decision_events` naming until the coordinated rename mig
 - Spec: `gt-lab/docs/param-canonicalization-spec-v1.md`
 - Method ladder: `gt-lab/docs/compliance-architecture/HANDOFF-decision-event-layer.md`
 - Schema: `proxy/migrations/20260512_decision_events_schema.sql` + `20260518_inferred_detection_events.sql`
-- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md) v1.2 (Jake-authored, ratified 2026-05-17; regulatory-context update 2026-05-20)
+- Charter: [ailedger-dev/charter/CHARTER.md](https://github.com/ailedger-dev/charter/blob/main/CHARTER.md)
