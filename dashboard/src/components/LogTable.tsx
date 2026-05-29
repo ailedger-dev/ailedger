@@ -52,10 +52,7 @@ function shortHash(hash: string | null) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
+  return new Date(iso).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 }
 
 // Position within the chain. Visible logs are the most-recent N rows ordered
