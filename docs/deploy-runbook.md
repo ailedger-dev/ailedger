@@ -1,32 +1,25 @@
 # AILedger Deploy Runbook
 
-**Scope:** every customer-facing surface in this repo — `proxy`, `onboard-auth`,
-`john-console`, `redirect` (Cloudflare Workers) and `landing`, `dashboard`
-(Cloudflare Pages).
+**Scope:** every customer-facing surface in this repo — `proxy`, `redirect`
+(Cloudflare Workers) and `landing`, `dashboard` (Cloudflare Pages).
 
 **Promotion model:**
 
 ```
-PR opened  ─────────►  staging (Workers + Pages preview)
-merge → main ────────►  staging (clean-main confirm)
-tag v* ──────────────►  production
+PR opened  ─────────►  gates + Pages preview (landing + dashboard)
+merge → main ────────►  Pages production
+tag v* ──────────────►  Workers production
 ```
 
-Staging is a **shared integration env**. Any PR may overwrite it. If two PRs
-need to test against staging simultaneously, coordinate in #deploys or stagger
-merges. Per-PR Workers previews are not configured — `.pages.dev` previews
-give you per-PR isolation for landing + dashboard; Workers use the one shared
-staging.
+**There is no remote Workers staging tier.** Workers are developed locally with
+`wrangler dev` and ship straight to production on a `v*` tag. The previous
+`*-staging.workers.dev` deploys were removed on 2026-05-28 — they put an
+unmonitored, publicly reachable copy of each Worker on the internet for no
+benefit at current scale. If a shared remote pre-prod is ever needed (e.g. for
+a team), reintroduce it **behind Cloudflare Access**, not on open `workers.dev`.
 
----
-
-## Before your first deploy
-
-Staging is **not** live out of the box. See
-[`staging-provisioning.md`](./staging-provisioning.md) for the one-time setup
-Jake owns: DNS zone, D1 / KV creation, and staging secrets. Until that is
-done, CI staging deploys will succeed against `workers.dev` subdomains but
-`staging.*.ailedger.dev` won't resolve.
+Pages still gets per-PR preview deploys (`*.pages.dev`) — that is the
+"staging" for `landing` + `dashboard`, and it is isolated per PR.
 
 ---
 
@@ -37,37 +30,35 @@ done, CI staging deploys will succeed against `workers.dev` subdomains but
    git checkout -b <short-description>
    ```
 
-2. **Work locally.** Use `wrangler dev` for Workers and `npm run dev` for
-   landing / dashboard. No deploy needed.
+2. **Work locally.** Use `wrangler dev` for Workers (`proxy`, `redirect`) and
+   `npm run dev` for `landing` / `dashboard`. `wrangler dev` emulates Workers
+   + KV + D1 locally, so no remote deploy is needed to iterate.
 
-3. **Open a PR.** CI runs the `gates` job (lint / typecheck / test). On green
-   gates, CI auto-deploys Workers to staging. Cloudflare Pages auto-previews
-   landing + dashboard on the same PR — the URLs appear in the PR check list.
+3. **Open a PR.** CI runs the `gates` job (lint / typecheck / test) and
+   auto-previews `landing` + `dashboard` on Cloudflare Pages — the `*.pages.dev`
+   URLs appear in the PR check list.
 
-4. **Validate on staging.** Hit the `.workers.dev` URL for Workers and the
-   `.pages.dev` URL for Pages. Smoke-check the flow you changed. Do NOT test
-   against prod — that's what staging is for.
+4. **Validate.** Workers: exercise locally via `wrangler dev`. Pages: hit the
+   per-PR `*.pages.dev` preview URL and smoke-check the flow you changed.
 
-5. **Merge to main.** CI re-runs gates and re-deploys staging from clean
-   main. This catches "works on my branch, breaks when merged" drift.
+5. **Merge to main.** CI re-runs gates and deploys `landing` + `dashboard` to
+   production.
 
-6. **Tag a release when you're ready to ship to prod.**
+6. **Ship Workers to prod by tagging a release.**
    ```bash
-   git tag v2026.04.21
-   git push origin v2026.04.21
+   git tag v2026.05.28
+   git push origin v2026.05.28
    ```
-   CI requires approval on the `production` GitHub environment before the
-   prod deploy runs (configure reviewers in repo Settings → Environments).
-   Once approved, Workers promote to prod. Pages prod deploy happens
-   automatically on merge to main — it is **not** gated on the tag. If you
-   need to gate Pages on the tag too, switch the CF Pages Git integration
-   off and add a `wrangler pages deploy` step here.
+   CI requires approval on the `production` GitHub environment before the prod
+   Worker deploy runs (configure reviewers in repo Settings → Environments).
+   Once approved, `proxy` + `redirect` promote to prod. Pages prod deploy
+   happens on merge to main and is **not** gated on the tag.
 
 ---
 
 ## Rollback
 
-### Workers (proxy, onboard-auth, john-console, redirect)
+### Workers (proxy, redirect)
 
 Cloudflare keeps the last 10 Worker versions. Roll back via dashboard or CLI:
 
@@ -103,66 +94,46 @@ ships and breaks prod:
 
 ## Secret rotation
 
-All runtime secrets live in Cloudflare (never in git). Rotation flow:
+All runtime secrets live in Cloudflare (never in git). With no remote staging,
+validate a new secret locally (`wrangler dev` with a `.dev.vars` value) before
+rotating prod:
 
 ```bash
-# Rotate in staging first:
-cd onboard-auth   # or proxy / john-console
-npx wrangler secret put SESSION_JWT_SECRET --env staging
+cd proxy
+npx wrangler secret put <NAME>
 # (paste new value at prompt)
-
-# Validate on staging — run smoke tests, verify nothing broke.
-
-# Then rotate in prod:
-npx wrangler secret put SESSION_JWT_SECRET
 ```
 
 **Rules:**
-- Staging and prod secrets **must be distinct values**. Never copy a prod
-  secret into staging. This is the whole point of env separation.
-- Session / refresh JWT secrets: rotation invalidates every session. Plan
-  for a mass logout when rotating.
-- Passkey RP_ID / RP_ORIGIN: changing these invalidates every credential
-  registered against the prior origin. **Do not change prod RP_ID** unless
-  you're ready to wipe `passkeys` and force everyone to re-register.
-
-**Never rotate secrets by committing new values to the repo.** If a secret
-leaks, rotate via `wrangler secret put` and consider the prior value
-compromised for its entire history in git.
+- Session / refresh JWT secrets: rotation invalidates every session. Plan for
+  a mass logout when rotating.
+- **Never rotate secrets by committing new values to the repo.** If a secret
+  leaks, rotate via `wrangler secret put` and consider the prior value
+  compromised for its entire history in git.
 
 ---
 
-## Promotion checklist (staging → prod)
+## Promotion checklist (→ prod)
 
 Before tagging a release:
 
 - [ ] PR merged to main, main green on CI.
-- [ ] Staging has been running the change for long enough to shake out
-  obvious regressions (minimum: you verified the changed surface manually;
-  recommended: 1+ full drip-cron cycle for proxy changes that touch email).
+- [ ] You verified the changed surface locally (`wrangler dev` for Workers,
+  `*.pages.dev` preview for Pages).
 - [ ] Release notes drafted (at minimum: what changed, what to watch for,
   how to roll back).
 - [ ] No open schema migrations that haven't been applied to prod.
-- [ ] If touching `proxy/` drip-email cron: verify staging has NO cron
-  configured so staging doesn't email real users. (`wrangler.jsonc`
-  `env.staging.triggers.crons` should be `[]`.)
-- [ ] If touching `onboard-auth/`: confirm staging RP_ID / RP_ORIGIN still
-  match the served origin.
 - [ ] Tag format: `vYYYY.MM.DD` or `vYYYY.MM.DD-<n>` for same-day re-roll.
 
 ---
 
 ## What lives where
 
-| Surface        | Runtime         | Prod route                        | Staging route (after DNS)              |
-|----------------|-----------------|-----------------------------------|----------------------------------------|
-| `proxy`        | Workers         | `proxy.ailedger.dev`              | `staging.proxy.ailedger.dev`           |
-| `onboard-auth` | Workers         | `login.joynerventures.com`        | `staging.login.joynerventures.com`     |
-| `john-console` | Workers         | `sales.ailedger.dev` (planned)    | `staging.sales.ailedger.dev` (planned) |
-| `redirect`     | Workers         | `dashboard.ailedger.dev`          | `staging.dashboard.ailedger.dev`       |
-| `landing`      | Pages           | `ailedger.dev`                    | `staging.ailedger.dev` (planned)       |
-| `dashboard`    | Pages           | `dash.ailedger.dev`               | `staging.dash.ailedger.dev` (planned)  |
+| Surface     | Runtime | Prod route             |
+|-------------|---------|------------------------|
+| `proxy`     | Workers | `proxy.ailedger.dev`   |
+| `redirect`  | Workers | `dashboard.ailedger.dev` |
+| `landing`   | Pages   | `ailedger.dev`         |
+| `dashboard` | Pages   | `dash.ailedger.dev`    |
 
-Until DNS for `staging.*` is provisioned, staging is served from
-`<worker-name>-staging.<subdomain>.workers.dev` and
-`<branch>.ailedger-{landing,dashboard}.pages.dev`.
+Pages previews are served from `<branch>.ailedger-{landing,dashboard}.pages.dev`.

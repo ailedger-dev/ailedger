@@ -7,13 +7,13 @@ pages_build_output_dir = "dist"
 #   production  — auto-deployed on push to the project's production branch (main)
 #   preview     — auto-deployed on every other branch / PR (acts as staging)
 #
-# This is an asymmetry with Workers (which use an `env.staging` block). For
-# Pages, "staging" IS the preview environment — there is no separate
+# For Pages, "staging" IS the preview environment — there is no separate
 # `env.staging` named environment. The `[env.preview]` block below is the
-# staging override. Keeping this file explicit so the env separation is
-# discoverable in the same place as the Worker wranglers.
+# preview override. (Workers in this repo have no remote staging tier at all —
+# they're developed locally with `wrangler dev` and deployed to prod on a v*
+# tag; see the runbook.)
 #
-# See docs/deploy-runbook.md and docs/staging-provisioning.md.
+# See docs/deploy-runbook.md.
 
 [env.production]
 # No Pages-level overrides today — landing is a static SPA. Add vars /
