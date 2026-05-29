@@ -40,6 +40,19 @@ function formatDate(iso: string) {
   return new Date(iso).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 }
 
+// Mirrors the canonical UTC format (YYYY-MM-DD HH:MM:SS) in the viewer's
+// timezone for the hover tooltip. en-CA + h23 keeps it symmetric so operators
+// can compare directly. UTC remains the source of truth in the cell text.
+function formatLocalTooltip(iso: string) {
+  const formatted = new Date(iso).toLocaleString('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+    timeZoneName: 'short',
+  })
+  return 'Local: ' + formatted.replace(',', '')
+}
+
 export default function ApiKeys({ customerId, onUpgrade }: { customerId: string; onUpgrade?: () => void }) {
   const [keys, setKeys] = useState<ApiKey[]>([])
   const [systems, setSystems] = useState<AiSystem[]>([])
@@ -374,8 +387,8 @@ export default function ApiKeys({ customerId, onUpgrade }: { customerId: string;
                   )}
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-slate-400">{key.key_prefix}...</td>
-                <td className="px-4 py-3 text-slate-400">{formatDate(key.created_at)}</td>
-                <td className="px-4 py-3 text-slate-400">{key.last_used_at ? formatDate(key.last_used_at) : 'Never'}</td>
+                <td title={formatLocalTooltip(key.created_at)} className="px-4 py-3 text-slate-400">{formatDate(key.created_at)}</td>
+                <td title={key.last_used_at ? formatLocalTooltip(key.last_used_at) : undefined} className="px-4 py-3 text-slate-400">{key.last_used_at ? formatDate(key.last_used_at) : 'Never'}</td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => deleteKey(key.id)}

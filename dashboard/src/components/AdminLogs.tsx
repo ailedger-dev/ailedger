@@ -20,6 +20,19 @@ function formatDate(iso: string) {
   return new Date(iso).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 }
 
+// Mirrors the canonical UTC format (YYYY-MM-DD HH:MM:SS) in the viewer's
+// timezone for the hover tooltip. en-CA + h23 keeps it symmetric so operators
+// can compare directly. UTC remains the source of truth in the cell text.
+function formatLocalTooltip(iso: string) {
+  const formatted = new Date(iso).toLocaleString('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+    timeZoneName: 'short',
+  })
+  return 'Local: ' + formatted.replace(',', '')
+}
+
 function shortHash(h: string | null) {
   return h ? h.slice(0, 12) + '...' : '-'
 }
@@ -118,7 +131,7 @@ export default function AdminLogs() {
                 <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-500">No logs yet.</td></tr>
               ) : logs.map((log) => (
                 <tr key={log.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                  <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{formatDate(log.logged_at)}</td>
+                  <td title={formatLocalTooltip(log.logged_at)} className="px-4 py-3 text-slate-400 whitespace-nowrap">{formatDate(log.logged_at)}</td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">{log.customer_id.slice(0, 8)}...</td>
                   <td className="px-4 py-3 text-white capitalize">{log.provider}</td>
                   <td className="px-4 py-3 text-slate-300">{log.model_name ?? '-'}</td>
