@@ -6,12 +6,18 @@ import './HiringPage.css'
  * Tokens and layout match Figma frame 5:3 in
  * figma.com/design/XyN2MXiVyGm4ZlriQlATnX/Hiring-Page---First-Draft
  *
- * Sections:
- *   1. Hero          — node 5:4   ✓
- *   2. Principles    — node 5:9   ✓
- *   3. Refusals      — node 7:45  ✓
- *   4. Open roles    — node 11:67 ✓
- *   5. CTA           — node 13:83 ✓
+ * Repositioned 2026-05-30: lead with the opportunity, then the role, then how
+ * we operate. The principled boundaries are retained — they're a recruiting
+ * asset and they mirror the canonical Charter — but they're framed as the moat
+ * that makes the evidence worth selling, not as a creed, and they sit below the
+ * "why this is a smart bet to join" case rather than above it.
+ *
+ * Sections (top to bottom):
+ *   1. Hero        — the product, in one line of buyer value
+ *   2. Why now     — the category, the timing, why early matters
+ *   3. Open roles  — what you'd own
+ *   4. How we win  — operating principles + Charter refusals, reframed
+ *   5. CTA
  *
  * Each section is its own component and is a direct child of <main>. The
  * page uses the normal single document scroll (no snap, no nested scroll
@@ -59,9 +65,9 @@ export default function HiringPage() {
       </header>
       <main>
         <HiringHero />
-        <HiringPrinciples />
-        <HiringRefusals />
+        <HiringWhyNow />
         <HiringOpenRoles />
+        <HiringPrinciples />
         <HiringCTA />
       </main>
     </div>
@@ -79,7 +85,8 @@ function HiringHero() {
         </h1>
         <p className="hiring-hero__lede">
           The substrate that makes AI systems in regulated and adversarial contexts
-          admissible under Federal Rule of Evidence 707 and the EU AI Act.
+          admissible under Federal Rule of Evidence 707 and the EU AI Act — and a
+          category being written into law right now. We&rsquo;re early, and we&rsquo;re hiring.
         </p>
         <a className="hiring-hero__cta" href="#open-roles">
           See open roles →
@@ -89,36 +96,34 @@ function HiringHero() {
   )
 }
 
-const PRINCIPLES: { title: string; body: string }[] = [
+/* Why now — the case for joining, before any doctrine. Reuses the principles
+   card grid so it inherits existing styling; no new CSS required. */
+const WHY_NOW: { title: string; body: string }[] = [
   {
-    title: 'Principled Boundaries',
-    body: "Companies in our refused categories don't get sold to, no matter the contract size. The Charter names them in writing.",
+    title: 'The rules just arrived.',
+    body: "Federal Rule of Evidence 707 and the EU AI Act turned 'we monitor our AI' into something you now have to prove. Regulated buyers need evidence that holds up in front of a regulator or a court — not assurances.",
   },
   {
-    title: 'Detection thresholds anchor to standards.',
-    body: 'EEOC four-fifths rule. Federal Reserve SR 11-7. OCC 2011-12. Customers can tighten thresholds toward stricter detection. They cannot loosen them. The refusal is structural, not policy.',
+    title: 'Budget exists. Good options don’t.',
+    body: 'Most governance tools ship a static PDF that goes stale the moment a model retrains. Continuous, tamper-evident, standards-anchored evidence is the gap — and it’s what buyers are actually trying to fund.',
   },
   {
-    title: 'Immutability is structural.',
-    body: "Hash-chained records. UPDATE and DELETE raise exceptions at the database layer, even from service accounts. We don't ask people to be careful with history; we make rewriting it impossible.",
-  },
-  {
-    title: 'We facilitate. We do not certify.',
-    body: "Compliance is the customer's work. We provide a substrate. The distinction matters because the alternative is audit theater, and audit theater is the failure mode we exist to refuse.",
+    title: 'Early enough to own the category.',
+    body: 'This market is forming, not formed. The work here is shaping how defensible AI evidence gets built and sold — early enough to define the category, real enough to sell today.',
   },
 ]
 
-function HiringPrinciples() {
+function HiringWhyNow() {
   return (
     <section
       className="hiring-section hiring-principles"
-      aria-labelledby="hiring-principles-label"
+      aria-labelledby="hiring-whynow-label"
     >
-      <p id="hiring-principles-label" className="hiring-eyebrow">
-        WHAT WE BELIEVE
+      <p id="hiring-whynow-label" className="hiring-eyebrow">
+        WHY NOW
       </p>
       <div className="hiring-principles__list">
-        {PRINCIPLES.map((p) => (
+        {WHY_NOW.map((p) => (
           <article key={p.title} className="hiring-principles__item">
             <h2 className="hiring-principles__title">{p.title}</h2>
             <p className="hiring-principles__body">{p.body}</p>
@@ -129,9 +134,79 @@ function HiringPrinciples() {
   )
 }
 
+type Role = {
+  title: string
+  meta: string
+  description: string
+  href: string
+}
+
+const ROLES: readonly Role[] = [
+  {
+    title: 'Founding Sales',
+    meta: 'Go-to-market · Remote (US / EU)',
+    description:
+      'Own go-to-market from zero. Find the regulated-industry buyers who need defensible AI evidence, build the pipeline, and shape how a new category gets sold. You’ll work directly with compliance leaders, general counsel, and risk owners — and you’ll qualify hard, because the deals that fit our substrate compound and the ones that don’t cost more than they pay.',
+    href: 'mailto:careers@ailedger.dev?subject=Founding%20Sales',
+  },
+]
+
+function HiringOpenRoles() {
+  return (
+    <section
+      id="open-roles"
+      className="hiring-section hiring-open-roles"
+      aria-labelledby="hiring-open-roles-heading"
+    >
+      <header className="hiring-open-roles__header">
+        <p className="hiring-eyebrow">OPEN ROLES</p>
+        <h2 id="hiring-open-roles-heading" className="hiring-display-md">
+          Build the go-to-market for a category that didn&rsquo;t exist last year.
+        </h2>
+      </header>
+      <ul className="hiring-open-roles__list">
+        {ROLES.map((role) => (
+          <li key={role.title} className="hiring-open-roles__row">
+            <a className="hiring-open-roles__link" href={role.href}>
+              <div className="hiring-open-roles__content">
+                <h3 className="hiring-open-roles__title">{role.title}</h3>
+                <p className="hiring-open-roles__meta">{role.meta}</p>
+                <p className="hiring-open-roles__description">{role.description}</p>
+              </div>
+              <span className="hiring-open-roles__arrow" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+const PRINCIPLES: { title: string; body: string }[] = [
+  {
+    title: 'Boundaries that protect the evidence.',
+    body: "We don't sell to companies in our refused categories, whatever the contract size — and it isn't idealism. A customer who games the audit turns our evidence into their liability and our reputation into collateral. The discipline is what keeps the record worth buying. The Charter names the lines in writing.",
+  },
+  {
+    title: 'Detection thresholds anchor to standards.',
+    body: 'EEOC four-fifths rule. Federal Reserve SR 11-7. OCC 2011-12. Customers can tighten thresholds toward stricter detection; they can’t loosen them. That’s precisely why a regulator trusts the output — and why it commands a premium.',
+  },
+  {
+    title: 'Immutability is structural.',
+    body: "Hash-chained records. UPDATE and DELETE raise exceptions at the database layer, even from service accounts. We don't ask people to be careful with history; we make rewriting it impossible.",
+  },
+  {
+    title: 'We facilitate. We do not certify.',
+    body: "Compliance is the customer's work; we provide the substrate. The distinction matters commercially: the alternative is audit theater, and audit theater is the failure mode that gets customers sued. Refusing to ship it is what makes our evidence defensible.",
+  },
+]
+
 /* Refusals copy mirrors the canonical Charter in ailedger-dev/charter
-   (CHARTER.md) and the published Charter at ailedger.dev/charter —
-   sourced verbatim from Figma node 7:45. */
+   (CHARTER.md) and the published Charter at ailedger.dev/charter. Kept here
+   verbatim and framed as the commercial moat; if the Charter is repositioned,
+   update both in step. */
 const REFUSED_CUSTOMERS: readonly string[] = [
   'Companies whose underlying AI use is itself the harm: predictive policing, social scoring, deceptive targeting of vulnerable populations.',
   'Companies that request detection configurations designed to suppress findings.',
@@ -146,18 +221,24 @@ const REFUSED_FEATURES: readonly string[] = [
   'Selective logging that excludes decision categories at customer request.',
 ]
 
-function HiringRefusals() {
+function HiringPrinciples() {
   return (
     <section
-      className="hiring-section hiring-refusals"
-      aria-labelledby="hiring-refusals-heading"
+      className="hiring-section hiring-principles"
+      aria-labelledby="hiring-principles-label"
     >
-      <header className="hiring-refusals__header">
-        <p className="hiring-eyebrow">THE CHARTER</p>
-        <h2 id="hiring-refusals-heading" className="hiring-display-md">
-          What we won&rsquo;t do
-        </h2>
-      </header>
+      <p id="hiring-principles-label" className="hiring-eyebrow">
+        HOW WE WIN
+      </p>
+      <div className="hiring-principles__list">
+        {PRINCIPLES.map((p) => (
+          <article key={p.title} className="hiring-principles__item">
+            <h2 className="hiring-principles__title">{p.title}</h2>
+            <p className="hiring-principles__body">{p.body}</p>
+          </article>
+        ))}
+      </div>
+
       <div className="hiring-refusals__columns">
         <RefusalsColumn title="Customers we refuse" items={REFUSED_CUSTOMERS} />
         <RefusalsColumn title={'Features we won’t build'} items={REFUSED_FEATURES} />
@@ -178,56 +259,6 @@ function RefusalsColumn({ title, items }: { title: string; items: readonly strin
         ))}
       </ul>
     </div>
-  )
-}
-
-type Role = {
-  title: string
-  meta: string
-  description: string
-  href: string
-}
-
-const ROLES: readonly Role[] = [
-  {
-    title: 'Founding Sales',
-    meta: 'Go-to-market · Remote (US / EU)',
-    description:
-      "Identify regulated-industry buyers whose AI compliance posture matches AILedger's substrate. Build the pipeline from scratch. Refuse the wrong customers cheerfully.",
-    href: 'mailto:careers@ailedger.dev?subject=Founding%20Sales',
-  },
-]
-
-function HiringOpenRoles() {
-  return (
-    <section
-      id="open-roles"
-      className="hiring-section hiring-open-roles"
-      aria-labelledby="hiring-open-roles-heading"
-    >
-      <header className="hiring-open-roles__header">
-        <p className="hiring-eyebrow">OPEN ROLES</p>
-        <h2 id="hiring-open-roles-heading" className="hiring-display-md">
-          Work on something that refuses easy answers.
-        </h2>
-      </header>
-      <ul className="hiring-open-roles__list">
-        {ROLES.map((role) => (
-          <li key={role.title} className="hiring-open-roles__row">
-            <a className="hiring-open-roles__link" href={role.href}>
-              <div className="hiring-open-roles__content">
-                <h3 className="hiring-open-roles__title">{role.title}</h3>
-                <p className="hiring-open-roles__meta">{role.meta}</p>
-                <p className="hiring-open-roles__description">{role.description}</p>
-              </div>
-              <span className="hiring-open-roles__arrow" aria-hidden="true">
-                →
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
   )
 }
 
