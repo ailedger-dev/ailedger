@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import { formatDate, formatLocalTooltip } from '../formatDate'
 import UpgradeModal from './UpgradeModal'
 
 interface ApiKey {
@@ -34,23 +35,6 @@ async function sha256hex(data: string): Promise<string> {
   const buf = new TextEncoder().encode(data)
   const hash = await crypto.subtle.digest('SHA-256', buf)
   return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
-}
-
-// Mirrors the canonical UTC format (YYYY-MM-DD HH:MM:SS) in the viewer's
-// timezone for the hover tooltip. en-CA + h23 keeps it symmetric so operators
-// can compare directly. UTC remains the source of truth in the cell text.
-function formatLocalTooltip(iso: string) {
-  const formatted = new Date(iso).toLocaleString('en-CA', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hourCycle: 'h23',
-    timeZoneName: 'short',
-  })
-  return 'Local: ' + formatted.replace(',', '')
 }
 
 export default function ApiKeys({ customerId, onUpgrade }: { customerId: string; onUpgrade?: () => void }) {

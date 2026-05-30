@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { formatDate, formatLocalTooltip } from '../formatDate'
 
 interface LogDetail {
   id: number
@@ -83,9 +84,21 @@ export default function LogDetailDrawer({
 
         <div className="p-5 space-y-5 text-xs">
           <Section label="Time">
-            <Field label="Logged at" value={log.logged_at} />
-            <Field label="Started" value={log.started_at} />
-            <Field label="Completed" value={log.completed_at} />
+            <Field
+              label="Logged at"
+              value={formatDate(log.logged_at)}
+              title={formatLocalTooltip(log.logged_at)}
+            />
+            <Field
+              label="Started"
+              value={log.started_at ? formatDate(log.started_at) : null}
+              title={log.started_at ? formatLocalTooltip(log.started_at) : undefined}
+            />
+            <Field
+              label="Completed"
+              value={log.completed_at ? formatDate(log.completed_at) : null}
+              title={log.completed_at ? formatLocalTooltip(log.completed_at) : undefined}
+            />
             <Field label="Latency" value={`${log.latency_ms}ms`} />
           </Section>
 
@@ -144,11 +157,11 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function Field({ label, value, mono = false }: { label: string; value: string | null; mono?: boolean }) {
+function Field({ label, value, mono = false, title }: { label: string; value: string | null; mono?: boolean; title?: string }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 gap-3">
       <span className="text-slate-500 shrink-0">{label}</span>
-      <span className={`text-slate-300 truncate text-right ${mono ? 'font-mono' : ''}`}>
+      <span title={title} className={`text-slate-300 truncate text-right ${mono ? 'font-mono' : ''}`}>
         {value ?? '-'}
       </span>
     </div>
