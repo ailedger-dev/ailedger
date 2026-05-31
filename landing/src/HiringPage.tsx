@@ -241,7 +241,7 @@ function HiringPrinciples() {
       </div>
 
       <div className="hiring-refusals__columns">
-        <RefusalsColumn title="Customers we refuse" items={REFUSED_CUSTOMERS} />
+        <RefusalsColumn title="Use cases we refuse" items={REFUSED_CUSTOMERS} />
         <RefusalsColumn title={'Features we won’t build'} items={REFUSED_FEATURES} />
       </div>
     </section>
