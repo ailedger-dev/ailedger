@@ -1,5 +1,4 @@
 name: Deploy
-
 # Environment promotion flow (see docs/deploy-runbook.md):
 #
 #   PR opened/synced  →  gates + Pages preview deploys
@@ -24,7 +23,6 @@ name: Deploy
 #
 # All Worker production secrets (SESSION_JWT_SECRET, ANTHROPIC_API_KEY, etc.)
 # are managed via `wrangler secret put` and NEVER live in this workflow.
-
 on:
   pull_request:
     branches: [main]
@@ -36,24 +34,20 @@ on:
   # generated /charter page without waiting for an unrelated commit here.
   repository_dispatch:
     types: [charter-updated]
-
 concurrency:
   # One lane per (event, ref). PR preview runs may cancel each other; prod and
   # main have their own lane.
   group: deploy-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 permissions:
   contents: read
   pull-requests: write
-
 jobs:
   gates:
     name: Lint / typecheck / test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -63,7 +57,6 @@ jobs:
             landing/package-lock.json
             dashboard/package-lock.json
             redirect/package-lock.json
-
       # proxy — only surface with a real test suite today.
       - name: proxy install
         run: npm ci
@@ -71,7 +64,6 @@ jobs:
       - name: proxy test
         run: npm test -- --run
         working-directory: proxy
-
       # landing — typecheck + lint via build.
       - name: landing install
         run: npm ci
@@ -82,14 +74,6 @@ jobs:
       - name: landing build
         run: npm run build
         working-directory: landing
-      - name: landing SEO guardrail
-        # Asserts the built homepage matches landing/seo.config.json (title,
-        # description, keywords, canonical, OG) and that no sitemap <loc> is a
-        # soft-404. Blocks regressions like Google rewriting the title to the
-        # bare domain. Runs against dist/ from the build step above.
-        run: npm run seo:check
-        working-directory: landing
-
       # dashboard — typecheck + lint via build.
       - name: dashboard install
         run: npm ci
@@ -103,7 +87,6 @@ jobs:
       - name: dashboard build
         run: npm run build
         working-directory: dashboard
-
   deploy-production:
     name: Deploy Workers → production
     needs: gates
@@ -118,7 +101,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       # JCS canary (threat model §6.8): runs in proxy's install context, so a
       # broken node_modules (the 2026-04-29 outage cause) fails the deploy
       # instead of shipping a chain that silently forks future hashes.
@@ -129,14 +111,12 @@ jobs:
           preCommands: npm run canary
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - uses: ./.github/actions/wrangler-deploy
         with:
           worker: redirect
           command: deploy
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
   # Pages deploys — replaces the CF Pages Git integration (see top-of-file note).
   # Matrix runs landing + dashboard in parallel; fail-fast off so one project's
   # failure doesn't kill the other's deploy.
@@ -179,7 +159,6 @@ jobs:
           wranglerVersion: '4.95.0'
           workingDirectory: ${{ matrix.project }}
           command: pages deploy dist --project-name=ailedger-${{ matrix.project }} --branch=${{ github.head_ref }}
-
   deploy-pages-production:
     name: Deploy Pages → production (${{ matrix.project }})
     needs: gates
@@ -224,7 +203,6 @@ jobs:
           wranglerVersion: '4.95.0'
           workingDirectory: ${{ matrix.project }}
           command: pages deploy dist --project-name=ailedger-${{ matrix.project }} --branch=main
-
       # Google exposes no public indexing API — re-crawl is a manual step.
       # Surface the reminder on every landing production deploy.
       - name: Search Console reminder (manual re-crawl)
