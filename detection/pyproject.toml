@@ -51,7 +51,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://ailedger.dev"
-Repository = "https://github.com/jakejjoyner/ailedger"
+Repository = "https://github.com/ailedger-dev/ailedger"
 Charter = "https://ailedger.dev/charter"
 
 [tool.hatch.build.targets.wheel]

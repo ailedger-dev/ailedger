@@ -131,7 +131,7 @@ pytest
 
 ## Repo posture (separate repo planned)
 
-Per AILedger posture v2 (`gt-lab/memory/project_ailedger_posture_v2_2026_05_12.md`), the Detection layer ships as a SEPARATE public repo from day one. v0.1.0 lives in the ailedger monorepo for development convenience; extraction to `github.com/jakejjoyner/ailedger-detection` (or canonical equivalent) is bead `hq-77p` work and gates the public-differentiation claim.
+Per AILedger posture v2 (`gt-lab/memory/project_ailedger_posture_v2_2026_05_12.md`), the Detection layer ships as a SEPARATE public repo from day one. v0.1.0 lives in the ailedger monorepo for development convenience; extraction to `github.com/ailedger-dev/ailedger-detection` (or canonical equivalent) is bead `hq-77p` work and gates the public-differentiation claim.
 
 The Apache 2.0 license is unchanged when the package extracts to its own repo. Issue tracking and contributions migrate at extraction time.
 

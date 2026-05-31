@@ -41,7 +41,7 @@ ailedger = "ailedger_cli.main:cli"
 
 [project.urls]
 Homepage = "https://ailedger.dev"
-Source = "https://github.com/jakejjoyner/ailedger"
+Source = "https://github.com/ailedger-dev/ailedger"
 
 [tool.setuptools.packages.find]
 where = ["src"]

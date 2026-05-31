@@ -773,7 +773,7 @@ never leaves the EU.
 Canonical refs:
 - https://ailedger.dev/llms.txt      (machine-readable product summary)
 - https://ailedger.dev/docs           (integration snippets per language)
-- https://github.com/jakejjoyner/ailedger  (MIT-licensed source)
+- https://github.com/ailedger-dev/ailedger  (AGPLv3 source)
 `
 
   // Code-block text colors. Background is --bg-code (stays dark both themes),
@@ -1850,7 +1850,7 @@ function About() {
           </ul>
         </div>
         <p style={{ color: 'var(--fg-subtle)', fontSize: 14, lineHeight: 1.75, marginBottom: 48 }}>
-          AILedger's canonical domain is <a href="https://ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>ailedger.dev</a>. The product dashboard is at <a href="https://dash.ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>dash.ailedger.dev</a>; the proxy at <a href="https://proxy.ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>proxy.ailedger.dev</a>. The Charter is published at <a href="/charter/v1" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>ailedger.dev/charter/v1</a>. The open-source Detection layer is available on <a href="https://github.com/jakejjoyner" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>GitHub</a> under the Apache 2.0 license.
+          AILedger's canonical domain is <a href="https://ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>ailedger.dev</a>. The product dashboard is at <a href="https://dash.ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>dash.ailedger.dev</a>; the proxy at <a href="https://proxy.ailedger.dev" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>proxy.ailedger.dev</a>. The Charter is published at <a href="/charter/v1" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>ailedger.dev/charter/v1</a>. The open-source Detection layer is available on <a href="https://github.com/ailedger-dev/ailedger-detection" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>GitHub</a> under the Apache 2.0 license.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginBottom: 16 }}>

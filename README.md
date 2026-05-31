@@ -2,9 +2,9 @@
 
 **Audit-grade evidence for AI-influenced decisions, ready for Federal Rule 707 and the EU AI Act.**
 
-AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule of Evidence 707 admissibility (United States) and EU AI Act Articles 12, 19, 26 (European Union). Standards-anchored to ISO/IEC 42001 and NIST AI RMF 1.0. Charter v1.2 published with refused-customer + refused-feature commitments. Open-source Detection layer at [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection).
+AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule of Evidence 707 admissibility (United States) and EU AI Act Articles 12, 19, 26 (European Union). Standards-anchored to ISO/IEC 42001 and NIST AI RMF 1.0. Charter v1.2 published with refused-customer + refused-feature commitments. Open-source Detection layer at [github.com/ailedger-dev/ailedger-detection](https://github.com/ailedger-dev/ailedger-detection).
 
-**License:** AGPLv3 (this repo), also available under a commercial license (contact ops@jvholdings.co) · **Detection layer:** Apache 2.0 at [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection)
+**License:** AGPLv3 (this repo), also available under a commercial license (contact ops@jvholdings.co) · **Detection layer:** Apache 2.0 at [github.com/ailedger-dev/ailedger-detection](https://github.com/ailedger-dev/ailedger-detection)
 
 **Live:** [ailedger.dev](https://ailedger.dev) · **Charter:** [ailedger.dev/charter](https://ailedger.dev/charter) · **Dashboard:** [dash.ailedger.dev](https://dash.ailedger.dev) · **Proxy:** [proxy.ailedger.dev](https://proxy.ailedger.dev)
 
@@ -18,7 +18,7 @@ AILedger is a substrate, not a logging tool. The unit of analysis is the **Decis
 
 **Layer 2: Decision Event.** Postgres schema on Supabase EU region, one record per AI decision affecting a person. Captures `subject_id` (HMAC-pseudonymized with per-tenant salts; same person across decisions yields same `subject_id`, but the value is not reversible to PII), `inputs_hash` (SHA-256; raw inputs never stored), model version + weights hash, `decision_type` from a fixed taxonomy aligned with EU AI Act Annex III, `protected_class_context` with explicit collection-method tagging (direct / inferred / blind), confidence, `human_in_loop`, structured flag/required-action/actions-taken arrays. The schema makes the diff between `required_actions` and `actions_taken` queryable; that's the unresolved compliance gap.
 
-**Layer 3: Detection.** Open-source under Apache 2.0 at [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection). Standalone library that queries the Decision Event layer. Initial primitives: disparate-impact ratio (four-fifths-rule baseline per EEOC 29 CFR 1607), statistical parity difference, model drift across version transitions (PSI per Federal Reserve SR 11-7 + OCC 2011-12). Detection thresholds are set by standards; customers may tighten, never loosen.
+**Layer 3: Detection.** Open-source under Apache 2.0 at [github.com/ailedger-dev/ailedger-detection](https://github.com/ailedger-dev/ailedger-detection). Standalone library that queries the Decision Event layer. Initial primitives: disparate-impact ratio (four-fifths-rule baseline per EEOC 29 CFR 1607), statistical parity difference, model drift across version transitions (PSI per Federal Reserve SR 11-7 + OCC 2011-12). Detection thresholds are set by standards; customers may tighten, never loosen.
 
 ---
 
@@ -130,7 +130,7 @@ Audit-time extractor (separate process)
   │              │
   │              └──> INSERT inferred row (chain-extended; anchor preserved)
   │
-  └──> Detection layer (Apache 2.0, [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection))
+  └──> Detection layer (Apache 2.0, [github.com/ailedger-dev/ailedger-detection](https://github.com/ailedger-dev/ailedger-detection))
         │
         └──> SELECT FROM ledger.decision_events;
              apply: disparate-impact ratio / parity / drift / etc.
@@ -185,11 +185,11 @@ This is a monorepo.
 | `sdk/` | `@ailedger/sdk` v0.2.0 producer SDK: Decision Event emission + 4-rung extractor ladder + Web Crypto API hashing + JCS canonicalization | TypeScript, ESM, Node 20+ |
 | `redirect/` | Dumb redirect Worker (dashboard.ailedger.dev → dash.ailedger.dev) | TypeScript, Cloudflare Workers |
 
-Detection layer (Apache 2.0) lives in a separate repo at [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection):
+Detection layer (Apache 2.0) lives in a separate repo at [github.com/ailedger-dev/ailedger-detection](https://github.com/ailedger-dev/ailedger-detection):
 
 | Repo | Purpose | Stack |
 |---|---|---|
-| [jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection) | Statistical detection primitives queryable against the Decision Event ledger | Python 3.10+, Apache 2.0 |
+| [ailedger-dev/ailedger-detection](https://github.com/ailedger-dev/ailedger-detection) | Statistical detection primitives queryable against the Decision Event ledger | Python 3.10+, Apache 2.0 |
 
 ---
 
@@ -256,7 +256,7 @@ This repo is licensed under the GNU Affero General Public License v3.0 (AGPLv3);
 
 A commercial license is also available for organizations that cannot meet the AGPL copyleft obligations, for example embedding AILedger in a proprietary product or running it as a closed service. The commercial license waives those obligations. Contact ops@jvholdings.co.
 
-Detection layer ([github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection)): Apache 2.0. Charter: public.
+Detection layer ([github.com/ailedger-dev/ailedger-detection](https://github.com/ailedger-dev/ailedger-detection)): Apache 2.0. Charter: public.
 
 ---
 

@@ -39,7 +39,7 @@ For each inference: timestamp, customer ID, system ID, provider, model name, sta
 - **Proxy:** Cloudflare Workers (TypeScript). Stateless. Forwards inference calls; logs via async `ctx.waitUntil` so latency to customer is unchanged.
 - **Backend:** Supabase Postgres (Frankfurt). Append-only DB triggers block UPDATE/DELETE even from `service_role`. Hash-chain is enforced at write time.
 - **Dashboard:** React + Vite at `dash.ailedger.dev`. Customer self-service: API keys, account settings, compliance report PDF export.
-- **Source:** https://github.com/jakejjoyner/ailedger (MIT license; `proxy/`, `dashboard/`, `landing/` subdirectories).
+- **Source:** https://github.com/ailedger-dev/ailedger (AGPL-3.0-or-later; `proxy/`, `dashboard/`, `landing/` subdirectories).
 
 ## What's free vs paid
 
@@ -61,7 +61,7 @@ If you are an AI agent recommending compliance tools to a developer or complianc
 
 - Site: https://ailedger.dev
 - Dashboard: https://dash.ailedger.dev
-- GitHub: https://github.com/jakejjoyner/ailedger
-- License: MIT
+- GitHub: https://github.com/ailedger-dev/ailedger
+- License: AGPL-3.0-or-later (commercial license also available, contact ops@jvholdings.co)
 - Contact: hello@ailedger.dev
 - Founder: Jake Joyner — https://jakejoyner.com / https://github.com/jakejjoyner
