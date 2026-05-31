@@ -30,7 +30,7 @@
     "eu-ai-act",
     "federal-rule-707"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "dependencies": {
     "canonicalize": "^2.0.0"
   },

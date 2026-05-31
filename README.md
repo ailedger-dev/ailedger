@@ -4,7 +4,7 @@
 
 AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule of Evidence 707 admissibility (United States) and EU AI Act Articles 12, 19, 26 (European Union). Standards-anchored to ISO/IEC 42001 and NIST AI RMF 1.0. Charter v1.2 published with refused-customer + refused-feature commitments. Open-source Detection layer at [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection).
 
-**License:** MIT (this repo) · **Detection layer:** Apache 2.0 at [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection)
+**License:** AGPLv3 (this repo), also available under a commercial license (contact ops@jvholdings.co) · **Detection layer:** Apache 2.0 at [github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection)
 
 **Live:** [ailedger.dev](https://ailedger.dev) · **Charter:** [ailedger.dev/charter](https://ailedger.dev/charter) · **Dashboard:** [dash.ailedger.dev](https://dash.ailedger.dev) · **Proxy:** [proxy.ailedger.dev](https://proxy.ailedger.dev)
 
@@ -250,7 +250,13 @@ AILedger does not certify compliance. We provide a substrate; compliance is the 
 
 ## License
 
-This repo: MIT. Detection layer ([github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection)): Apache 2.0. Charter: public.
+Copyright (c) 2026 Jake Joyner.
+
+This repo is licensed under the GNU Affero General Public License v3.0 (AGPLv3); see [LICENSE](LICENSE). Because AGPLv3 treats network use as distribution, anyone who runs a modified version of this software as a network service must make their complete corresponding source available to its users under the same terms.
+
+A commercial license is also available for organizations that cannot meet the AGPL copyleft obligations, for example embedding AILedger in a proprietary product or running it as a closed service. The commercial license waives those obligations. Contact ops@jvholdings.co.
+
+Detection layer ([github.com/jakejjoyner/ailedger-detection](https://github.com/jakejjoyner/ailedger-detection)): Apache 2.0. Charter: public.
 
 ---
 
