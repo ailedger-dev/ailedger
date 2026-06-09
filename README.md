@@ -254,4 +254,4 @@ This repo: MIT. Detection layer ([github.com/jakejjoyner/ailedger-detection](htt
 
 ---
 
-Contact: `ops@jvholdings.co`.
+Contact: `team@ailedger.dev`.
