@@ -21,6 +21,7 @@
     "wrangler": "^4.95.0"
   },
   "dependencies": {
+    "@ailedger/sdk": "file:../sdk",
     "canonicalize": "^3.0.0"
   }
 }

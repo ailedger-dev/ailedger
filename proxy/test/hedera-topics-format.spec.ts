@@ -41,7 +41,7 @@ describe('tenant-created announcement', () => {
     adminKeyFingerprints: [FP, FP, FP],
   };
 
-  it('round-trips through build → encode → parse', () => {
+  it('round-trips through build/encode/parse', () => {
     const { announcement, encoded } = buildTenantCreatedAnnouncement(params);
     expect(encoded.byteLength).toBeLessThanOrEqual(1024);
     const parsed = parseTenantCreatedAnnouncement(encoded);
