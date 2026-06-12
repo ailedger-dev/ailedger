@@ -162,6 +162,26 @@ async function loadChainState(store: OutboxStore, tenantRef: string): Promise<Ch
   return raw ? (JSON.parse(raw) as ChainState) : { prevHash: GENESIS_PREV_HASH };
 }
 
+/** True if the tenant has local chain state (false ⇒ a drain would start at genesis). */
+export async function hasChainState(store: OutboxStore, tenantRef: string): Promise<boolean> {
+  return (await store.get(chainStateKey(tenantRef))) !== null;
+}
+
+/**
+ * Seed the tenant's chain tail explicitly — used by drainers recovering from
+ * state loss: read the topic's last message from a mirror, hash its bytes,
+ * seed here. Prevents a fresh drainer from forking the app chain back to
+ * genesis on a topic that already has records.
+ */
+export async function seedChainState(
+  store: OutboxStore,
+  tenantRef: string,
+  prevHash: string,
+): Promise<void> {
+  if (!/^[0-9a-f]{64}$/.test(prevHash)) throw new Error('prevHash must be 64-hex');
+  await store.put(chainStateKey(tenantRef), JSON.stringify({ prevHash } satisfies ChainState));
+}
+
 /**
  * Drain one tenant's queue: decisions individually in order, then a log
  * batch if due. Returns counts; on a submit failure the remaining queue is

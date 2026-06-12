@@ -22,6 +22,8 @@
   },
   "dependencies": {
     "@ailedger/sdk": "file:../sdk",
-    "canonicalize": "^3.0.0"
+    "@hono/node-server": "^2.0.4",
+    "canonicalize": "^3.0.0",
+    "hono": "^4.12.25"
   }
 }
