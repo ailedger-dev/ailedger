@@ -9,6 +9,9 @@
 // output differs from the byte-for-byte expected value. Run BEFORE
 // `wrangler deploy` in CI (see .github/workflows/deploy.yml).
 import canonicalize from 'canonicalize';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const input = { z: 1, a: { y: 2, x: [3, 1, 2] }, b: 'test' };
 const expected = '{"a":{"x":[3,1,2],"y":2},"b":"test","z":1}';
@@ -21,4 +24,28 @@ if (actual !== expected) {
   process.exit(1);
 }
 
-console.log('JCS canary OK');
+// Full golden corpus (testdata/) — same vectors enforced in sdk and the
+// Python CLI. Catches a divergent `canonicalize` bump in THIS package's
+// node_modules before it can fork chain hashes (sdk and proxy pin different
+// major versions; byte-compatibility is asserted, not assumed).
+const corpusPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'testdata',
+  'jcs-golden-vectors.json',
+);
+const corpus = JSON.parse(readFileSync(corpusPath, 'utf8'));
+let failures = 0;
+for (const vector of corpus.vectors) {
+  const got = canonicalize(vector.input);
+  if (got !== vector.expected) {
+    failures++;
+    console.error(`JCS corpus vector FAILED: ${vector.name}`);
+    console.error('expected:', vector.expected);
+    console.error('actual:  ', got);
+  }
+}
+if (failures > 0) process.exit(1);
+
+console.log(`JCS canary OK (1 fixed vector + ${corpus.vectors.length} corpus vectors)`);
