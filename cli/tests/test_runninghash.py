@@ -71,6 +71,29 @@ def test_mid_chain_dump_skips_unverifiable_first_row() -> None:
     assert (matches, checks) == (4, 4)
 
 
+def test_real_mainnet_fixture_pins_the_detected_layout() -> None:
+    """Three real consecutive messages from mainnet topic 0.0.368908.
+
+    Empirical ground truth (2026-06-12, validated 59/59 on topic 0.0.368908
+    and 39/39 on 0.0.10570984): the v3 preimage uses Java ObjectOutputStream
+    framing with payer account included and nanos as int32. If this test ever
+    fails after an SDK/library change, production verification is broken.
+    """
+    import json
+    from pathlib import Path
+
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures" / "hcs-mainnet-368908.json").read_text()
+    )
+    messages = sorted(
+        (TopicMessage.from_mirror(r) for r in fixture["messages"]),
+        key=lambda m: m.sequence_number,
+    )
+    results = detect_layout(messages)
+    full_matches = [name for name, (m, c) in results.items() if c and m == c]
+    assert full_matches == ["v3/jos/payer/nanos-i32"]
+
+
 def test_from_mirror_parses_rest_row() -> None:
     row = {
         "consensus_timestamp": "1780000000.123456789",

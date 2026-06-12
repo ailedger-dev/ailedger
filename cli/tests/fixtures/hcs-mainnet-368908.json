@@ -1,0 +1,32 @@
+{
+ "description": "Three consecutive real messages from Hedera mainnet topic 0.0.368908 (public benchmark topic), captured 2026-06-12 via mainnet.mirrornode.hedera.com. Regression fixture pinning the empirically-detected v3 running-hash preimage layout (java-object-stream framing, payer included, nanos int32).",
+ "messages": [
+  {
+   "consensus_timestamp": "1781294868.088657210",
+   "topic_id": "0.0.368908",
+   "payer_account_id": "0.0.256009",
+   "sequence_number": 22589154,
+   "message": "MTc4MTI5NDg2NzYyNCBma0xacnh4WnNSUWtCTUt6aE91RGlOcHp3Ull1QWNJdXFkRW1XcUFvWkJRZlpMZGZlVGZKY1FCWEZFSm9sTUJXVUltWXlKSGhjQVd6bXBMWElPb2pqZlJnT01CRGl1WWRTSWtzbUlXWVVyZmZhQmhWZW9wQ3ROUmJRRG5QalRFTFZjU1ZXdUpmVk5LQlRpblFzRVFBdWNvQVdJY05PTHFRRE15eFlJRXZPVmdWTExqb3ZFbVBVdnhYbm5qT29sbWdFckliRk1DWU9rc0NSU3htZ2tBbkZseEFSZWhwWEJTb09saHJaY0p3eG9XUWJTWkFJSw==",
+   "running_hash": "HvIdSem4csG6ZrvWbkPUh44cfHwK4AKWepuk+//G63T5rrQcHDvtm6aSOeJsVuxm",
+   "running_hash_version": 3
+  },
+  {
+   "consensus_timestamp": "1781294871.112234000",
+   "topic_id": "0.0.368908",
+   "payer_account_id": "0.0.256009",
+   "sequence_number": 22589155,
+   "message": "MTc4MTI5NDg3MDE2MCBNZVpBQklPTHlkYmJpUXVYVkJYTmVaREJIUW9iWHJicFBIc0xISXJtUVhEaExQV0xFZ1lPWGNjemRLVkJLYmR4SVFUV3hYeGN5UUFCWW5yaHFPTnRYb0RRSlVTUXJJelhjTHdscWhjdWJBTlhhTFdHWkFac05xTEZtSHdJRk1VVFZzUVRpSmhGU2paQUp4ak14TkxJUW1ITnBSdlVnRUhkaFlGbXRveEZDaGt6WFJYYVpiSlNLQVRUZnBFRUdES2pLaVhaVW16UVNwakJEeW9Yc3RXempNRGpiR3dyblRBWWRJS2VwQUVOYWtjcEd4R3hvbw==",
+   "running_hash": "q/8tkESie3qjGV9jHXLPdiI8Wz6Ns1trSxqw/dA0TkvtTzaPs9MpSymi4Ycmd6rx",
+   "running_hash_version": 3
+  },
+  {
+   "consensus_timestamp": "1781294878.225144000",
+   "topic_id": "0.0.368908",
+   "payer_account_id": "0.0.256009",
+   "sequence_number": 22589156,
+   "message": "MTc4MTI5NDg3NzYyNCBqVUR2anVOTmdEcXVOenNFbGlNS3Zsb0xNbmV6V1BvdlpjYmV6d2Fpb3l0SWFiV3BtaEtFeFdta0lLT3V5ZlZ3WG1HT0tzSnhVRFhSRlZkeWR5b21BZ0ZFRG11ZW5uU0RRUWZJR05CTGZmU09nWGpLSG1QeUdUbXVRSEtRT0tKelh5WnVuZUNKdXRJWExzT29RUmZhTEVIeWt0alFaTVNVUERMQnNabFVHWUV5c0RscnV0cU9YR0ZwVVF3Q3dYdmtSTFlaeklDcmJLZEZycnhWbHlOWmhNUUd4c2phUVR1TGtjZWZLVW1keGlEeW5mQXlrdg==",
+   "running_hash": "Y5EIBJNqEp3+dIQbjBHtElcZGpgSSAiy8iZinpKpp5yyl5WVzY0LiJ4ehbaG/d4U",
+   "running_hash_version": 3
+  }
+ ]
+}

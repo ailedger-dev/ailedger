@@ -40,7 +40,7 @@ before committing to the design.
 | 2 | submit→receipt latency (p50 over the lifecycle run) | TBD |
 | 3 | consensus→mirror REST availability lag | TBD |
 | 4 | Burst behavior: N=25 concurrent submits — success rate, error classes (BUSY/throttle), effective sealed/s | TBD |
-| 5 | Running-hash v3 preimage layout (detector verdict over a multi-message dump) | TBD |
+| 5 | Running-hash v3 preimage layout (detector verdict over a multi-message dump) | **RESOLVED 2026-06-12 (no credentials needed — public mainnet mirror reads):** `v3/jos/payer/nanos-i32` — the preimage is framed with Java `ObjectOutputStream` serialization (`ACED0005` header, `TC_ARRAY`+classdesc around the two byte arrays, primitives in one `TC_BLOCKDATA` chunk), payer account id included, nanos as int32. Validated 59/59 consecutive links on topic 0.0.368908 and 39/39 on 0.0.10570984; all raw-concatenation candidates fail 0/N. Regression fixture: `cli/tests/fixtures/hcs-mainnet-368908.json`. Python recompute is byte-exact with the network. |
 | 6 | Rotation ceremony: 2-of-3 adminKey submitKey replacement verified both directions (old rejected, new sealed) | TBD |
 | 7 | Topic create fee with threshold adminKey | TBD |
 

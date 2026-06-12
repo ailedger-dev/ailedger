@@ -7,18 +7,23 @@ at the heart of verifier v2 — but the exact byte layout of the v3 preimage is
 not stated in the public docs (gap recorded in the Phase 0 ADR).
 
 This module therefore implements the candidate layouts and *detects* the one
-that matches live network data:
+that matches live network data. The logical fields are:
 
-    SHA384(
-        previous_running_hash (48 bytes)
-        || version            (int64 BE, = 3)
-        [|| payer shard/realm/num   (3 × int64 BE)]      # candidates
-        || topic shard/realm/num    (3 × int64 BE)
-        || consensus seconds        (int64 BE)
-        || consensus nanos          (int32 or int64 BE)  # candidates
-        || sequence_number          (int64 BE)
-        || SHA384(message)          (48 bytes)
-    )
+    previous_running_hash (48 bytes)
+    version               (int64 BE, = 3)
+    [payer shard/realm/num   (3 × int64 BE)]        # candidate dimension
+    topic shard/realm/num    (3 × int64 BE)
+    consensus seconds        (int64 BE)
+    consensus nanos          (int32 or int64 BE)    # candidate dimension
+    sequence_number          (int64 BE)
+    SHA384(message)          (48 bytes)
+
+…and the framing is a candidate dimension too: consensus nodes build the
+preimage with Java's ObjectOutputStream (stream header ``ACED0005``,
+``TC_ARRAY``/``TC_CLASSDESC`` framing around the two byte arrays, primitives
+coalesced into a ``TC_BLOCKDATA`` chunk), not raw concatenation. Empirical
+verdict against mainnet topic 0.0.368908: **java-object-stream / payer
+included / nanos int32** matches; all raw-concatenation variants fail.
 
 Validation walks a mirror-node dump (``spike-hcs.mts mirror-dump`` output):
 for every adjacent pair, recompute message N's hash from message N-1's
@@ -42,23 +47,38 @@ __all__ = ["Layout", "LAYOUTS", "TopicMessage", "step", "detect_layout"]
 GENESIS = bytes(48)
 RUNNING_HASH_VERSION = 3
 
+# Java ObjectOutputStream framing constants (java.io.ObjectStreamConstants).
+_JOS_HEADER = bytes.fromhex("aced0005")  # STREAM_MAGIC + STREAM_VERSION
+# TC_CLASSDESC for byte[]: classname "[B", serialVersionUID, SC_SERIALIZABLE,
+# zero fields, TC_ENDBLOCKDATA, TC_NULL superclass.
+_JOS_BYTE_ARRAY_CLASSDESC = bytes.fromhex("7200025b42acf317f8060854e00200007870")
+_JOS_TC_ARRAY = b"\x75"
+# Second byte[] reuses the class descriptor via TC_REFERENCE to handle 0x7E0000.
+_JOS_CLASSDESC_REF = b"\x71\x00\x7e\x00\x00"
+_JOS_TC_BLOCKDATA = b"\x77"
+
 
 @dataclass(frozen=True)
 class Layout:
     """One candidate preimage layout."""
 
+    java_object_stream: bool
     includes_payer: bool
     nanos_int64: bool
 
     @property
     def name(self) -> str:
+        framing = "jos" if self.java_object_stream else "raw"
         payer = "payer" if self.includes_payer else "no-payer"
         nanos = "nanos-i64" if self.nanos_int64 else "nanos-i32"
-        return f"v3/{payer}/{nanos}"
+        return f"v3/{framing}/{payer}/{nanos}"
 
 
 LAYOUTS = [
-    Layout(includes_payer=p, nanos_int64=n) for p in (True, False) for n in (True, False)
+    Layout(java_object_stream=j, includes_payer=p, nanos_int64=n)
+    for j in (True, False)
+    for p in (True, False)
+    for n in (True, False)
 ]
 
 
@@ -95,10 +115,8 @@ def _entity(entity: str) -> tuple[int, int, int]:
     return int(shard), int(realm), int(num)
 
 
-def step(prev: bytes, msg: TopicMessage, layout: Layout) -> bytes:
-    """Compute the running hash after *msg*, given the hash before it."""
+def _primitives(msg: TopicMessage, layout: Layout) -> bytes:
     buf = bytearray()
-    buf += prev
     buf += struct.pack(">q", RUNNING_HASH_VERSION)
     if layout.includes_payer:
         buf += struct.pack(">qqq", *msg.payer_id)
@@ -106,8 +124,36 @@ def step(prev: bytes, msg: TopicMessage, layout: Layout) -> bytes:
     buf += struct.pack(">q", msg.seconds)
     buf += struct.pack(">q" if layout.nanos_int64 else ">i", msg.nanos)
     buf += struct.pack(">q", msg.sequence_number)
-    buf += hashlib.sha384(msg.message).digest()
-    return hashlib.sha384(bytes(buf)).digest()
+    return bytes(buf)
+
+
+def step(prev: bytes, msg: TopicMessage, layout: Layout) -> bytes:
+    """Compute the running hash after *msg*, given the hash before it."""
+    digest = hashlib.sha384(msg.message).digest()
+    prims = _primitives(msg, layout)
+    if not layout.java_object_stream:
+        preimage = prev + prims + digest
+        return hashlib.sha384(preimage).digest()
+    # Replicate java.io.ObjectOutputStream byte-for-byte:
+    #   writeObject(prev)  → TC_ARRAY + full classdesc (first occurrence)
+    #   writeLong/Int…     → one TC_BLOCKDATA chunk (primitives coalesce)
+    #   writeObject(digest)→ TC_ARRAY + TC_REFERENCE to the byte[] classdesc
+    assert len(prims) < 256, "block-data short form only"
+    preimage = (
+        _JOS_HEADER
+        + _JOS_TC_ARRAY
+        + _JOS_BYTE_ARRAY_CLASSDESC
+        + struct.pack(">i", len(prev))
+        + prev
+        + _JOS_TC_BLOCKDATA
+        + bytes([len(prims)])
+        + prims
+        + _JOS_TC_ARRAY
+        + _JOS_CLASSDESC_REF
+        + struct.pack(">i", len(digest))
+        + digest
+    )
+    return hashlib.sha384(preimage).digest()
 
 
 def detect_layout(messages: list[TopicMessage]) -> dict[str, tuple[int, int]]:
