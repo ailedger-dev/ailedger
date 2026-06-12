@@ -1,0 +1,22 @@
+{
+  "name": "@ailedger/indexer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Operator-independent evidence indexer: rebuilds the AILedger read layer from public Hedera mirror data. Holds no privileged keys; derived state only.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "start": "node scripts/indexer.mts"
+  },
+  "dependencies": {
+    "@ailedger/sdk": "file:../sdk",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@types/node": "^25.6.0",
+    "typescript": "^5.5.2",
+    "vitest": "~3.2.0"
+  }
+}
