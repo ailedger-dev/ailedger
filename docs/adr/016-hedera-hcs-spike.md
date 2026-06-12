@@ -1,8 +1,8 @@
 # ADR-016 — Hedera HCS spike: measurements before the rails (Phase 0)
 
-Status: **in progress** — instruments built; live testnet run pending operator
-account provisioning. This ADR becomes the go/no-go record for building the
-HCS-based evidence rails.
+Status: **complete — GO** (testnet run 2026-06-12, topic `0.0.9217909`;
+running-hash layout additionally validated against mainnet topics
+`0.0.368908` and `0.0.10570984`).
 
 ## Context
 
@@ -36,13 +36,13 @@ before committing to the design.
 
 | # | Question | Result |
 |---|---|---|
-| 1 | Actual fee at 200 B / 700 B / 1024 B / 5120 B (chunked) vs fee-schedule model ($0.0008 + $0.00000068/B > 100 B) | TBD |
-| 2 | submit→receipt latency (p50 over the lifecycle run) | TBD |
-| 3 | consensus→mirror REST availability lag | TBD |
-| 4 | Burst behavior: N=25 concurrent submits — success rate, error classes (BUSY/throttle), effective sealed/s | TBD |
+| 1 | Actual fee at 200 B / 700 B / 1024 B / 5120 B (chunked) vs fee-schedule model ($0.0008 + $0.00000068/B > 100 B) | **$0.000338 / $0.000678 / $0.000898 / $0.004492.** The per-byte rate matches the docs exactly (the 200→700 B delta is 0.68 µ$/B); the base component measures ≈$0.0002, well under the documented $0.0008 — measured cost is ~½ the model, in our favor. Chunked = one full fee per chunk (5120 B ≈ 5×1024 B fee). Chunk receipts return out of array order; sequence numbers are contiguous. |
+| 2 | submit→receipt latency (p50 over the lifecycle run) | **~1.6–1.9 s** single message (incl. receipt query round-trip); ~3.2 s for a 5-chunk submit. |
+| 3 | consensus→mirror REST availability lag | **~636 ms** — comfortably compatible with the async `queued → sealed` ack model and a fresh-feeling indexer. |
+| 4 | Burst behavior: N=25 concurrent submits — success rate, error classes (BUSY/throttle), effective sealed/s | **25/25 OK, zero throttle/BUSY errors, 9.3 sealed/s effective** (client-side receipt-wait bound, not a network ceiling; no throttling observed at this concurrency from one payer). |
 | 5 | Running-hash v3 preimage layout (detector verdict over a multi-message dump) | **RESOLVED 2026-06-12 (no credentials needed — public mainnet mirror reads):** `v3/jos/payer/nanos-i32` — the preimage is framed with Java `ObjectOutputStream` serialization (`ACED0005` header, `TC_ARRAY`+classdesc around the two byte arrays, primitives in one `TC_BLOCKDATA` chunk), payer account id included, nanos as int32. Validated 59/59 consecutive links on topic 0.0.368908 and 39/39 on 0.0.10570984; all raw-concatenation candidates fail 0/N. Regression fixture: `cli/tests/fixtures/hcs-mainnet-368908.json`. Python recompute is byte-exact with the network. |
-| 6 | Rotation ceremony: 2-of-3 adminKey submitKey replacement verified both directions (old rejected, new sealed) | TBD |
-| 7 | Topic create fee with threshold adminKey | TBD |
+| 6 | Rotation ceremony: 2-of-3 adminKey submitKey replacement verified both directions (old rejected, new sealed) | **VERIFIED** on `0.0.9217909`: update signed by a *different* admin pair than creation (any-2-of-3 proven); old submitKey rejected (`INVALID_SIGNATURE`), new submitKey sealed seq 34. Genesis also confirmed: seq 1 verifies against a 48-zero-byte previous hash. |
+| 7 | Topic create fee with threshold adminKey | **$0.0502** (≈5× the bare $0.01 — key complexity priced in; negligible one-time per tenant). |
 
 ## Procedure for the live run
 
@@ -58,7 +58,21 @@ cd ../proxy && node scripts/spike-hcs.mts rotate <topicId>
 
 ## Decision
 
-Pending the table above. Go criteria: fees within 20% of model; mirror lag
-compatible with an async `queued → sealed` ack model; a unique running-hash
-layout detected (Python recompute matches the network byte-for-byte); rotation
-rehearsed end-to-end.
+**GO.** All criteria met: measured fees are *below* the model (≈$0.00068 for a
+700 B evidence record — the cost model's $0.0012 is conservative by ~1.8×);
+mirror lag (~0.6 s) fits the async `queued → sealed` ack; a unique running-hash
+layout was detected and pinned (`v3/jos/payer/nanos-i32`, byte-exact Python
+recompute, validated on two mainnet topics and our testnet topic including
+genesis and chunked messages); the 2-of-3 rotation ceremony was rehearsed
+end-to-end with both-direction proof.
+
+Operational lessons folded into Phase 1:
+
+- **Operator key type is ambiguous in bare hex** (portal accounts are commonly
+  ECDSA; naive ED25519 parsing yields precheck `INVALID_SIGNATURE`). The spike
+  resolves the key by matching candidate public keys against the account's key
+  on file at the mirror node — the relay's Hedera client must do the same.
+- **Chunk receipts complete out of order**; consumers must order by sequence
+  number, never by response order.
+- **Local dev/CI targets Solo, not hiero-local-node** — local node enters a
+  6-month deprecation (support ends September 2026).

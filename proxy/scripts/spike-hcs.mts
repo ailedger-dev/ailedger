@@ -48,7 +48,49 @@ interface SpikeKeys {
   createdAt: string;
 }
 
-function client(): Client {
+async function resolveOperatorKey(accountId: string, keyStr: string): Promise<PrivateKey> {
+  // A bare hex private key is ambiguous (ED25519 vs ECDSA) and guessing wrong
+  // yields INVALID_SIGNATURE at precheck. Parse under every encoding, then
+  // pick the candidate whose public key matches the account's key on file at
+  // the mirror node.
+  const cleaned = keyStr.startsWith('0x') ? keyStr.slice(2) : keyStr;
+  const candidates: PrivateKey[] = [];
+  for (const parse of [
+    PrivateKey.fromStringDer,
+    PrivateKey.fromStringECDSA,
+    PrivateKey.fromStringED25519,
+  ]) {
+    try {
+      candidates.push(parse.call(PrivateKey, cleaned));
+    } catch {
+      // not this encoding
+    }
+  }
+  if (candidates.length === 0) {
+    throw new Error('HEDERA_OPERATOR_KEY is not parseable as DER, ECDSA, or ED25519');
+  }
+  try {
+    const res = await fetch(`${MIRROR_REST}/api/v1/accounts/${accountId}`);
+    if (res.ok) {
+      const body = (await res.json()) as { key?: { key?: string } };
+      const onFile = body.key?.key?.toLowerCase();
+      if (onFile) {
+        for (const candidate of candidates) {
+          if (candidate.publicKey.toStringRaw().toLowerCase() === onFile) return candidate;
+        }
+        console.error(
+          `none of the parseable key interpretations matches account ${accountId}'s key on file — wrong key?`,
+        );
+        process.exit(2);
+      }
+    }
+  } catch {
+    // mirror unreachable — fall through to first parseable candidate
+  }
+  return candidates[0];
+}
+
+async function client(): Promise<Client> {
   const id = process.env.HEDERA_OPERATOR_ID;
   const key = process.env.HEDERA_OPERATOR_KEY;
   if (!id || !key) {
@@ -58,7 +100,7 @@ function client(): Client {
     process.exit(2);
   }
   const c = Client.forName(NETWORK);
-  c.setOperator(AccountId.fromString(id), PrivateKey.fromString(key));
+  c.setOperator(AccountId.fromString(id), await resolveOperatorKey(id, key));
   return c;
 }
 
@@ -138,7 +180,7 @@ async function waitForMirrorSeq(topicId: string, seq: number): Promise<number> {
 }
 
 async function lifecycle(): Promise<void> {
-  const c = client();
+  const c = await client();
   const submitKey = PrivateKey.generateED25519();
   const adminKeys = [
     PrivateKey.generateED25519(),
@@ -208,7 +250,7 @@ async function mirrorDump(topicId: string, outfile: string): Promise<void> {
 }
 
 async function burst(topicId: string, count: number, size: number): Promise<void> {
-  const c = client();
+  const c = await client();
   const keys = loadKeys(topicId);
   const submitKey = PrivateKey.fromString(keys.submitKey);
   const topic = TopicId.fromString(topicId);
@@ -242,7 +284,7 @@ async function burst(topicId: string, count: number, size: number): Promise<void
 }
 
 async function rotate(topicId: string): Promise<void> {
-  const c = client();
+  const c = await client();
   const keys = loadKeys(topicId);
   const topic = TopicId.fromString(topicId);
   const adminKeys = keys.adminKeys.map((k) => PrivateKey.fromString(k));
