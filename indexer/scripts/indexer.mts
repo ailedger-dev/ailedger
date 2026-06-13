@@ -16,12 +16,13 @@
 // No Hedera keys, no operator credentials — public reads only, by design.
 
 import { serve } from '@hono/node-server';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { createIndexerApi } from '../src/api.ts';
+import { createIndexerApi, type ApiState } from '../src/api.ts';
 import { ingestAll } from '../src/ingest.ts';
 import { restMirror } from '../src/mirror.ts';
+import { dispatchAlerts, restRawRowSource, runMonitor, webhookAlertSink } from '../src/monitor.ts';
 import { IndexerStore } from '../src/store.ts';
 
 const registryTopic = process.env.INDEXER_REGISTRY_TOPIC;
@@ -66,15 +67,45 @@ for (const tenant of store.tenants()) {
   }
 }
 
+function loadManifestEntries(): { sequenceNumber: number; tenantRef: string }[] | undefined {
+  const path = process.env.AILEDGER_MANIFESTS ?? join(homedir(), '.ailedger-outbox', 'manifests.jsonl');
+  if (!existsSync(path)) return undefined;
+  return readFileSync(path, 'utf-8')
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => JSON.parse(line) as { sequenceNumber: number; tenantRef: string });
+}
+
+async function monitorSweep(state: ApiState): Promise<void> {
+  const report = await runMonitor({
+    store,
+    mirror,
+    rawRows: restRawRowSource(mirrorBase),
+    mirrorBase,
+    payerAccountId: process.env.HEDERA_OPERATOR_ID,
+    minPayerHbar: Number(process.env.MONITOR_MIN_PAYER_HBAR ?? 10),
+    manifestEntries: loadManifestEntries(),
+  });
+  state.lastMonitorReport = report;
+  const sink = process.env.ALERT_WEBHOOK ? webhookAlertSink(process.env.ALERT_WEBHOOK) : null;
+  const alerted = await dispatchAlerts(report, sink);
+  const fails = report.findings.filter((f) => f.level === 'FAIL');
+  for (const f of fails) console.error(`MONITOR FAIL ${f.check}/${f.subject}: ${f.detail}`);
+  if (fails.length && !alerted) console.error('(no ALERT_WEBHOOK configured — failures logged only)');
+}
+
 if (cmd === 'serve') {
+  const state: ApiState = {};
   const port = Number(process.env.AILEDGER_INDEXER_PORT ?? 8799);
-  serve({ fetch: createIndexerApi(store).fetch, port });
+  serve({ fetch: createIndexerApi(store, state).fetch, port });
   console.log(`indexer read API on :${port} (db=${dbPath}, mirror=${mirrorBase})`);
+  await monitorSweep(state);
   const pollS = Number(process.env.INDEXER_POLL_S ?? 15);
   for (;;) {
     await new Promise((r) => setTimeout(r, pollS * 1000));
     try {
       await sweep();
+      await monitorSweep(state);
     } catch (err) {
       console.error('sweep error:', (err as Error).message);
     }

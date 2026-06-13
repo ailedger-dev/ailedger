@@ -3,11 +3,32 @@
 
 import { Hono } from 'hono';
 import type { IndexerStore } from './store.ts';
+import type { MonitorReport } from './monitor.ts';
 
-export function createIndexerApi(store: IndexerStore): Hono {
+export interface ApiState {
+  /** Last monitor sweep result; updated by the serve loop. */
+  lastMonitorReport?: MonitorReport;
+}
+
+export function createIndexerApi(store: IndexerStore, state: ApiState = {}): Hono {
   const app = new Hono();
 
   app.get('/healthz', (c) => c.json({ ok: true }));
+
+  app.get('/v1/health', (c) => {
+    const report = state.lastMonitorReport;
+    if (!report) return c.json({ status: 'unknown', detail: 'no monitor sweep yet' }, 503);
+    const fails = report.findings.filter((f) => f.level === 'FAIL');
+    const warns = report.findings.filter((f) => f.level === 'WARN');
+    return c.json(
+      {
+        status: fails.length ? 'fail' : warns.length ? 'warn' : 'ok',
+        ran_at: report.ranAt,
+        findings: report.findings,
+      },
+      fails.length ? 500 : 200,
+    );
+  });
 
   app.get('/v1/tenants', (c) =>
     c.json({
