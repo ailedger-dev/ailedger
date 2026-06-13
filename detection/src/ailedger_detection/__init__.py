@@ -58,7 +58,7 @@ from ailedger_detection.types import (
 )
 from ailedger_detection.unresolved_flags import unresolved_flag_accumulation
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     # Canonicalization + substrate ingest seam (v0.3.0)

@@ -15,7 +15,7 @@
 //   ~/.secrets/hedera-tenants/<ref>.<network>.json  per-tenant submitKey + topic
 //
 // Env: source ~/.secrets/hedera-testnet.env (HEDERA_OPERATOR_ID/KEY[,NETWORK]).
-import { PrivateKey, TopicId } from '@hashgraph/sdk';
+import { PrivateKey, PublicKey, TopicId } from '@hashgraph/sdk';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -38,7 +38,8 @@ import {
 interface ProvisionState {
   network: string;
   createdAt: string;
-  adminKeys: { operator: string; customerPlaceholder: string; escrowPlaceholder: string };
+  /** Escrow private key is NOT here — see docs/key-escrow-policy.md. */
+  adminKeys: { operator: string; customerPlaceholder: string; escrowPublicKey: string };
   registrySubmitKey: string;
   topics: Record<string, string>;
 }
@@ -77,17 +78,34 @@ async function init(): Promise<void> {
   const adminKeys = {
     operator: PrivateKey.generateED25519(),
     customerPlaceholder: PrivateKey.generateED25519(),
-    escrowPlaceholder: PrivateKey.generateED25519(),
+    escrow: PrivateKey.generateED25519(),
   };
   const admin = {
     publicKeys: [
       adminKeys.operator.publicKey,
       adminKeys.customerPlaceholder.publicKey,
-      adminKeys.escrowPlaceholder.publicKey,
+      adminKeys.escrow.publicKey,
     ],
     threshold: 2,
   };
+  // Escrow key custody is SEGREGATED from day one (docs/key-escrow-policy.md):
+  // routine operations never need it (any 2-of-3 suffices — operator +
+  // customer sign here), so it goes to its own cold-storage file and is
+  // never loaded again by this tooling.
   const adminSigners = [adminKeys.operator, adminKeys.customerPlaceholder];
+  const escrowDir = join(homedir(), '.secrets', 'hedera-escrow');
+  mkdirSync(escrowDir, { recursive: true, mode: 0o700 });
+  const escrowPath = join(escrowDir, `escrow-admin.${env.network}.json`);
+  writeProtected(escrowPath, {
+    network: env.network,
+    role: 'escrow-admin (2-of-3 threshold member)',
+    createdAt: new Date().toISOString(),
+    privateKey: adminKeys.escrow.toStringDer(),
+    publicKey: adminKeys.escrow.publicKey.toStringRaw(),
+    custody:
+      'INTERIM operator-segregated cold storage. Move offline (hardware token / printed + safe) and ultimately to an independent escrow agent per docs/key-escrow-policy.md. Routine operations MUST NOT load this file.',
+  });
+  console.log(`escrow admin key → ${escrowPath} (segregated; move to cold storage)`);
   const registrySubmitKey = PrivateKey.generateED25519();
 
   const topics: Record<string, string> = {};
@@ -116,7 +134,7 @@ async function init(): Promise<void> {
     adminKeys: {
       operator: adminKeys.operator.toStringDer(),
       customerPlaceholder: adminKeys.customerPlaceholder.toStringDer(),
-      escrowPlaceholder: adminKeys.escrowPlaceholder.toStringDer(),
+      escrowPublicKey: adminKeys.escrow.publicKey.toStringRaw(),
     },
     registrySubmitKey: registrySubmitKey.toStringDer(),
     topics,
@@ -138,14 +156,22 @@ async function tenant(tenantRef: string): Promise<void> {
   const adminPrivs = {
     operator: PrivateKey.fromStringDer(state.adminKeys.operator),
     customer: PrivateKey.fromStringDer(state.adminKeys.customerPlaceholder),
-    escrow: PrivateKey.fromStringDer(state.adminKeys.escrowPlaceholder),
   };
+  // Escrow participates by PUBLIC key only — the private key is segregated
+  // cold storage (docs/key-escrow-policy.md) and never loaded here. Legacy
+  // state files (pre-segregation) carried the private key; tolerate them
+  // read-only but nag.
+  const legacy = (state.adminKeys as Record<string, string>).escrowPlaceholder;
+  const escrowPublic = state.adminKeys.escrowPublicKey
+    ? PublicKey.fromString(state.adminKeys.escrowPublicKey)
+    : PrivateKey.fromStringDer(legacy).publicKey;
+  if (!state.adminKeys.escrowPublicKey) {
+    console.error(
+      'WARNING: legacy provision state carries the escrow PRIVATE key — segregate it per docs/key-escrow-policy.md',
+    );
+  }
   const admin = {
-    publicKeys: [
-      adminPrivs.operator.publicKey,
-      adminPrivs.customer.publicKey,
-      adminPrivs.escrow.publicKey,
-    ],
+    publicKeys: [adminPrivs.operator.publicKey, adminPrivs.customer.publicKey, escrowPublic],
     threshold: 2,
   };
   const submitKey = PrivateKey.generateED25519();
@@ -166,7 +192,7 @@ async function tenant(tenantRef: string): Promise<void> {
     adminKeyFingerprints: [
       await publicKeyFingerprint(adminPrivs.operator.publicKey),
       await publicKeyFingerprint(adminPrivs.customer.publicKey),
-      await publicKeyFingerprint(adminPrivs.escrow.publicKey),
+      await publicKeyFingerprint(escrowPublic),
     ],
   });
   const registryTopic = TopicId.fromString(state.topics.registry_tenants);

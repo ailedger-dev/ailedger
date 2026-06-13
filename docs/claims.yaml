@@ -1,0 +1,63 @@
+# Claims register — marketing/site language gated on shipped, verified capability.
+# Reviewed at every phase exit. The rule: a claim ships AFTER the capability,
+# never before (the mock-anchor lesson, mechanized).
+#
+# status: allowed | blocked | never
+# Each blocked claim names its unlock condition.
+
+claims:
+  - claim: "Evidence records are sealed on Hedera with consensus timestamps"
+    status: allowed
+    since: "Phase 1 (testnet) — say 'testnet' until Phase 3 mainnet cutover"
+
+  - claim: "Anyone can verify the evidence chain without AILedger's permission or credentials"
+    status: allowed
+    since: "Phase 2 — `ailedger verify-evidence` (offline-capable, keyless), indexer cold-rebuild from public mirror"
+
+  - claim: "Tamper-evidence is enforced by the network, not by AILedger"
+    status: allowed
+    since: "Phase 1 — HCS running hash recomputed independently (Python + TS, byte-exact)"
+
+  - claim: "Anchored to Hedera (mainnet)"
+    status: blocked
+    unlock: "Phase 3 — mainnet topics + genesis attestations live (docs/mainnet-runbook.md)"
+
+  - claim: "Hedera is the system of record"
+    status: blocked
+    unlock: "Phase 3 exit — reads cut over, 'sealed' is the product meaning of recorded"
+
+  - claim: "AILedger cannot rewrite, reorder, backdate, or delete your records"
+    status: allowed
+    since: "Phase 1 — consensus ordering/immutability; note operator can still DELAY sealing (detectable via sealed-SLA monitor)"
+
+  - claim: "AILedger cannot forge or block your ledger"
+    status: blocked
+    unlock: "Phase 4 — BYO-submitKey tier with signed requests; claimable for that tier only"
+
+  - claim: "Evidence custody survives the vendor"
+    status: blocked
+    unlock: "Escrow custody stage 1+ (docs/key-escrow-policy.md) for the tenant in question; stage 2 for the blanket claim"
+
+  - claim: "Court-grade independent verification via council node signatures"
+    status: blocked
+    unlock: "Record-file signature validation (requester-pays bucket access — ADR-016 follow-up). Interim truthful form: 'verification against the consensus running hash, cross-checked across independent mirrors'"
+
+  - claim: "Run the whole stack yourself"
+    status: blocked
+    unlock: "Phase 5 — OSS releases + third-party reproduction documented. Interim truthful form: 'self-host relay + indexer + verifier exist and run today' (they do)"
+
+  - claim: "GDPR-compliant out of the box"
+    status: never
+    say_instead: "GDPR-compatible architecture with a documented residual-risk position (DPIA template, Phase 4)"
+
+  - claim: "Trustless / fully decentralized"
+    status: never
+    say_instead: "Public network operated by 30+ named institutions; permissioned consensus today, community-node roadmap"
+
+  - claim: "State proofs"
+    status: never
+    say_instead: "Record-file node signatures (when shipped); state proofs are not GA on Hedera"
+
+  - claim: "Your data is stored on-chain"
+    status: never
+    say_instead: "Salted commitments and structural fields on-chain; payloads encrypted in customer-controllable storage; subject identifiers never on-chain in any form"

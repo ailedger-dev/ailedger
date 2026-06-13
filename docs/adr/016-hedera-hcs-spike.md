@@ -76,3 +76,26 @@ Operational lessons folded into Phase 1:
   number, never by response order.
 - **Local dev/CI targets Solo, not hiero-local-node** — local node enters a
   6-month deprecation (support ends September 2026).
+
+## Follow-up: record-file node-signature validation (probed 2026-06-12)
+
+The strongest court proof — council node signatures over record files — has
+exactly one remaining blocker, now precisely characterized:
+
+- **Mirror alpha state-proof endpoint is GONE:** probed live against our own
+  sealed transaction (`/api/v1/transactions/0.0.9185779-1781306663-007128639/
+  stateproof` → HTTP 404 on the public testnet mirror). No credential-free
+  path to record files exists.
+- **The remaining path is requester-pays cloud buckets** (GCP
+  `hedera-mainnet-streams`/testnet equivalents): needs a GCP project with
+  billing. Cost is trivial — record files are KB-scale; selective fetches for
+  our consensus timestamps are cents per month (full-history backfill is the
+  only meaningful egress spend and is not needed).
+- **Until then**, the truthful verification story (implemented, shipped):
+  consensus running-hash recompute (byte-exact, two independent
+  implementations) + multi-mirror cross-checking. `docs/claims.yaml` blocks
+  the council-signature claim until this lands.
+- **Action when unblocked:** implement fetch in `cli/ailedger_cli/mirror.py`
+  + archival in `indexer/src/archiver.ts` (interfaces already shaped for it),
+  validate signatures against the address book, extend `verify-evidence`
+  with a `record-files` check.
