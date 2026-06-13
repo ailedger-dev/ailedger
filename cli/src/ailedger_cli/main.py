@@ -152,6 +152,88 @@ def verify_cmd(customer: str | None, since: str | None, until: str | None) -> No
         sys.exit(2)
 
 
+# -- verify-evidence (Hedera rails) ---------------------------------------------
+
+
+@cli.command(
+    "verify-evidence",
+    help="Offline, keyless verification of a Hedera evidence topic: network "
+    "running hash, app prev_hash chain, batch inclusion proofs, payload "
+    "commitments, multi-mirror cross-check.",
+)
+@click.option("--topic", "topic_id", required=True, metavar="0.0.X", help="Tenant topic id.")
+@click.option("--archive", "archive_path", type=click.Path(path_type=Path), help="Verify from an archive/mirror-dump JSON file (fully offline).")
+@click.option("--mirror", "mirror_base", metavar="URL", help="Mirror REST base (default by --network).")
+@click.option("--network", default="testnet", show_default=True, help="testnet | mainnet (selects default mirror).")
+@click.option("--cross-mirror", "cross_mirror_base", metavar="URL", help="Second, independent mirror to cross-check against.")
+@click.option("--manifests", "manifests_path", type=click.Path(path_type=Path), help="Drainer manifests.jsonl — verifies every batch root + all inclusion proofs.")
+@click.option("--payload", "payload_specs", multiple=True, metavar="EVENT_ID=FILE", help="Decrypted payload JSON for commitment verification (repeatable).")
+def verify_evidence_cmd(
+    topic_id: str,
+    archive_path: Path | None,
+    mirror_base: str | None,
+    network: str,
+    cross_mirror_base: str | None,
+    manifests_path: Path | None,
+    payload_specs: tuple[str, ...],
+) -> None:
+    import json as _json
+
+    from ailedger_cli.evidence import verify_batch_manifest, verify_commitments, verify_topic
+    from ailedger_cli.mirror import (
+        DEFAULT_MIRRORS,
+        cross_check,
+        fetch_topic_messages,
+        load_archive,
+    )
+
+    if archive_path is not None:
+        messages = load_archive(archive_path)
+        source = f"archive {archive_path}"
+    else:
+        base = mirror_base or DEFAULT_MIRRORS.get(network)
+        if base is None:
+            raise click.UsageError(f"unknown network {network!r} — pass --mirror explicitly")
+        messages = fetch_topic_messages(base, topic_id)
+        source = f"mirror {base}"
+
+    report = verify_topic(topic_id, messages)
+
+    if cross_mirror_base is not None:
+        second = fetch_topic_messages(cross_mirror_base, topic_id)
+        result = cross_check(messages, second)
+        report.add(
+            "PASS" if result.agree else "FAIL",
+            "cross-mirror",
+            f"{result.detail} (vs {cross_mirror_base})",
+        )
+
+    if manifests_path is not None:
+        for line in manifests_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            entry = _json.loads(line)
+            if entry.get("kind") == "batch":
+                verify_batch_manifest(report, entry)
+
+    for spec in payload_specs:
+        event_id, _, file_part = spec.partition("=")
+        if not file_part:
+            raise click.UsageError("--payload expects EVENT_ID=FILE")
+        payload = _json.loads(Path(file_part).read_text(encoding="utf-8"))
+        verify_commitments(report, event_id.strip(), payload)
+
+    click.echo(f"topic {topic_id} — {len(report.records)} records from {source}")
+    for finding in report.findings:
+        click.echo(f"  [{finding.level}] {finding.check}: {finding.detail}")
+    click.echo(
+        f"VERDICT: {'OK' if report.ok else 'FAIL'}"
+        + (f" ({report.warnings} warning(s))" if report.warnings else "")
+    )
+    if not report.ok:
+        sys.exit(2)
+
+
 # -- export --------------------------------------------------------------------
 
 

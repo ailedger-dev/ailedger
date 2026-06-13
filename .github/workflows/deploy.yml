@@ -53,11 +53,23 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
+            sdk/package-lock.json
             proxy/package-lock.json
             landing/package-lock.json
             dashboard/package-lock.json
             redirect/package-lock.json
-      # proxy — only surface with a real test suite today.
+      # sdk — built FIRST: proxy depends on @ailedger/sdk via file:../sdk,
+      # whose entry resolves to dist/ (gitignored; npm does not run prepare
+      # for file: deps, so the build must be explicit).
+      - name: sdk install
+        run: npm ci
+        working-directory: sdk
+      - name: sdk build
+        run: npm run build
+        working-directory: sdk
+      - name: sdk test
+        run: npm test
+        working-directory: sdk
       - name: proxy install
         run: npm ci
         working-directory: proxy

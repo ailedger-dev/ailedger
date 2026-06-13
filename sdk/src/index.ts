@@ -34,6 +34,48 @@ export type {
 } from './types.js';
 
 export { computeInputsHash, sha256hex, sha256jcs, isJsonContentType } from './hash.js';
+
+// Evidence core — the shared emitter primitives for the Hedera rails
+// (ode-2 on-chain records, RFC 6962 batching, payload envelope). Consumed by
+// the relay, the verifier, and the aDNA adapter. See docs/adr/016.
+export {
+  buildBatchRecord,
+  buildDecisionRecord,
+  commitField,
+  encodeRecord,
+  generateEventSalt,
+  verifyFieldCommitment,
+  GENESIS_PREV_HASH,
+  MAX_RECORD_BYTES,
+  ODE_BATCH_VERSION,
+  ODE_DECISION_VERSION,
+} from './evidence/record.js';
+export type {
+  BuildBatchRecordParams,
+  BuildDecisionRecordParams,
+  DecisionCommitInputs,
+  OdeBatchRecord,
+  OdeDecisionRecord,
+} from './evidence/record.js';
+export {
+  encodeLeaf,
+  fromHex,
+  inclusionProof,
+  leafHash,
+  merkleRoot,
+  merkleRootHex,
+  toHex,
+  verifyInclusion,
+} from './evidence/merkle.js';
+export {
+  generateDek,
+  openPayload,
+  payloadHashOf,
+  sealPayload,
+  DEK_BYTES,
+  ENVELOPE_VERSION,
+} from './evidence/envelope.js';
+export type { SealedPayload } from './evidence/envelope.js';
 export { computeExtractorParamsHash } from './canonicalize.js';
 export { normalizeConfidence, normalizeTimestamp } from './normalize.js';
 

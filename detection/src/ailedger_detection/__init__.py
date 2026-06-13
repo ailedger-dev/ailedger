@@ -25,7 +25,18 @@ Authority: gt-lab/docs/param-canonicalization-spec-v1.md +
 gt-lab/docs/compliance-architecture/ARCHITECTURE-detection-taxonomy.md.
 """
 
+from ailedger_detection.canonical import canonical, canonical_bytes
 from ailedger_detection.confidence import confidence_stratified_outcome_analysis
+from ailedger_detection.decision_event import (
+    NO_LOOSER_ALTERNATIVE,
+    DecisionEventRecord,
+    IncompleteRationaleError,
+    SeamSchemaError,
+    canonical_digest,
+    to_ingest_body,
+    validate_decision_event,
+)
+from ailedger_detection.emitter import RelayEmitter, RelayError
 from ailedger_detection.disparate_impact import (
     DisparateImpactResult,
     disparate_impact_ratio,
@@ -47,9 +58,21 @@ from ailedger_detection.types import (
 )
 from ailedger_detection.unresolved_flags import unresolved_flag_accumulation
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
+    # Canonicalization + substrate ingest seam (v0.3.0)
+    "canonical",
+    "canonical_bytes",
+    "canonical_digest",
+    "validate_decision_event",
+    "to_ingest_body",
+    "DecisionEventRecord",
+    "SeamSchemaError",
+    "IncompleteRationaleError",
+    "NO_LOOSER_ALTERNATIVE",
+    "RelayEmitter",
+    "RelayError",
     # Type contracts
     "DetectionEvent",
     "InferredDetectionEvent",
