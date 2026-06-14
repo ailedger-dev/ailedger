@@ -49,12 +49,14 @@ __all__ = [
     "verify_batch_manifest",
     "verify_checkpoint_manifest",
     "verify_commitments",
+    "verify_genesis_witness",
     "verify_topic",
 ]
 
 GENESIS_PREV = "0" * 64
 _SALT_LEN = 32
 CHECKPOINT_KIND = "chk-1"
+GENESIS_KIND = "gen-1"
 
 
 @dataclass(frozen=True)
@@ -280,6 +282,47 @@ def verify_checkpoint_manifest(
         "checkpoint",
         f"tenant_root matches on-chain chk-1 over {len(heads)} tenant head(s) (seq {onchain.seq})",
     )
+
+
+def verify_genesis_witness(
+    report: VerificationReport,
+    predecessor_messages: list[TopicMessage],
+) -> None:
+    """Check — an hcs-continuity gen-1 record genuinely continues a predecessor
+    topic. Recompute the predecessor's head (final seq, network running hash,
+    app-chain head) from public mirror data and compare to the witness. Keyless:
+    proves the new chain isn't a fresh slate masquerading as continuous."""
+    genesis = next((r for r in report.records if r.kind == GENESIS_KIND), None)
+    if genesis is None:
+        report.add("FAIL", "genesis", "no gen-1 record on this topic")
+        return
+    if genesis.seq != 1:
+        report.add("WARN", "genesis", f"gen-1 is at seq {genesis.seq}, expected message #1")
+    witness = genesis.body.get("witness")
+    if not isinstance(witness, dict) or witness.get("kind") != "hcs-continuity":
+        kind = witness.get("kind") if isinstance(witness, dict) else witness
+        report.add("FAIL", "genesis", f"not an hcs-continuity witness (kind={kind!r})")
+        return
+    if not predecessor_messages:
+        report.add("FAIL", "genesis", "no predecessor messages supplied to check the witness")
+        return
+    last = max(predecessor_messages, key=lambda m: m.sequence_number)
+    expected = {
+        "final_seq": last.sequence_number,
+        "final_running_hash": last.running_hash.hex(),
+        "final_app_head": hashlib.sha256(last.message).hexdigest(),
+        "record_count": last.sequence_number,
+    }
+    mismatches = [k for k, v in expected.items() if witness.get(k) != v]
+    pred = witness.get("predecessor_topic_id")
+    if mismatches:
+        report.add("FAIL", "genesis", f"continuity witness disagrees with predecessor {pred}: {mismatches}")
+    else:
+        report.add(
+            "PASS",
+            "genesis",
+            f"continuity witness matches predecessor {pred} @ seq {last.sequence_number}",
+        )
 
 
 def commit_field(salt: bytes, field_name: str, value: Any) -> str:

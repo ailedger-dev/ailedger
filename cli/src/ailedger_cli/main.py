@@ -169,6 +169,7 @@ def verify_cmd(customer: str | None, since: str | None, until: str | None) -> No
 @click.option("--cross-mirror", "cross_mirror_base", metavar="URL", help="Second, independent mirror to cross-check against.")
 @click.option("--manifests", "manifests_path", type=click.Path(path_type=Path), help="Drainer manifests.jsonl (batch or checkpoint lines) — verifies every batch root + inclusion proofs, and every cross-topic checkpoint root.")
 @click.option("--payload", "payload_specs", multiple=True, metavar="EVENT_ID=FILE", help="Decrypted payload JSON for commitment verification (repeatable).")
+@click.option("--genesis-predecessor", "genesis_predecessor", metavar="0.0.X", help="Predecessor topic id — checks a gen-1 continuity witness against it (mirror read).")
 def verify_evidence_cmd(
     topic_id: str,
     archive_path: Path | None,
@@ -177,6 +178,7 @@ def verify_evidence_cmd(
     cross_mirror_base: str | None,
     manifests_path: Path | None,
     payload_specs: tuple[str, ...],
+    genesis_predecessor: str | None,
 ) -> None:
     import json as _json
 
@@ -184,6 +186,7 @@ def verify_evidence_cmd(
         verify_batch_manifest,
         verify_checkpoint_manifest,
         verify_commitments,
+        verify_genesis_witness,
         verify_topic,
     )
     from ailedger_cli.mirror import (
@@ -230,6 +233,12 @@ def verify_evidence_cmd(
             raise click.UsageError("--payload expects EVENT_ID=FILE")
         payload = _json.loads(Path(file_part).read_text(encoding="utf-8"))
         verify_commitments(report, event_id.strip(), payload)
+
+    if genesis_predecessor is not None:
+        pred_base = mirror_base or DEFAULT_MIRRORS.get(network)
+        if pred_base is None:
+            raise click.UsageError(f"unknown network {network!r} — pass --mirror for the predecessor")
+        verify_genesis_witness(report, fetch_topic_messages(pred_base, genesis_predecessor))
 
     click.echo(f"topic {topic_id} — {len(report.records)} records from {source}")
     for finding in report.findings:

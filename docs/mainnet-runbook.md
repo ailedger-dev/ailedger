@@ -7,8 +7,14 @@ signs off before real value moves.**
 
 ## 0. Funding (operator action, ~15 minutes)
 
-1. Create a mainnet account: portal.hedera.com (or any exchange + transfer).
-   ECDSA key recommended; record only the account id in ops docs.
+1. Create a mainnet account. NOTE: portal.hedera.com is testnet/previewnet
+   ONLY — it cannot issue a mainnet account. A mainnet account is created when
+   a key is first funded on-ledger, so bootstrap from outside the network:
+   a wallet (HashPack/Blade/Kabila) + an exchange that lists HBAR — buy ~100 ℏ,
+   withdraw to the wallet (the first inbound transfer creates + activates the
+   account id), then export the key. Or generate an ECDSA keypair locally and
+   fund its public-key/EVM-address alias (HIP-32 auto-create) for cleaner
+   custody. ECDSA key recommended; record only the account id in ops docs.
 2. Fund: **~100 ℏ** is ample runway — fees are USD-pegged. Cost basis at
    measured rates (ADR-016): ~$0.0007/decision-record, ~$0.05/topic,
    $0.0502/topic with threshold adminKey. 100 ℏ ≈ tens of thousands of

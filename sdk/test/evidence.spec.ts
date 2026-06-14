@@ -4,6 +4,7 @@ import {
   buildBatchRecord,
   buildCheckpointRecord,
   buildDecisionRecord,
+  buildGenesisRecord,
   checkpointLeaf,
   CHECKPOINT_LEAF_SPEC,
   commitField,
@@ -198,6 +199,73 @@ describe('chk-1 cross-topic checkpoint record', () => {
         tenantCount: 0,
       }),
     ).toThrow(/empty estate/);
+  });
+});
+
+describe('gen-1 genesis attestation', () => {
+  it('builds an hcs-continuity genesis pinned to the all-zero prev_hash', () => {
+    const { record, encoded } = buildGenesisRecord({
+      ts: '2026-06-14T00:00:00.000Z',
+      witness: {
+        kind: 'hcs-continuity',
+        predecessor_topic_id: '0.0.9218174',
+        final_seq: 7,
+        final_running_hash: 'AB'.repeat(48),
+        final_app_head: 'cd'.repeat(32),
+        record_count: 7,
+      },
+    });
+    expect(record.v).toBe('gen-1');
+    expect(record.prev_hash).toBe('0'.repeat(64)); // genesis is the chain origin
+    expect(record.witness.kind).toBe('hcs-continuity');
+    if (record.witness.kind === 'hcs-continuity') {
+      expect(record.witness.final_running_hash).toBe('ab'.repeat(48)); // lowercased
+    }
+    expect(encoded.byteLength).toBeLessThanOrEqual(MAX_RECORD_BYTES);
+  });
+
+  it('builds a pg-pipe-v0 genesis witnessing the legacy chain', () => {
+    const { record } = buildGenesisRecord({
+      ts: '2026-06-14T00:00:00.000Z',
+      witness: {
+        kind: 'pg-pipe-v0',
+        legacy_chain_head: 'ab'.repeat(32),
+        legacy_algo: 'pg-pipe-v0',
+        row_count: 1234,
+        merkle_root: 'ef'.repeat(32),
+        pg_snapshot_ts: '2026-06-14T00:00:00.000Z',
+      },
+    });
+    expect(record.witness.kind).toBe('pg-pipe-v0');
+  });
+
+  it('rejects malformed witnesses', () => {
+    expect(() =>
+      buildGenesisRecord({
+        ts: 't',
+        witness: {
+          kind: 'hcs-continuity',
+          predecessor_topic_id: 'nope',
+          final_seq: 1,
+          final_running_hash: 'ab',
+          final_app_head: 'cd'.repeat(32),
+          record_count: 1,
+        },
+      }),
+    ).toThrow(/predecessor_topic_id/);
+    expect(() =>
+      buildGenesisRecord({
+        ts: 't',
+        witness: {
+          kind: 'pg-pipe-v0',
+          legacy_chain_head: 'ab'.repeat(32),
+          legacy_algo: 'pg-pipe-v0',
+          row_count: -1,
+          merkle_root: 'ef'.repeat(32),
+          pg_snapshot_ts: '2026-06-14',
+        },
+      }),
+    ).toThrow(/row_count/);
   });
 });
 

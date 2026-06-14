@@ -42,6 +42,7 @@ export {
   buildBatchRecord,
   buildCheckpointRecord,
   buildDecisionRecord,
+  buildGenesisRecord,
   checkpointLeaf,
   commitField,
   encodeRecord,
@@ -53,15 +54,21 @@ export {
   ODE_BATCH_VERSION,
   ODE_CHECKPOINT_VERSION,
   ODE_DECISION_VERSION,
+  ODE_GENESIS_VERSION,
 } from './evidence/record.js';
 export type {
   BuildBatchRecordParams,
   BuildCheckpointRecordParams,
   BuildDecisionRecordParams,
+  BuildGenesisRecordParams,
   DecisionCommitInputs,
+  GenesisWitness,
+  HcsContinuityWitness,
   OdeBatchRecord,
   OdeCheckpointRecord,
   OdeDecisionRecord,
+  OdeGenesisRecord,
+  PgPipeWitness,
   TenantHead,
 } from './evidence/record.js';
 export {

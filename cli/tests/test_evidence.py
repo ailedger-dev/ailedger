@@ -16,6 +16,7 @@ from ailedger_cli.evidence import (
     verify_batch_manifest,
     verify_checkpoint_manifest,
     verify_commitments,
+    verify_genesis_witness,
     verify_topic,
 )
 from ailedger_cli.merkle import inclusion_proof, leaf_hash, merkle_root, verify_inclusion
@@ -180,6 +181,71 @@ def test_checkpoint_manifest_rejects_root_absent_on_chain() -> None:
     finding = next(f for f in report.findings if f.check == "checkpoint")
     assert finding.level == "FAIL"
     assert "no on-chain" in finding.detail
+
+
+# --- fixture: a genesis topic (gen-1 witnessing a predecessor) ---------------
+
+
+def _witness_for(pred: list[TopicMessage]) -> dict[str, Any]:
+    last = max(pred, key=lambda m: m.sequence_number)
+    return {
+        "kind": "hcs-continuity",
+        "predecessor_topic_id": "0.0.9218174",
+        "final_seq": last.sequence_number,
+        "final_running_hash": last.running_hash.hex(),
+        "final_app_head": hashlib.sha256(last.message).hexdigest(),
+        "record_count": last.sequence_number,
+    }
+
+
+def _genesis_topic(witness: dict[str, Any]) -> list[TopicMessage]:
+    raw = canonical(
+        {"v": "gen-1", "prev_hash": GENESIS_PREV, "ts": "2026-06-14T00:00:00.000Z", "witness": witness}
+    ).encode("utf-8")
+    partial = TopicMessage(
+        topic_id=_TOPIC,
+        payer_id=(0, 0, 9185779),
+        seconds=1_781_300_000,
+        nanos=0,
+        sequence_number=1,
+        message=raw,
+        running_hash=b"",
+        running_hash_version=3,
+    )
+    rh = step(GENESIS, partial, _JOS)
+    return [
+        TopicMessage(
+            topic_id=partial.topic_id,
+            payer_id=partial.payer_id,
+            seconds=partial.seconds,
+            nanos=partial.nanos,
+            sequence_number=1,
+            message=raw,
+            running_hash=rh,
+            running_hash_version=3,
+        )
+    ]
+
+
+def test_genesis_witness_matches_predecessor() -> None:
+    pred = make_topic(["ode-2", "ode-2", "ode-2b"])
+    report = verify_topic("0.0.mainnet", _genesis_topic(_witness_for(pred)))
+    verify_genesis_witness(report, pred)
+    finding = next(f for f in report.findings if f.check == "genesis")
+    assert finding.level == "PASS", finding.detail
+    assert report.ok
+
+
+def test_genesis_witness_detects_forged_continuity() -> None:
+    pred = make_topic(["ode-2", "ode-2", "ode-2b"])
+    forged = _witness_for(pred)
+    forged["final_app_head"] = "00" * 32  # claims a predecessor head that isn't real
+    report = verify_topic("0.0.mainnet", _genesis_topic(forged))
+    verify_genesis_witness(report, pred)
+    finding = next(f for f in report.findings if f.check == "genesis")
+    assert finding.level == "FAIL"
+    assert "final_app_head" in finding.detail
+    assert not report.ok
 
 
 # --- merkle parity ------------------------------------------------------------
