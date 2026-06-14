@@ -45,6 +45,11 @@ export class IndexerStore {
         seq INTEGER NOT NULL, decision_type TEXT NOT NULL, ts TEXT NOT NULL,
         human_in_loop INTEGER NOT NULL, payload_hash TEXT NOT NULL, record_hash TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS unwarrants (
+        event_id TEXT PRIMARY KEY, tenant_ref TEXT NOT NULL, topic_id TEXT NOT NULL,
+        seq INTEGER NOT NULL, category TEXT NOT NULL, decision_type TEXT NOT NULL,
+        ts TEXT NOT NULL, record_hash TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS batches (
         batch_id TEXT PRIMARY KEY, tenant_ref TEXT NOT NULL, topic_id TEXT NOT NULL,
         seq INTEGER NOT NULL, merkle_root TEXT NOT NULL, leaf_count INTEGER NOT NULL,
@@ -59,6 +64,7 @@ export class IndexerStore {
         PRIMARY KEY (topic_id, seq)
       );
       CREATE INDEX IF NOT EXISTS decisions_tenant ON decisions (tenant_ref, seq);
+      CREATE INDEX IF NOT EXISTS unwarrants_tenant ON unwarrants (tenant_ref, seq);
       CREATE INDEX IF NOT EXISTS batches_tenant ON batches (tenant_ref, seq);
     `);
   }
@@ -125,6 +131,64 @@ export class IndexerStore {
         .prepare('INSERT OR IGNORE INTO duplicates (topic_id, seq, event_or_batch_id) VALUES (?, ?, ?)')
         .run(topicId, rec.seq, String(b.event_id));
     }
+  }
+
+  /** Record an ode-2u unwarranted decision (OWT). Deduped by event_id. */
+  insertUnwarrant(tenantRef: string, topicId: string, rec: ParsedRecord): void {
+    const b = rec.body as Record<string, unknown>;
+    const result = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO unwarrants
+         (event_id, tenant_ref, topic_id, seq, category, decision_type, ts, record_hash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        String(b.event_id),
+        tenantRef,
+        topicId,
+        rec.seq,
+        String(b.unwarrant_category),
+        String(b.decision_type),
+        String(b.ts),
+        rec.recordHash,
+      );
+    if (result.changes === 0) {
+      this.db
+        .prepare('INSERT OR IGNORE INTO duplicates (topic_id, seq, event_or_batch_id) VALUES (?, ?, ?)')
+        .run(topicId, rec.seq, String(b.event_id));
+    }
+  }
+
+  /**
+   * Per-tenant warrant health: the unwarranted rate over the tenant's whole
+   * Logbook. Denominator = warranted (ode-2) + unwarranted (ode-2u), both
+   * counted from the same sequenced chain — gap-honest, tamper-evident.
+   */
+  warrantHealth(tenantRef: string): {
+    total: number;
+    unwarranted: number;
+    warranted: number;
+    rate: number;
+    byCategory: Record<string, number>;
+  } {
+    const warranted = (
+      this.db.prepare('SELECT COUNT(*) AS c FROM decisions WHERE tenant_ref = ?').get(tenantRef) as {
+        c: number;
+      }
+    ).c;
+    const unwarranted = (
+      this.db.prepare('SELECT COUNT(*) AS c FROM unwarrants WHERE tenant_ref = ?').get(tenantRef) as {
+        c: number;
+      }
+    ).c;
+    const byCategory: Record<string, number> = {};
+    for (const row of this.db
+      .prepare('SELECT category, COUNT(*) AS c FROM unwarrants WHERE tenant_ref = ? GROUP BY category')
+      .all(tenantRef) as { category: string; c: number }[]) {
+      byCategory[row.category] = row.c;
+    }
+    const total = warranted + unwarranted;
+    return { total, unwarranted, warranted, rate: total > 0 ? unwarranted / total : 0, byCategory };
   }
 
   insertBatch(tenantRef: string, topicId: string, rec: ParsedRecord): void {

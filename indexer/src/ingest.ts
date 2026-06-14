@@ -15,6 +15,7 @@ export interface IngestSummary {
   topicId: string;
   newRecords: number;
   decisions: number;
+  unwarrants: number;
   batches: number;
   announcements: number;
   brokenLinks: number;
@@ -68,6 +69,9 @@ export async function ingestTenantTopic(
     if (rec.body.v === 'ode-2') {
       store.insertDecision(tenantRef, topicId, rec);
       summary.decisions++;
+    } else if (rec.body.v === 'ode-2u') {
+      store.insertUnwarrant(tenantRef, topicId, rec);
+      summary.unwarrants++;
     } else if (rec.body.v === 'ode-2b') {
       store.insertBatch(tenantRef, topicId, rec);
       summary.batches++;
@@ -95,5 +99,13 @@ export async function ingestAll(
 export { restMirror, sha256hexOf, decodeBase64 };
 
 function base(topicId: string): IngestSummary {
-  return { topicId, newRecords: 0, decisions: 0, batches: 0, announcements: 0, brokenLinks: 0 };
+  return {
+    topicId,
+    newRecords: 0,
+    decisions: 0,
+    unwarrants: 0,
+    batches: 0,
+    announcements: 0,
+    brokenLinks: 0,
+  };
 }

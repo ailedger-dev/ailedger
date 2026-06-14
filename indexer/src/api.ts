@@ -50,6 +50,20 @@ export function createIndexerApi(store: IndexerStore, state: ApiState = {}): Hon
     return event ? c.json(event) : c.json({ error: 'not found' }, 404);
   });
 
+  app.get('/v1/tenants/:ref/warrant-health', (c) => {
+    const tenant = store.tenantByRef(c.req.param('ref'));
+    if (!tenant) return c.json({ error: 'unknown tenant' }, 404);
+    const h = store.warrantHealth(tenant.tenantRef);
+    return c.json({
+      tenant_ref: tenant.tenantRef,
+      total_decisions: h.total,
+      warranted: h.warranted,
+      unwarranted: h.unwarranted,
+      unwarranted_rate: h.rate,
+      by_category: h.byCategory,
+    });
+  });
+
   app.get('/v1/tenants/:ref/batches', (c) => {
     const limit = Math.min(Number(c.req.query('limit') ?? 100), 1000);
     return c.json({ batches: store.batchesForTenant(c.req.param('ref'), limit) });

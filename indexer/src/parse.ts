@@ -23,6 +23,7 @@ export interface ParsedRecord {
   body:
     | { v: 'ode-2'; [k: string]: unknown }
     | { v: 'ode-2b'; [k: string]: unknown }
+    | { v: 'ode-2u'; [k: string]: unknown }
     | { v: 'reg-1'; [k: string]: unknown }
     | { v: 'unknown'; raw: string };
 }
@@ -45,7 +46,12 @@ export async function parseMirrorMessage(msg: MirrorMessage): Promise<ParsedReco
   let body: ParsedRecord['body'];
   try {
     const parsed = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
-    if (parsed.v === 'ode-2' || parsed.v === 'ode-2b' || parsed.v === 'reg-1') {
+    if (
+      parsed.v === 'ode-2' ||
+      parsed.v === 'ode-2b' ||
+      parsed.v === 'ode-2u' ||
+      parsed.v === 'reg-1'
+    ) {
       body = parsed as ParsedRecord['body'];
     } else {
       body = { v: 'unknown', raw: new TextDecoder().decode(bytes).slice(0, 256) };
