@@ -45,9 +45,12 @@ __all__ = [
     "Finding",
     "VerificationReport",
     "commit_field",
+    "count_warrant_records",
+    "parse_records",
     "verify_batch_manifest",
     "verify_commitments",
     "verify_topic",
+    "verify_warrant_health",
 ]
 
 GENESIS_PREV = "0" * 64
@@ -89,7 +92,7 @@ class VerificationReport:
         self.findings.append(Finding(level, check, detail))
 
 
-def _parse(messages: list[TopicMessage]) -> list[EvidenceRecord]:
+def parse_records(messages: list[TopicMessage]) -> list[EvidenceRecord]:
     records: list[EvidenceRecord] = []
     for msg in sorted(messages, key=lambda m: m.sequence_number):
         try:
@@ -116,7 +119,7 @@ def verify_topic(topic_id: str, messages: list[TopicMessage]) -> VerificationRep
     if not messages:
         report.add("FAIL", "presence", "no messages on topic")
         return report
-    report.records = _parse(messages)
+    report.records = parse_records(messages)
 
     # 1. network running hash — over ADJACENT pairs (dump may be partial),
     # plus the genesis link when the dump starts at seq 1.
@@ -242,3 +245,73 @@ def verify_commitments(
         report.add("FAIL", f"commit:{event_id}", f"commitment mismatch: {mismatches}")
     else:
         report.add("PASS", f"commit:{event_id}", "all field commitments verify against the payload")
+
+
+def count_warrant_records(records: list[EvidenceRecord]) -> tuple[int, dict[str, int]]:
+    """Count warranted (ode-2) and unwarranted-by-category (ode-2u) from a
+    tenant topic's sealed records — the chain-derived ground truth that a
+    published owh-1 must reconcile against."""
+    warranted = sum(1 for r in records if r.kind == "ode-2")
+    by_category: dict[str, int] = {}
+    for r in records:
+        if r.kind == "ode-2u":
+            cat = str(r.body.get("unwarrant_category", "unknown"))
+            by_category[cat] = by_category.get(cat, 0) + 1
+    return warranted, by_category
+
+
+def verify_warrant_health(
+    report: VerificationReport,
+    published: dict[str, Any],
+    warranted: int,
+    by_category: dict[str, int],
+) -> None:
+    """Reconcile a published owh-1 against the sealed chain — the teeth of OWT.
+
+    Recompute total / unwarranted / by_category / rate / verdict from the
+    operator's own sealed ode-2/ode-2u records and FAIL any disagreement. An
+    operator can publish a false rate only by writing it down, at which point
+    the math is caught here by anyone with mirror access and zero keys. (What
+    this CANNOT catch is a refusal never written — the irreducible
+    withhold/pad residual; see the OWT threat model.)
+    """
+    # Import here to keep the detection dependency lazy (cli can run without it
+    # for non-OWT verification).
+    from ailedger_detection.warrant_health import compute_warrant_health
+
+    op = str(published.get("operator_id", "?"))
+    check = f"warrant-health:{op}"
+
+    recomputed = compute_warrant_health(
+        warranted,
+        by_category,
+        threshold=float(published.get("threshold", 0.05)),
+        min_sample=int(published.get("min_sample", 30)),
+    )
+
+    mismatches: list[str] = []
+    if int(published.get("total", -1)) != recomputed.total:
+        mismatches.append(f"total {published.get('total')}≠{recomputed.total}")
+    if int(published.get("unwarranted", -1)) != recomputed.unwarranted:
+        mismatches.append(f"unwarranted {published.get('unwarranted')}≠{recomputed.unwarranted}")
+    pub_by_cat = {k: int(v) for k, v in (published.get("by_category") or {}).items()}
+    if pub_by_cat != recomputed.by_category:
+        mismatches.append(f"by_category {pub_by_cat}≠{recomputed.by_category}")
+    if abs(float(published.get("rate", -1)) - recomputed.rate) > 1e-9:
+        mismatches.append(f"rate {published.get('rate')}≠{recomputed.rate:.6f}")
+    if str(published.get("verdict")) != recomputed.verdict.value:
+        mismatches.append(f"verdict {published.get('verdict')}≠{recomputed.verdict.value}")
+
+    if mismatches:
+        report.add(
+            "FAIL",
+            check,
+            "published owh-1 disagrees with the sealed chain: " + "; ".join(mismatches),
+        )
+    else:
+        report.add(
+            "PASS",
+            check,
+            f"owh-1 reconciles: {recomputed.unwarranted}/{recomputed.total} "
+            f"rate {recomputed.rate:.4f} → {recomputed.verdict.value}",
+        )

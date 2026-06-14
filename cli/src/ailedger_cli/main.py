@@ -234,6 +234,64 @@ def verify_evidence_cmd(
         sys.exit(2)
 
 
+# -- verify-warrant-health (OWT teeth) -----------------------------------------
+
+
+@cli.command(
+    "verify-warrant-health",
+    help="Reconcile an operator's published owh-1 against its tenants' sealed "
+    "chains — catches a lying or stale warrant-health aggregate. Keyless.",
+)
+@click.option("--operator-topic", "owh_topic", required=True, metavar="0.0.X", help="The operator's warrant-health topic.")
+@click.option("--tenant-topic", "tenant_topics", multiple=True, required=True, metavar="0.0.X", help="A tenant topic the operator aggregates (repeatable).")
+@click.option("--mirror", "mirror_base", metavar="URL", help="Mirror REST base (default by --network).")
+@click.option("--network", default="testnet", show_default=True, help="testnet | mainnet.")
+def verify_warrant_health_cmd(
+    owh_topic: str,
+    tenant_topics: tuple[str, ...],
+    mirror_base: str | None,
+    network: str,
+) -> None:
+    from ailedger_cli.evidence import (
+        VerificationReport,
+        count_warrant_records,
+        parse_records,
+        verify_warrant_health,
+    )
+    from ailedger_cli.mirror import DEFAULT_MIRRORS, fetch_topic_messages
+
+    base = mirror_base or DEFAULT_MIRRORS.get(network)
+    if base is None:
+        raise click.UsageError(f"unknown network {network!r} — pass --mirror explicitly")
+
+    # Latest published owh-1 on the operator's warrant-health topic.
+    owh_records = parse_records(fetch_topic_messages(base, owh_topic))
+    owh = next((r.body for r in reversed(owh_records) if r.kind == "owh-1"), None)
+    if owh is None:
+        raise click.ClickException(f"no owh-1 record found on {owh_topic}")
+
+    # Ground truth: count warranted/unwarranted across the operator's tenants.
+    warranted = 0
+    by_category: dict[str, int] = {}
+    for topic in tenant_topics:
+        w, cats = count_warrant_records(parse_records(fetch_topic_messages(base, topic)))
+        warranted += w
+        for k, v in cats.items():
+            by_category[k] = by_category.get(k, 0) + v
+
+    report = VerificationReport(topic_id=owh_topic)
+    verify_warrant_health(report, owh, warranted, by_category)
+    click.echo(
+        f"operator {owh.get('operator_id', '?')} — owh-1 from {owh_topic} vs "
+        f"{len(tenant_topics)} tenant chain(s)"
+    )
+    for f in report.findings:
+        click.echo(f"  [{f.level}] {f.check}: {f.detail}")
+    click.echo(f"VERDICT: {'OK' if report.ok else 'FAIL'}")
+    if not report.ok:
+        sys.exit(2)
+
+
 # -- export --------------------------------------------------------------------
 
 

@@ -35,11 +35,13 @@ const cfg = {
     appendFileSync(MANIFESTS, JSON.stringify({ sealedAt: new Date().toISOString(), ...info }) + '\n', {
       mode: 0o600,
     });
-    console.log(
+    const line =
       info.kind === 'decision'
         ? `sealed decision ${info.eventId} seq ${info.sequenceNumber}`
-        : `sealed batch ${info.batchId} (${info.leafCount} leaves) seq ${info.sequenceNumber}`,
-    );
+        : info.kind === 'unwarrant'
+          ? `sealed UNWARRANT ${info.eventId} [${info.unwarrantCategory}] seq ${info.sequenceNumber}`
+          : `sealed batch ${info.batchId} (${info.leafCount} leaves) seq ${info.sequenceNumber}`;
+    console.log(line);
   },
 };
 
@@ -74,6 +76,7 @@ async function once(): Promise<void> {
   const r = await drainTenant(cfg, tenantRef, { forceBatch });
   const note = [
     `decisions=${r.sealedDecisions}`,
+    `unwarrants=${r.sealedUnwarrants}`,
     `batches=${r.sealedBatches}`,
     r.pendingLogsHeld ? `logsHeld=${r.pendingLogsHeld}` : null,
     r.skipped ? `skipped=${r.skipped}` : null,

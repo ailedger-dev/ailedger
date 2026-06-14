@@ -36,17 +36,19 @@ const dbPath =
   process.env.AILEDGER_INDEXER_DB ?? join(homedir(), '.ailedger-indexer', 'index.db');
 mkdirSync(dirname(dbPath), { recursive: true, mode: 0o700 });
 
+const operatorsTopic = process.env.INDEXER_OPERATORS_TOPIC; // OWT cross-operator board (optional)
 const store = new IndexerStore(dbPath);
 const mirror = restMirror(mirrorBase);
 
 async function sweep(): Promise<void> {
-  const summaries = await ingestAll(store, mirror, registryTopic!);
+  const summaries = await ingestAll(store, mirror, registryTopic!, operatorsTopic);
   for (const s of summaries) {
     if (s.newRecords === 0) continue;
     console.log(
       `${s.topicId}: +${s.newRecords} records` +
         (s.announcements ? ` (${s.announcements} announcements)` : '') +
         (s.decisions ? ` ${s.decisions} decisions` : '') +
+        (s.unwarrants ? ` ${s.unwarrants} unwarrants` : '') +
         (s.batches ? ` ${s.batches} batches` : '') +
         (s.brokenLinks ? ` BROKEN-LINKS=${s.brokenLinks}` : ''),
     );

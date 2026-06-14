@@ -40,6 +40,41 @@ export function createIndexerApi(store: IndexerStore, state: ApiState = {}): Hon
     }),
   );
 
+  // OWT — the public cross-operator warrant-health board. Anyone reads any
+  // operator's published unwarranted rate + verdict + freshness, with no
+  // credentials. A null `latest` = operator announced but never published
+  // (gap-honest: visibly non-participating).
+  app.get('/v1/operators', (c) =>
+    c.json({
+      operators: store.operators().map((o) => ({
+        operator_id: o.operatorId,
+        operator_pubkey: o.operatorPubkey,
+        warrant_health_topic_id: o.warrantHealthTopicId,
+      })),
+    }),
+  );
+
+  app.get('/v1/board', (c) =>
+    c.json({
+      board: store.board().map((row) => ({
+        operator_id: row.operatorId,
+        warrant_health_topic_id: row.warrantHealthTopicId,
+        latest: row.latest
+          ? {
+              seq: row.latest.seq,
+              published_at: row.latest.consensusTs,
+              total: row.latest.total,
+              unwarranted: row.latest.unwarranted,
+              unwarranted_rate: row.latest.rate,
+              threshold: row.latest.threshold,
+              verdict: row.latest.verdict,
+              by_category: row.latest.byCategory,
+            }
+          : null,
+      })),
+    }),
+  );
+
   app.get('/v1/tenants/:ref/events', (c) => {
     const limit = Math.min(Number(c.req.query('limit') ?? 100), 1000);
     return c.json({ events: store.decisionsForTenant(c.req.param('ref'), limit) });
@@ -48,6 +83,20 @@ export function createIndexerApi(store: IndexerStore, state: ApiState = {}): Hon
   app.get('/v1/events/:eventId', (c) => {
     const event = store.decisionById(c.req.param('eventId'));
     return event ? c.json(event) : c.json({ error: 'not found' }, 404);
+  });
+
+  app.get('/v1/tenants/:ref/warrant-health', (c) => {
+    const tenant = store.tenantByRef(c.req.param('ref'));
+    if (!tenant) return c.json({ error: 'unknown tenant' }, 404);
+    const h = store.warrantHealth(tenant.tenantRef);
+    return c.json({
+      tenant_ref: tenant.tenantRef,
+      total_decisions: h.total,
+      warranted: h.warranted,
+      unwarranted: h.unwarranted,
+      unwarranted_rate: h.rate,
+      by_category: h.byCategory,
+    });
   });
 
   app.get('/v1/tenants/:ref/batches', (c) => {

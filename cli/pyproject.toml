@@ -26,6 +26,8 @@ dependencies = [
   "click>=8.1",
   "httpx>=0.27",
   "reportlab>=4.0",
+  # OWT warrant-health reconciliation reuses the open-standard verdict logic.
+  "ailedger-detection>=0.3.0",
 ]
 
 [project.optional-dependencies]

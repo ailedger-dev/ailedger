@@ -16,7 +16,7 @@
 // taxonomy decision_type) without importing legacy code.
 
 import { generateDek, generateEventSalt, sealPayload, toHex } from '@ailedger/sdk';
-import type { OutboxConfig, QueuedDecision } from '../hedera/outbox.ts';
+import type { OutboxConfig, QueuedDecision, QueuedUnwarrant } from '../hedera/outbox.ts';
 import { enqueue } from '../hedera/outbox.ts';
 import { wrapDek, type KekProvider } from '../vault/kek.ts';
 import type { VaultStore } from '../vault/types.ts';
@@ -134,6 +134,81 @@ export async function ingestDecisionEvent(
     humanInLoop: body.human_in_loop ?? false,
     modelWeightsHash: body.model_weights_hash ?? null,
     commitInputs,
+    saltHex: toHex(salt),
+    payloadHash,
+  };
+  await enqueue(deps.outbox, tenantRef, item);
+  return { eventId, payloadHash, status: 'queued' };
+}
+
+export interface UnwarrantBody {
+  event_id?: string;
+  timestamp: string;
+  decision_type: string;
+  unwarrant_category:
+    | 'missing-justification'
+    | 'empty-alternatives'
+    | 'weak-warrant'
+    | 'unresolved-obligation';
+  /** The full attempted decision — sealed in the vault, committed on-chain. */
+  attempt: unknown;
+}
+
+const UNWARRANT_CATEGORIES = new Set([
+  'missing-justification',
+  'empty-alternatives',
+  'weak-warrant',
+  'unresolved-obligation',
+]);
+
+export function validateUnwarrant(body: unknown): UnwarrantBody {
+  if (typeof body !== 'object' || body === null) throw new ValidationError('body must be an object');
+  const b = body as Record<string, unknown>;
+  if (b.event_id !== undefined && !UUID_RE.test(String(b.event_id))) {
+    throw new ValidationError('event_id must be a UUID');
+  }
+  if (!ISO_RE.test(String(b.timestamp))) throw new ValidationError('timestamp must be ISO-8601');
+  if (typeof b.decision_type !== 'string' || !b.decision_type) {
+    throw new ValidationError('decision_type is required');
+  }
+  if (!UNWARRANT_CATEGORIES.has(String(b.unwarrant_category))) {
+    throw new ValidationError('unwarrant_category must be a known OWT category');
+  }
+  if (b.attempt === undefined) throw new ValidationError('attempt is required');
+  return b as unknown as UnwarrantBody;
+}
+
+/**
+ * Ingest an unwarranted decision (OWT): seal the attempt in the vault exactly
+ * like a decision payload, enqueue an `ode-2u` for the tenant's own chain. The
+ * refusal is recorded gap-honestly instead of dropped.
+ */
+export async function ingestUnwarrant(
+  deps: PipelineDeps,
+  tenantRef: string,
+  rawBody: unknown,
+): Promise<IngestResult> {
+  const body = validateUnwarrant(rawBody);
+  const eventId = body.event_id ?? crypto.randomUUID();
+  const salt = generateEventSalt();
+  const dek = generateDek();
+
+  const { blob, payloadHash } = await sealPayload(
+    dek,
+    { attempt: body.attempt, unwarrant_category: body.unwarrant_category, event_salt: toHex(salt) },
+    eventId,
+  );
+  const kek = await deps.keks.getKek(tenantRef);
+  const wrappedDek = await wrapDek(kek, dek, payloadHash);
+  await deps.vault.put(tenantRef, payloadHash, { blob, wrappedDek });
+
+  const item: QueuedUnwarrant = {
+    kind: 'unwarrant',
+    eventId,
+    decisionType: body.decision_type,
+    ts: body.timestamp,
+    unwarrantCategory: body.unwarrant_category,
+    attempt: body.attempt,
     saltHex: toHex(salt),
     payloadHash,
   };

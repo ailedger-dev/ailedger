@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from ailedger_detection.decision_event import to_ingest_body, validate_decision_event
+from ailedger_detection.unwarrant import classify_unwarrant, to_unwarrant_ingest_body
 
 __all__ = ["RelayEmitter", "RelayError"]
 
@@ -69,8 +70,24 @@ class RelayEmitter:
         return json.loads(raw) if raw else {}
 
     def emit(self, seam_event: dict[str, Any]) -> dict[str, Any]:
-        """Validate a seam decision event and submit it. Refuses locally on
-        schema violations (IncompleteRationaleError / SeamSchemaError)."""
+        """Submit a seam decision event, recording its warrant verdict (OWT).
+
+        Three outcomes:
+          * **warranted** → POST /v2/detection-events (sealed as ode-2).
+          * **unwarranted** (missing/empty/weak warrant) → POST
+            /v2/unwarranted-events (sealed as ode-2u — the refusal becomes a
+            gap-honest, counted record instead of a silent drop).
+          * **malformed** (no decision_id/decision/ts) → SeamSchemaError,
+            pre-network: a non-decision is not recordable.
+
+        This replaces the old raise-and-drop behavior: an unwarranted decision
+        is no longer discarded, it is recorded as unwarranted.
+        """
+        category = classify_unwarrant(seam_event)
+        if category is not None:
+            return self._post(
+                "/v2/unwarranted-events", to_unwarrant_ingest_body(seam_event, category)
+            )
         record = validate_decision_event(seam_event)
         return self._post("/v2/detection-events", to_ingest_body(record))
 

@@ -7,6 +7,7 @@ import {
   type OutboxStore,
   type QueuedDecision,
   type QueuedLog,
+  type QueuedUnwarrant,
   type SealedInfo,
 } from '../src/hedera/outbox';
 import {
@@ -75,6 +76,19 @@ function decision(n: number): QueuedDecision {
 
 function log(n: number): QueuedLog {
   return { kind: 'log', ts: `2026-06-12T17:00:0${n}.000000Z`, logRecord: { call: n } };
+}
+
+function unwarrant(n: number): QueuedUnwarrant {
+  return {
+    kind: 'unwarrant',
+    eventId: `event-u${n}`,
+    decisionType: 'agent_decision',
+    ts: `2026-06-12T17:00:0${n}.000000Z`,
+    unwarrantCategory: 'missing-justification',
+    attempt: { decision: 'acted', warrant: { rejected_alternatives: ['x'] } },
+    saltHex: '07'.repeat(32),
+    payloadHash: 'cd'.repeat(32),
+  };
 }
 
 function makeCfg(overrides: Partial<OutboxConfig> = {}) {
@@ -146,6 +160,30 @@ describe('outbox drain', () => {
     );
     const proof = await inclusionProof(1, leaves);
     expect(await verifyInclusion(leaves[1], 1, leaves.length, proof, root)).toBe(true);
+  });
+
+  it('ode-2u threads the SAME chain as ode-2 (denominator integrity)', async () => {
+    const { cfg, submitter, sealed } = makeCfg();
+    await enqueue(cfg, 't1', decision(1));
+    await enqueue(cfg, 't1', unwarrant(2));
+    await enqueue(cfg, 't1', decision(3));
+
+    const result = await drainTenant(cfg, 't1');
+    expect(result.sealedDecisions).toBe(2);
+    expect(result.sealedUnwarrants).toBe(1);
+
+    const [r1, ru, r3] = submitter.submitted.map((s) => decode(s.encoded));
+    expect(r1.v).toBe('ode-2');
+    expect(ru.v).toBe('ode-2u');
+    expect(ru.unwarrant_category).toBe('missing-justification');
+    expect(r3.v).toBe('ode-2');
+    // one continuous chain across all three kinds
+    expect(r1.prev_hash).toBe(GENESIS_PREV_HASH);
+    expect(ru.prev_hash).toBe(await sha256hexOf(submitter.submitted[0].encoded));
+    expect(r3.prev_hash).toBe(await sha256hexOf(submitter.submitted[1].encoded));
+    // the unwarranted attempt never appears in the on-chain bytes
+    expect(new TextDecoder().decode(submitter.submitted[1].encoded)).not.toContain('acted');
+    expect(sealed.find((s) => s.kind === 'unwarrant')).toBeDefined();
   });
 
   it('head-of-line blocking: a failed submit stops the drain; retry continues the same chain', async () => {

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from ailedger_detection.decision_event import IncompleteRationaleError
+from ailedger_detection.decision_event import SeamSchemaError
 from ailedger_detection.emitter import RelayEmitter, RelayError
 from tests.test_decision_event import seam_event
 
@@ -36,11 +36,32 @@ def test_emit_posts_mapped_body_with_auth() -> None:
     assert body["inputs"]["rejected_alternatives"][0].startswith("duckdb")
 
 
-def test_invalid_event_never_reaches_the_network() -> None:
+def test_unwarranted_decision_routes_to_unwarranted_endpoint() -> None:
+    # OWT: an unwarranted decision is RECORDED (gap-honest), not dropped.
+    transport = FakeTransport(body={"event_id": "x", "status": "queued"})
+    emitter = RelayEmitter("http://relay:8788", api_key="alk_test", transport=transport)
+    for warrant, category in [
+        ({"justification": "", "rejected_alternatives": ["x"]}, "missing-justification"),
+        ({"justification": "why", "rejected_alternatives": []}, "empty-alternatives"),
+        ({"justification": "why", "rejected_alternatives": ["x"], "confidence": 0.1}, "weak-warrant"),
+    ]:
+        transport.calls.clear()
+        emitter.emit(seam_event(warrant=warrant))
+        url, _, raw = transport.calls[0]
+        assert url == "http://relay:8788/v2/unwarranted-events"
+        body = json.loads(raw)
+        assert body["unwarrant_category"] == category
+        assert body["attempt"]["warrant"] == warrant  # full attempt carried for sealing
+
+
+def test_malformed_decision_still_refused_pre_network() -> None:
+    # A non-decision (no decision_id) is not recordable — still raises, no I/O.
     transport = FakeTransport()
     emitter = RelayEmitter("http://relay:8788", api_key="alk_test", transport=transport)
-    with pytest.raises(IncompleteRationaleError):
-        emitter.emit(seam_event(warrant={"justification": "", "rejected_alternatives": ["x"]}))
+    bad = seam_event(warrant={"justification": "", "rejected_alternatives": ["x"]})
+    del bad["decision_id"]
+    with pytest.raises(SeamSchemaError):
+        emitter.emit(bad)
     assert transport.calls == []
 
 

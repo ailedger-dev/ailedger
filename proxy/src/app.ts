@@ -18,6 +18,7 @@ import { Hono } from 'hono';
 import {
   ingestDecisionEvent,
   ingestInferenceLog,
+  ingestUnwarrant,
   ValidationError,
   type PipelineDeps,
 } from './evidence/pipeline.ts';
@@ -56,6 +57,22 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
     }
     try {
       const result = await ingestDecisionEvent(deps, c.get('tenantRef'), body);
+      return c.json({ event_id: result.eventId, payload_hash: result.payloadHash, status: result.status }, 202);
+    } catch (err) {
+      if (err instanceof ValidationError) return c.json({ error: err.message }, 400);
+      throw err;
+    }
+  });
+
+  app.post('/v2/unwarranted-events', async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: 'invalid JSON body' }, 400);
+    }
+    try {
+      const result = await ingestUnwarrant(deps, c.get('tenantRef'), body);
       return c.json({ event_id: result.eventId, payload_hash: result.payloadHash, status: result.status }, 202);
     } catch (err) {
       if (err instanceof ValidationError) return c.json({ error: err.message }, 400);

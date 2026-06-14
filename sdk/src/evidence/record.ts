@@ -28,6 +28,16 @@ import canonicalize from 'canonicalize';
 
 export const ODE_DECISION_VERSION = 'ode-2' as const;
 export const ODE_BATCH_VERSION = 'ode-2b' as const;
+export const ODE_UNWARRANT_VERSION = 'ode-2u' as const;
+export const OWH_VERSION = 'owh-1' as const;
+export type WarrantHealthVerdict = 'PASS' | 'FLAG' | 'GAP';
+
+/** The frozen unwarrant-category wire strings (mirror of the detection enum). */
+export type UnwarrantCategory =
+  | 'missing-justification'
+  | 'empty-alternatives'
+  | 'weak-warrant'
+  | 'unresolved-obligation';
 /** Hard cap on the canonical byte length of one on-chain record (one HCS message). */
 export const MAX_RECORD_BYTES = 1024;
 export const EVENT_SALT_BYTES = 32;
@@ -147,8 +157,39 @@ export async function verifyFieldCommitment(
   return (await commitField(salt, fieldName, value)) === expectedCommit.toLowerCase();
 }
 
+/**
+ * The owh-1 operator warrant-health aggregate (OWT). Counts only —
+ * non-personal, public-safe. Published to the operator's OWN single-writer
+ * warrant-health topic, which authenticates the writer; the prev_hash threads
+ * that topic's chain. No detached signature in v1 (the single-writer HCS topic
+ * is the authentication). A verifier recomputes total/unwarranted/rate from
+ * the operator's sealed ode-2/ode-2u records and FAILs a mismatch — so this
+ * aggregate cannot lie about the chain it summarizes.
+ */
+export interface OdeWarrantHealthRecord {
+  v: typeof OWH_VERSION;
+  prev_hash: string;
+  operator_id: string;
+  window: { from_ts: string; to_ts: string };
+  total: number;
+  unwarranted: number;
+  by_category: Record<string, number>;
+  rate: number;
+  sample_size: number;
+  threshold: number;
+  /** Sample floor below which the verdict is GAP — on-chain so the verdict is reproducible. */
+  min_sample: number;
+  verdict: WarrantHealthVerdict;
+}
+
 /** Canonical on-chain encoding of a record (the exact HCS message bytes). */
-export function encodeRecord(record: OdeDecisionRecord | OdeBatchRecord): Uint8Array {
+export function encodeRecord(
+  record:
+    | OdeDecisionRecord
+    | OdeBatchRecord
+    | OdeUnwarrantRecord
+    | OdeWarrantHealthRecord,
+): Uint8Array {
   const jcs = canonicalize(record as Parameters<typeof canonicalize>[0]);
   if (jcs === undefined) throw new Error('record is not JCS-serializable');
   return new TextEncoder().encode(jcs);
@@ -231,6 +272,118 @@ export function buildBatchRecord(params: BuildBatchRecordParams): {
   const encoded = encodeRecord(record);
   if (encoded.byteLength > MAX_RECORD_BYTES) {
     throw new Error(`encoded batch record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
+  }
+  return { record, encoded };
+}
+
+/**
+ * The ode-2u unwarranted-decision record (OWT). The gap-honest counterpart of
+ * ode-2: a decision the agent attempted that lacked a sound warrant, recorded
+ * instead of silently dropped. It lives on the tenant's SAME Logbook topic and
+ * threads the SAME prev_hash chain as ode-2 — so total decisions
+ * (warranted + unwarranted) are network-counted by HCS sequence number, which
+ * is exactly what makes the unwarranted-rate denominator tamper-evident.
+ *
+ * The attempted decision's sensitive content is sealed in the vault (it may
+ * carry PII, like any decision payload); on-chain we keep only the
+ * non-personal structural fields, the category, and a salted commitment.
+ */
+export interface OdeUnwarrantRecord {
+  v: typeof ODE_UNWARRANT_VERSION;
+  event_id: string;
+  decision_type: string;
+  ts: string;
+  prev_hash: string;
+  unwarrant_category: UnwarrantCategory;
+  /** SHA-256(salt ‖ 'attempt' ‖ 0x3A ‖ JCS(attempt)) — provable later, not leaked. */
+  attempt_commit: string;
+  /** SHA-256 of the sealed attempt blob (vault content address). */
+  payload_hash: string;
+}
+
+export interface BuildUnwarrantRecordParams {
+  eventId: string;
+  decisionType: string;
+  ts: string;
+  prevHash: string;
+  unwarrantCategory: UnwarrantCategory;
+  /** Per-event salt; the attempt commitment hides under it. Lives in the payload. */
+  salt: Uint8Array;
+  /** The full attempted decision (sealed in the vault; committed here). */
+  attempt: unknown;
+  /** SHA-256 hex of the sealed attempt blob. */
+  payloadHash: string;
+}
+
+/** Build the ode-2u record for one unwarranted decision. */
+export async function buildUnwarrantRecord(
+  params: BuildUnwarrantRecordParams,
+): Promise<{ record: OdeUnwarrantRecord; encoded: Uint8Array }> {
+  assertHex64('prevHash', params.prevHash);
+  assertHex64('payloadHash', params.payloadHash);
+  const record: OdeUnwarrantRecord = {
+    v: ODE_UNWARRANT_VERSION,
+    event_id: params.eventId,
+    decision_type: params.decisionType,
+    ts: params.ts,
+    prev_hash: params.prevHash,
+    unwarrant_category: params.unwarrantCategory,
+    attempt_commit: await commitField(params.salt, 'attempt', params.attempt),
+    payload_hash: params.payloadHash,
+  };
+  const encoded = encodeRecord(record);
+  if (encoded.byteLength > MAX_RECORD_BYTES) {
+    throw new Error(
+      `encoded unwarrant record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES} hard cap`,
+    );
+  }
+  return { record, encoded };
+}
+
+export interface BuildWarrantHealthRecordParams {
+  prevHash: string;
+  operatorId: string;
+  fromTs: string;
+  toTs: string;
+  total: number;
+  unwarranted: number;
+  byCategory: Record<string, number>;
+  rate: number;
+  sampleSize: number;
+  threshold: number;
+  minSample: number;
+  verdict: WarrantHealthVerdict;
+}
+
+/** Build the owh-1 operator warrant-health aggregate record. */
+export function buildWarrantHealthRecord(params: BuildWarrantHealthRecordParams): {
+  record: OdeWarrantHealthRecord;
+  encoded: Uint8Array;
+} {
+  assertHex64('prevHash', params.prevHash);
+  if (!Number.isInteger(params.total) || params.total < 0) {
+    throw new Error('total must be a non-negative integer');
+  }
+  if (!Number.isInteger(params.unwarranted) || params.unwarranted < 0 || params.unwarranted > params.total) {
+    throw new Error('unwarranted must be an integer in [0, total]');
+  }
+  const record: OdeWarrantHealthRecord = {
+    v: OWH_VERSION,
+    prev_hash: params.prevHash,
+    operator_id: params.operatorId,
+    window: { from_ts: params.fromTs, to_ts: params.toTs },
+    total: params.total,
+    unwarranted: params.unwarranted,
+    by_category: params.byCategory,
+    rate: params.rate,
+    sample_size: params.sampleSize,
+    threshold: params.threshold,
+    min_sample: params.minSample,
+    verdict: params.verdict,
+  };
+  const encoded = encodeRecord(record);
+  if (encoded.byteLength > MAX_RECORD_BYTES) {
+    throw new Error(`encoded owh-1 record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
   }
   return { record, encoded };
 }

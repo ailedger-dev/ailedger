@@ -37,6 +37,24 @@ from ailedger_detection.decision_event import (
     validate_decision_event,
 )
 from ailedger_detection.emitter import RelayEmitter, RelayError
+from ailedger_detection.unwarrant import (
+    WEAK_WARRANT_THRESHOLD,
+    UnwarrantCategory,
+    classify_unwarrant,
+    to_unwarrant_ingest_body,
+)
+from ailedger_detection.warrant_health import (
+    DEFAULT_MIN_SAMPLE,
+    DEFAULT_UNWARRANT_THRESHOLD,
+    WarrantHealthResult,
+    WarrantHealthVerdict,
+    compute_warrant_health,
+    wilson_interval,
+)
+from ailedger_detection.warrant_trend import (
+    WarrantTrendResult,
+    cusum_upper,
+)
 from ailedger_detection.disparate_impact import (
     DisparateImpactResult,
     disparate_impact_ratio,
@@ -56,7 +74,13 @@ from ailedger_detection.types import (
     InferredDetectionEvent,
     ProtectedClassCollectionMethod,
 )
-from ailedger_detection.unresolved_flags import unresolved_flag_accumulation
+from ailedger_detection.unresolved_flags import (
+    DEFAULT_UNRESOLVED_THRESHOLD,
+    UnresolvedFlagResult,
+    UnresolvedObligation,
+    unresolved_flag_accumulation,
+    unresolved_obligation_bodies,
+)
 
 __version__ = "0.3.0"
 
@@ -73,6 +97,24 @@ __all__ = [
     "NO_LOOSER_ALTERNATIVE",
     "RelayEmitter",
     "RelayError",
+    # OWT — unwarrant classification (open-standard reference impl)
+    "classify_unwarrant",
+    "to_unwarrant_ingest_body",
+    "UnwarrantCategory",
+    "WEAK_WARRANT_THRESHOLD",
+    # OWT — warrant-health verdict (Wilson gap-honest)
+    "compute_warrant_health",
+    "wilson_interval",
+    "WarrantHealthResult",
+    "WarrantHealthVerdict",
+    "DEFAULT_UNWARRANT_THRESHOLD",
+    "DEFAULT_MIN_SAMPLE",
+    "cusum_upper",
+    "WarrantTrendResult",
+    "unresolved_flag_accumulation",
+    "unresolved_obligation_bodies",
+    "UnresolvedFlagResult",
+    "UnresolvedObligation",
     # Type contracts
     "DetectionEvent",
     "InferredDetectionEvent",

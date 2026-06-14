@@ -17,7 +17,7 @@ import canonicalize from 'canonicalize';
 
 /** HCS topic memo hard limit (bytes). */
 export const TOPIC_MEMO_MAX_BYTES = 100;
-export const REGISTRY_NAMES = ['tenants', 'keys', 'schema'] as const;
+export const REGISTRY_NAMES = ['tenants', 'keys', 'schema', 'operators'] as const;
 export type RegistryName = (typeof REGISTRY_NAMES)[number];
 
 const TENANT_REF_RE = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
@@ -50,6 +50,11 @@ export function registryTopicMemo(name: RegistryName): string {
 
 export function checkpointsTopicMemo(): string {
   return assertMemoBytes('ailedger/checkpoints v1');
+}
+
+export function warrantHealthTopicMemo(operatorId: string): string {
+  assertTenantRef(operatorId); // same slug rule
+  return assertMemoBytes(`ailedger/owh-1 operator=${operatorId}`);
 }
 
 /** Tenant-created announcement — message #N on registry.tenants. */
@@ -106,6 +111,63 @@ export function buildTenantCreatedAnnouncement(params: {
     throw new Error(`announcement is ${encoded.byteLength} bytes > 1024 (single HCS message)`);
   }
   return { announcement, encoded };
+}
+
+/**
+ * Operator-created announcement — message on registry.operators (OWT). Binds a
+ * stable operator id to a stable public key (anti-rotation, attack #5) and
+ * points at the operator's own warrant-health topic. Anyone replaying
+ * registry.operators enumerates every operator trustlessly.
+ */
+export interface OperatorCreatedAnnouncement {
+  v: 'reg-1';
+  kind: 'operator-created';
+  operator_id: string;
+  /** Raw hex of the operator's stable public key (identity binding). */
+  operator_pubkey: string;
+  /** The operator's own single-writer warrant-health topic (owh-1 records). */
+  warrant_health_topic_id: string;
+}
+
+export function buildOperatorCreatedAnnouncement(params: {
+  operatorId: string;
+  operatorPubkeyHex: string;
+  warrantHealthTopicId: string;
+}): { announcement: OperatorCreatedAnnouncement; encoded: Uint8Array } {
+  assertTenantRef(params.operatorId); // same slug rule
+  if (!/^[0-9a-f]{64,66}$/.test(params.operatorPubkeyHex)) {
+    throw new Error('operator_pubkey must be raw hex (64 ed25519 / 66 compressed ecdsa)');
+  }
+  if (!TOPIC_ID_RE.test(params.warrantHealthTopicId)) {
+    throw new Error(`invalid warrant_health_topic_id: ${params.warrantHealthTopicId}`);
+  }
+  const announcement: OperatorCreatedAnnouncement = {
+    v: 'reg-1',
+    kind: 'operator-created',
+    operator_id: params.operatorId,
+    operator_pubkey: params.operatorPubkeyHex.toLowerCase(),
+    warrant_health_topic_id: params.warrantHealthTopicId,
+  };
+  const jcs = canonicalize(announcement as Parameters<typeof canonicalize>[0]);
+  if (jcs === undefined) throw new Error('announcement is not JCS-serializable');
+  const encoded = new TextEncoder().encode(jcs);
+  if (encoded.byteLength > 1024) {
+    throw new Error(`announcement is ${encoded.byteLength} bytes > 1024 (single HCS message)`);
+  }
+  return { announcement, encoded };
+}
+
+export function parseOperatorCreatedAnnouncement(bytes: Uint8Array): OperatorCreatedAnnouncement {
+  const parsed = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  if (parsed.v !== 'reg-1' || parsed.kind !== 'operator-created') {
+    throw new Error(`not a reg-1 operator-created announcement: ${JSON.stringify(parsed).slice(0, 80)}`);
+  }
+  const { announcement } = buildOperatorCreatedAnnouncement({
+    operatorId: String(parsed.operator_id),
+    operatorPubkeyHex: String(parsed.operator_pubkey),
+    warrantHealthTopicId: String(parsed.warrant_health_topic_id),
+  });
+  return announcement;
 }
 
 /** Parse + validate a registry.tenants message (indexer/list-side). */

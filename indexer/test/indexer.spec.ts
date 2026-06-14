@@ -5,6 +5,8 @@ import { Buffer } from 'node:buffer';
 import {
   buildBatchRecord,
   buildDecisionRecord,
+  buildUnwarrantRecord,
+  buildWarrantHealthRecord,
   encodeLeaf,
   merkleRootHex,
   GENESIS_PREV_HASH,
@@ -52,6 +54,19 @@ async function decisionEncoded(n: number, prevHash: string, eventId?: string) {
       trace: null,
     },
     salt: new Uint8Array(32).fill(7),
+    payloadHash: 'cd'.repeat(32),
+  });
+}
+
+async function unwarrantEncoded(n: number, prevHash: string) {
+  return buildUnwarrantRecord({
+    eventId: `00000000-0000-4000-8000-0000000000u${n}`.slice(0, 36),
+    decisionType: 'agent_decision',
+    ts: `2026-06-12T19:00:0${n}.000Z`,
+    prevHash,
+    unwarrantCategory: 'missing-justification',
+    salt: new Uint8Array(32).fill(7),
+    attempt: { decision: 'acted', n },
     payloadHash: 'cd'.repeat(32),
   });
 }
@@ -107,6 +122,98 @@ describe('indexer', () => {
     expect(status.continuous).toBe(true);
     expect(store.decisionsForTenant('jv-fleet').length).toBe(2);
     expect(store.batchesForTenant('jv-fleet').length).toBe(1);
+  });
+
+  it('ode-2u counts toward warrant-health on the same chain as ode-2', async () => {
+    // d1 (warranted) -> u2 (unwarranted) -> d3 (warranted), one chain.
+    const d1 = await decisionEncoded(1, GENESIS_PREV_HASH);
+    mirror.push(TENANT_TOPIC, d1.encoded);
+    const u2 = await unwarrantEncoded(2, await sha256hexOf(d1.encoded));
+    mirror.push(TENANT_TOPIC, u2.encoded);
+    const d3 = await decisionEncoded(3, await sha256hexOf(u2.encoded));
+    mirror.push(TENANT_TOPIC, d3.encoded);
+    // announce the tenant so warrantHealth resolves it
+    mirror.push(
+      REGISTRY,
+      new TextEncoder().encode(
+        JSON.stringify({
+          v: 'reg-1',
+          kind: 'tenant-created',
+          tenant_ref: 'jv-fleet',
+          topic_id: TENANT_TOPIC,
+          submit_pubkey: 'ab'.repeat(32),
+          admin_threshold: 2,
+          admin_key_fingerprints: ['ef'.repeat(32), 'ef'.repeat(32), 'ef'.repeat(32)],
+        }),
+      ),
+    );
+
+    await ingestAll(store, mirror, REGISTRY);
+    const status = store.chainStatus(TENANT_TOPIC)!;
+    expect(status.records).toBe(3);
+    expect(status.continuous).toBe(true); // unwarrant threads the same chain
+
+    const h = store.warrantHealth('jv-fleet');
+    expect(h).toMatchObject({
+      total: 3,
+      warranted: 2,
+      unwarranted: 1,
+      byCategory: { 'missing-justification': 1 },
+    });
+    expect(h.rate).toBeCloseTo(1 / 3, 10);
+  });
+
+  it('discovers operators from registry.operators and builds the public board', async () => {
+    const OPERATORS_REGISTRY = '0.0.300';
+    const WH_TOPIC = '0.0.301';
+    // operator announcement on the operators registry
+    mirror.push(
+      OPERATORS_REGISTRY,
+      new TextEncoder().encode(
+        JSON.stringify({
+          v: 'reg-1',
+          kind: 'operator-created',
+          operator_id: 'jv-fleet',
+          operator_pubkey: 'cd'.repeat(32),
+          warrant_health_topic_id: WH_TOPIC,
+        }),
+      ),
+    );
+    // one owh-1 on the operator's warrant-health topic
+    const owh = buildWarrantHealthRecord({
+      prevHash: GENESIS_PREV_HASH,
+      operatorId: 'jv-fleet',
+      fromTs: '1970-01-01T00:00:00Z',
+      toTs: '2026-06-12T00:00:00Z',
+      total: 1000,
+      unwarranted: 30,
+      byCategory: { 'missing-justification': 30 },
+      rate: 0.03,
+      sampleSize: 1000,
+      threshold: 0.05,
+      minSample: 30,
+      verdict: 'PASS',
+    });
+    mirror.push(WH_TOPIC, owh.encoded);
+
+    // bootstrap from BOTH roots — tenants (empty here) + operators
+    await ingestAll(store, mirror, REGISTRY, OPERATORS_REGISTRY);
+
+    expect(store.operators()[0]).toMatchObject({ operatorId: 'jv-fleet', warrantHealthTopicId: WH_TOPIC });
+    const board = store.board();
+    expect(board).toHaveLength(1);
+    expect(board[0].latest).toMatchObject({
+      total: 1000,
+      unwarranted: 30,
+      rate: 0.03,
+      verdict: 'PASS',
+      byCategory: { 'missing-justification': 30 },
+    });
+
+    // cold rebuild from the same mirror reproduces the board
+    const b = new IndexerStore(':memory:');
+    await ingestAll(b, mirror, REGISTRY, OPERATORS_REGISTRY);
+    expect(b.board()).toEqual(board);
   });
 
   it('detects a broken link at the exact sequence', async () => {

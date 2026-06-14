@@ -41,6 +41,8 @@ export { computeInputsHash, sha256hex, sha256jcs, isJsonContentType } from './ha
 export {
   buildBatchRecord,
   buildDecisionRecord,
+  buildUnwarrantRecord,
+  buildWarrantHealthRecord,
   commitField,
   encodeRecord,
   generateEventSalt,
@@ -49,13 +51,21 @@ export {
   MAX_RECORD_BYTES,
   ODE_BATCH_VERSION,
   ODE_DECISION_VERSION,
+  ODE_UNWARRANT_VERSION,
+  OWH_VERSION,
 } from './evidence/record.js';
 export type {
   BuildBatchRecordParams,
   BuildDecisionRecordParams,
+  BuildUnwarrantRecordParams,
+  BuildWarrantHealthRecordParams,
   DecisionCommitInputs,
   OdeBatchRecord,
   OdeDecisionRecord,
+  OdeUnwarrantRecord,
+  OdeWarrantHealthRecord,
+  UnwarrantCategory,
+  WarrantHealthVerdict,
 } from './evidence/record.js';
 export {
   encodeLeaf,
@@ -76,6 +86,14 @@ export {
   ENVELOPE_VERSION,
 } from './evidence/envelope.js';
 export type { SealedPayload } from './evidence/envelope.js';
+export {
+  computeWarrantHealth,
+  wilsonInterval,
+  DEFAULT_UNWARRANT_THRESHOLD,
+  DEFAULT_MIN_SAMPLE,
+  WILSON_Z_95,
+} from './evidence/warrant-health.js';
+export type { WarrantHealthResult } from './evidence/warrant-health.js';
 export { computeExtractorParamsHash } from './canonicalize.js';
 export { normalizeConfidence, normalizeTimestamp } from './normalize.js';
 

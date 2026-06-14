@@ -52,7 +52,36 @@ const validEvent = {
   trace: ['call-1'],
 };
 
+const unwarrantBody = {
+  timestamp: '2026-06-12T18:00:00.000Z',
+  decision_type: 'agent_decision',
+  unwarrant_category: 'missing-justification',
+  attempt: { decision: 'acted', warrant: { rejected_alternatives: ['x'] }, subject_id: 'f1'.repeat(32) },
+};
+
 describe('evidence app', () => {
+  it('records an unwarranted decision: vault seals the attempt, outbox holds ode-2u', async () => {
+    const { app, vault, store } = makeApp();
+    const res = await post(app, '/v2/unwarranted-events', unwarrantBody);
+    expect(res.status).toBe(202);
+    const body = (await res.json()) as { event_id: string; payload_hash: string; status: string };
+    expect(body.status).toBe('queued');
+    expect(await vault.get('jv-fleet', body.payload_hash)).not.toBeNull();
+    const keys = await store.list('outbox:jv-fleet:');
+    const item = JSON.parse((await store.get(keys[0]))!) as { kind: string; unwarrantCategory: string };
+    expect(item.kind).toBe('unwarrant');
+    expect(item.unwarrantCategory).toBe('missing-justification');
+  });
+
+  it('rejects an unwarrant with a bad category or missing attempt (400)', async () => {
+    const { app } = makeApp();
+    expect((await post(app, '/v2/unwarranted-events', { ...unwarrantBody, unwarrant_category: 'nope' })).status).toBe(400);
+    const noAttempt: Record<string, unknown> = { ...unwarrantBody };
+    delete noAttempt.attempt;
+    expect((await post(app, '/v2/unwarranted-events', noAttempt)).status).toBe(400);
+    expect((await post(app, '/v2/unwarranted-events', unwarrantBody, 'bad-key')).status).toBe(401);
+  });
+
   it('healthz is open; /v2 requires auth', async () => {
     const { app } = makeApp();
     expect((await app.request('/healthz')).status).toBe(200);
