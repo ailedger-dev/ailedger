@@ -27,6 +27,7 @@
 import {
   buildBatchRecord,
   buildDecisionRecord,
+  buildUnwarrantRecord,
   encodeLeaf,
   fromHex,
   merkleRootHex,
@@ -65,7 +66,19 @@ export interface QueuedLog {
   logRecord: Record<string, unknown>;
 }
 
-export type QueuedItem = QueuedDecision | QueuedLog;
+export interface QueuedUnwarrant {
+  kind: 'unwarrant';
+  eventId: string;
+  decisionType: string;
+  ts: string;
+  unwarrantCategory: 'missing-justification' | 'empty-alternatives' | 'weak-warrant';
+  /** The full attempted decision — committed at drain, sealed in the vault. */
+  attempt: unknown;
+  saltHex: string;
+  payloadHash: string;
+}
+
+export type QueuedItem = QueuedDecision | QueuedLog | QueuedUnwarrant;
 
 export interface SealedDecision {
   kind: 'decision';
@@ -88,7 +101,16 @@ export interface SealedBatch {
   logs: Record<string, unknown>[];
 }
 
-export type SealedInfo = SealedDecision | SealedBatch;
+export interface SealedUnwarrant {
+  kind: 'unwarrant';
+  tenantRef: string;
+  eventId: string;
+  unwarrantCategory: string;
+  sequenceNumber: number;
+  recordHash: string;
+}
+
+export type SealedInfo = SealedDecision | SealedBatch | SealedUnwarrant;
 
 export interface OutboxConfig {
   store: OutboxStore;
@@ -105,6 +127,7 @@ export interface OutboxConfig {
 export interface DrainResult {
   tenantRef: string;
   sealedDecisions: number;
+  sealedUnwarrants: number;
   sealedBatches: number;
   pendingLogsHeld: number;
   skipped?: 'lease-held';
@@ -199,6 +222,7 @@ export async function drainTenant(
   const result: DrainResult = {
     tenantRef,
     sealedDecisions: 0,
+    sealedUnwarrants: 0,
     sealedBatches: 0,
     pendingLogsHeld: 0,
   };
@@ -224,6 +248,37 @@ export async function drainTenant(
 
       if (item.kind === 'log') {
         pendingLogs.push({ key, item });
+        continue;
+      }
+
+      if (item.kind === 'unwarrant') {
+        // ode-2u threads the SAME chain as ode-2 on the SAME topic — so the
+        // unwarranted-rate denominator (warranted + unwarranted) is counted by
+        // HCS sequence number and cannot be silently shrunk.
+        const { encoded } = await buildUnwarrantRecord({
+          eventId: item.eventId,
+          decisionType: item.decisionType,
+          ts: item.ts,
+          prevHash: state.prevHash,
+          unwarrantCategory: item.unwarrantCategory,
+          salt: fromHex(item.saltHex),
+          attempt: item.attempt,
+          payloadHash: item.payloadHash,
+        });
+        const { sequenceNumber } = await submitter.submit(tenantRef, encoded);
+        const recordHash = await sha256hexOf(encoded);
+        state.prevHash = recordHash;
+        await store.put(chainStateKey(tenantRef), JSON.stringify(state));
+        await store.delete(key);
+        result.sealedUnwarrants++;
+        await cfg.onSealed?.({
+          kind: 'unwarrant',
+          tenantRef,
+          eventId: item.eventId,
+          unwarrantCategory: item.unwarrantCategory,
+          sequenceNumber,
+          recordHash,
+        });
         continue;
       }
 
