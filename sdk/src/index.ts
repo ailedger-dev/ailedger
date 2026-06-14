@@ -40,22 +40,29 @@ export { computeInputsHash, sha256hex, sha256jcs, isJsonContentType } from './ha
 // the relay, the verifier, and the aDNA adapter. See docs/adr/016.
 export {
   buildBatchRecord,
+  buildCheckpointRecord,
   buildDecisionRecord,
+  checkpointLeaf,
   commitField,
   encodeRecord,
   generateEventSalt,
   verifyFieldCommitment,
+  CHECKPOINT_LEAF_SPEC,
   GENESIS_PREV_HASH,
   MAX_RECORD_BYTES,
   ODE_BATCH_VERSION,
+  ODE_CHECKPOINT_VERSION,
   ODE_DECISION_VERSION,
 } from './evidence/record.js';
 export type {
   BuildBatchRecordParams,
+  BuildCheckpointRecordParams,
   BuildDecisionRecordParams,
   DecisionCommitInputs,
   OdeBatchRecord,
+  OdeCheckpointRecord,
   OdeDecisionRecord,
+  TenantHead,
 } from './evidence/record.js';
 export {
   encodeLeaf,

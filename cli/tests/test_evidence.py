@@ -12,7 +12,9 @@ from ailedger_cli.canonical import canonical
 from ailedger_cli.evidence import (
     GENESIS_PREV,
     commit_field,
+    compute_checkpoint_root,
     verify_batch_manifest,
+    verify_checkpoint_manifest,
     verify_commitments,
     verify_topic,
 )
@@ -92,6 +94,92 @@ def make_topic(kinds: list[str]) -> list[TopicMessage]:
         prev_app = hashlib.sha256(raw).hexdigest()
         prev_rh = rh
     return messages
+
+
+# --- fixture: a checkpoint topic (chk-1 over tenant heads) -------------------
+
+_HEADS = [
+    {"topic_id": "0.0.200", "sequence_number": 7, "running_hash": "ab" * 48},
+    {"topic_id": "0.0.30", "sequence_number": 3, "running_hash": "cd" * 48},
+]
+
+
+def _checkpoint_topic(tenant_root: str, tenant_count: int) -> list[TopicMessage]:
+    """A single chk-1 record, running-hash chained from genesis."""
+    body = {
+        "v": "chk-1",
+        "prev_hash": GENESIS_PREV,
+        "ts": "2026-06-14T00:00:00.000Z",
+        "period": {"from_ts": "genesis", "to_ts": "2026-06-14T00:00:00.000Z"},
+        "tenant_root": tenant_root,
+        "tenant_count": tenant_count,
+        "leaf_spec": "rfc6962-sha256/jcs-tenant-head-v1",
+    }
+    raw = canonical(body).encode("utf-8")
+    partial = TopicMessage(
+        topic_id=_TOPIC,
+        payer_id=(0, 0, 9185779),
+        seconds=1_781_300_000,
+        nanos=0,
+        sequence_number=1,
+        message=raw,
+        running_hash=b"",
+        running_hash_version=3,
+    )
+    rh = step(GENESIS, partial, _JOS)
+    return [
+        TopicMessage(
+            topic_id=partial.topic_id,
+            payer_id=partial.payer_id,
+            seconds=partial.seconds,
+            nanos=partial.nanos,
+            sequence_number=1,
+            message=raw,
+            running_hash=rh,
+            running_hash_version=3,
+        )
+    ]
+
+
+def test_checkpoint_root_is_order_independent_and_numeric() -> None:
+    # 0.0.30 sorts before 0.0.200 numerically; input order must not matter.
+    assert compute_checkpoint_root(_HEADS) == compute_checkpoint_root(list(reversed(_HEADS)))
+
+
+def test_checkpoint_manifest_verifies_against_onchain_root() -> None:
+    root = compute_checkpoint_root(_HEADS)
+    report = verify_topic("0.0.9218174", _checkpoint_topic(root, len(_HEADS)))
+    verify_checkpoint_manifest(report, {"kind": "checkpoint", "tenant_root": root, "heads": _HEADS})
+    finding = next(f for f in report.findings if f.check == "checkpoint")
+    assert finding.level == "PASS", finding.detail
+    assert report.ok
+
+
+def test_checkpoint_manifest_detects_internal_tamper() -> None:
+    # Heads swapped under an unchanged claimed root ⇒ recompute disagrees.
+    root = compute_checkpoint_root(_HEADS)
+    report = verify_topic("0.0.9218174", _checkpoint_topic(root, len(_HEADS)))
+    tampered = [dict(_HEADS[0], running_hash="ff" * 48), _HEADS[1]]
+    verify_checkpoint_manifest(report, {"kind": "checkpoint", "tenant_root": root, "heads": tampered})
+    finding = next(f for f in report.findings if f.check == "checkpoint")
+    assert finding.level == "FAIL"
+    assert "disagrees with recompute" in finding.detail
+    assert not report.ok
+
+
+def test_checkpoint_manifest_rejects_root_absent_on_chain() -> None:
+    # Internally consistent manifest describing a DIFFERENT estate ⇒ no chk-1
+    # on this topic carries that root.
+    on_chain_root = compute_checkpoint_root(_HEADS)
+    report = verify_topic("0.0.9218174", _checkpoint_topic(on_chain_root, len(_HEADS)))
+    other_heads = [dict(_HEADS[0], running_hash="ff" * 48), _HEADS[1]]
+    other_root = compute_checkpoint_root(other_heads)
+    verify_checkpoint_manifest(
+        report, {"kind": "checkpoint", "tenant_root": other_root, "heads": other_heads}
+    )
+    finding = next(f for f in report.findings if f.check == "checkpoint")
+    assert finding.level == "FAIL"
+    assert "no on-chain" in finding.detail
 
 
 # --- merkle parity ------------------------------------------------------------

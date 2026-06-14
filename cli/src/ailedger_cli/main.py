@@ -12,6 +12,7 @@ import click
 from ailedger_cli import __version__
 from ailedger_cli.api import FetchOptions, LedgerClient
 from ailedger_cli.attest import (
+    HEDERA,
     SERVICE_ROLE_ENV_VAR,
     AttestClient,
     AttestError,
@@ -158,15 +159,15 @@ def verify_cmd(customer: str | None, since: str | None, until: str | None) -> No
 @cli.command(
     "verify-evidence",
     help="Offline, keyless verification of a Hedera evidence topic: network "
-    "running hash, app prev_hash chain, batch inclusion proofs, payload "
-    "commitments, multi-mirror cross-check.",
+    "running hash, app prev_hash chain, batch inclusion proofs, cross-topic "
+    "checkpoint roots, payload commitments, multi-mirror cross-check.",
 )
 @click.option("--topic", "topic_id", required=True, metavar="0.0.X", help="Tenant topic id.")
 @click.option("--archive", "archive_path", type=click.Path(path_type=Path), help="Verify from an archive/mirror-dump JSON file (fully offline).")
 @click.option("--mirror", "mirror_base", metavar="URL", help="Mirror REST base (default by --network).")
 @click.option("--network", default="testnet", show_default=True, help="testnet | mainnet (selects default mirror).")
 @click.option("--cross-mirror", "cross_mirror_base", metavar="URL", help="Second, independent mirror to cross-check against.")
-@click.option("--manifests", "manifests_path", type=click.Path(path_type=Path), help="Drainer manifests.jsonl — verifies every batch root + all inclusion proofs.")
+@click.option("--manifests", "manifests_path", type=click.Path(path_type=Path), help="Drainer manifests.jsonl (batch or checkpoint lines) — verifies every batch root + inclusion proofs, and every cross-topic checkpoint root.")
 @click.option("--payload", "payload_specs", multiple=True, metavar="EVENT_ID=FILE", help="Decrypted payload JSON for commitment verification (repeatable).")
 def verify_evidence_cmd(
     topic_id: str,
@@ -179,7 +180,12 @@ def verify_evidence_cmd(
 ) -> None:
     import json as _json
 
-    from ailedger_cli.evidence import verify_batch_manifest, verify_commitments, verify_topic
+    from ailedger_cli.evidence import (
+        verify_batch_manifest,
+        verify_checkpoint_manifest,
+        verify_commitments,
+        verify_topic,
+    )
     from ailedger_cli.mirror import (
         DEFAULT_MIRRORS,
         cross_check,
@@ -215,6 +221,8 @@ def verify_evidence_cmd(
             entry = _json.loads(line)
             if entry.get("kind") == "batch":
                 verify_batch_manifest(report, entry)
+            elif entry.get("kind") == "checkpoint":
+                verify_checkpoint_manifest(report, entry)
 
     for spec in payload_specs:
         event_id, _, file_part = spec.partition("=")
@@ -307,10 +315,20 @@ def attest_compute_cmd() -> None:
 @click.option(
     "--backend",
     metavar="NAME",
-    help=f"Override {SERVICE_ROLE_ENV_VAR[:-3]}ANCHOR_BACKEND. One of: mock, bitcoin-testnet, bitcoin.",
+    help="Override AILEDGER_ANCHOR_BACKEND. One of: mock, hedera.",
 )
 def attest_publish_cmd(backend: str | None) -> None:
     backend_name = (backend or resolve_backend_name()).lower()
+    if backend_name == HEDERA:
+        # The Hedera checkpoint anchor is sealed by the operator's key-holding
+        # publisher, not this keyless CLI — refuse before touching the (legacy,
+        # being-shed) Supabase client so the message is honest post-cutover.
+        raise click.ClickException(
+            "the Hedera checkpoint anchor is sealed by the operator checkpoint "
+            "publisher (proxy/scripts/checkpoint.mts), not this keyless CLI. Run "
+            "it on a cadence; verify with:\n  ailedger verify-evidence --topic "
+            "<checkpoints-topic> --manifests ~/.ailedger-outbox/checkpoints.jsonl"
+        )
     try:
         anchor = get_backend(backend_name)
     except AttestError as exc:

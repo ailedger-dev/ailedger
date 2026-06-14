@@ -2,7 +2,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildBatchRecord,
+  buildCheckpointRecord,
   buildDecisionRecord,
+  checkpointLeaf,
+  CHECKPOINT_LEAF_SPEC,
   commitField,
   encodeRecord,
   generateEventSalt,
@@ -131,6 +134,70 @@ describe('ode-2b batch record', () => {
         toTs: 't',
       }),
     ).toThrow(/positive/);
+  });
+});
+
+describe('chk-1 cross-topic checkpoint record', () => {
+  const heads = [
+    { topicId: '0.0.200', sequenceNumber: 7, runningHashHex: 'ab'.repeat(48) },
+    { topicId: '0.0.201', sequenceNumber: 3, runningHashHex: 'cd'.repeat(48) },
+  ];
+
+  it('anchors a Merkle root over tenant-head leaves under the size cap', async () => {
+    const tenantRoot = await merkleRootHex(heads.map((h) => checkpointLeaf(h)));
+    const { record, encoded } = buildCheckpointRecord({
+      prevHash: '0'.repeat(64),
+      ts: '2026-06-14T00:00:00.000Z',
+      fromTs: '2026-05-14T00:00:00.000Z',
+      toTs: '2026-06-14T00:00:00.000Z',
+      tenantRoot,
+      tenantCount: heads.length,
+    });
+    expect(record.v).toBe('chk-1');
+    expect(record.leaf_spec).toBe(CHECKPOINT_LEAF_SPEC);
+    expect(record.tenant_root).toBe(tenantRoot);
+    expect(encoded.byteLength).toBeLessThanOrEqual(MAX_RECORD_BYTES);
+    // Deterministic: same inputs ⇒ byte-identical record.
+    const again = buildCheckpointRecord({
+      prevHash: '0'.repeat(64),
+      ts: '2026-06-14T00:00:00.000Z',
+      fromTs: '2026-05-14T00:00:00.000Z',
+      toTs: '2026-06-14T00:00:00.000Z',
+      tenantRoot,
+      tenantCount: heads.length,
+    });
+    expect(toHex(again.encoded)).toBe(toHex(encoded));
+  });
+
+  it('checkpointLeaf is JCS over {running_hash, sequence_number, topic_id}, casing-normalized', () => {
+    const lower = checkpointLeaf({ topicId: '0.0.200', sequenceNumber: 7, runningHashHex: 'ab'.repeat(48) });
+    const upper = checkpointLeaf({ topicId: '0.0.200', sequenceNumber: 7, runningHashHex: 'AB'.repeat(48) });
+    expect(toHex(lower)).toBe(toHex(upper));
+    expect(new TextDecoder().decode(lower)).toBe(
+      `{"running_hash":"${'ab'.repeat(48)}","sequence_number":7,"topic_id":"0.0.200"}`,
+    );
+  });
+
+  it('rejects malformed leaves and an empty estate', () => {
+    expect(() => checkpointLeaf({ topicId: 'nope', sequenceNumber: 1, runningHashHex: 'ab' })).toThrow(
+      /topic id/,
+    );
+    expect(() => checkpointLeaf({ topicId: '0.0.1', sequenceNumber: 0, runningHashHex: 'ab' })).toThrow(
+      /sequence_number/,
+    );
+    expect(() => checkpointLeaf({ topicId: '0.0.1', sequenceNumber: 1, runningHashHex: 'zz' })).toThrow(
+      /running_hash/,
+    );
+    expect(() =>
+      buildCheckpointRecord({
+        prevHash: '0'.repeat(64),
+        ts: 't',
+        fromTs: 'a',
+        toTs: 'b',
+        tenantRoot: 'ef'.repeat(32),
+        tenantCount: 0,
+      }),
+    ).toThrow(/empty estate/);
   });
 });
 

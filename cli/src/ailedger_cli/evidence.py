@@ -45,13 +45,16 @@ __all__ = [
     "Finding",
     "VerificationReport",
     "commit_field",
+    "compute_checkpoint_root",
     "verify_batch_manifest",
+    "verify_checkpoint_manifest",
     "verify_commitments",
     "verify_topic",
 ]
 
 GENESIS_PREV = "0" * 64
 _SALT_LEN = 32
+CHECKPOINT_KIND = "chk-1"
 
 
 @dataclass(frozen=True)
@@ -195,6 +198,87 @@ def verify_batch_manifest(
         "PASS",
         f"batch:{batch_id}",
         f"root matches; all {len(leaves)} inclusion proofs verify (seq {onchain.seq})",
+    )
+
+
+def _checkpoint_leaf(head: dict[str, Any]) -> bytes:
+    """Mirror of sdk evidence/record.ts checkpointLeaf:
+    UTF-8(JCS({running_hash, sequence_number, topic_id})), casing-normalized."""
+    return canonical(
+        {
+            "running_hash": str(head["running_hash"]).lower(),
+            "sequence_number": int(head["sequence_number"]),
+            "topic_id": str(head["topic_id"]),
+        }
+    ).encode("utf-8")
+
+
+def _topic_sort_key(topic_id: str) -> tuple[int, int, int]:
+    """Numeric (shard, realm, num) order — matches checkpoint.ts sortTenantHeads."""
+    a, b, c = (int(p) for p in str(topic_id).split("."))
+    return (a, b, c)
+
+
+def compute_checkpoint_root(heads: list[dict[str, Any]]) -> str:
+    """RFC 6962 root over the per-tenant head leaves, in canonical estate order.
+
+    Independent Python reimplementation of proxy checkpoint.ts computeTenantRoot —
+    the disagreement between two implementations is what makes the on-chain root
+    trustworthy. Keyless: heads come from public mirror reads.
+    """
+    if not heads:
+        raise ValueError("no tenant heads — an empty estate has no checkpoint root")
+    ordered = sorted(heads, key=lambda h: _topic_sort_key(h["topic_id"]))
+    return merkle_root([_checkpoint_leaf(h) for h in ordered]).hex()
+
+
+def verify_checkpoint_manifest(
+    report: VerificationReport,
+    manifest: dict[str, Any],
+) -> None:
+    """Check — recompute the tenant_root from a checkpoint manifest's heads and
+    confirm it matches BOTH the manifest's claimed root and an on-chain chk-1
+    record. Closes the lying-checkpoint attack: a manifest whose heads don't
+    produce the sealed root FAILs, recomputed by anyone with mirror access."""
+    heads = manifest.get("heads")
+    claimed_root = manifest.get("tenant_root")
+    if not isinstance(heads, list) or not heads:
+        report.add("FAIL", "checkpoint", "manifest carries no tenant heads")
+        return
+    try:
+        recomputed = compute_checkpoint_root(heads)
+    except (KeyError, ValueError, TypeError) as exc:
+        report.add("FAIL", "checkpoint", f"malformed head in manifest: {exc}")
+        return
+    if recomputed != claimed_root:
+        report.add(
+            "FAIL",
+            "checkpoint",
+            f"manifest tenant_root {str(claimed_root)[:16]}… disagrees with recompute {recomputed[:16]}…",
+        )
+        return
+    onchain = next(
+        (
+            r
+            for r in report.records
+            if r.kind == CHECKPOINT_KIND and r.body.get("tenant_root") == recomputed
+        ),
+        None,
+    )
+    if onchain is None:
+        report.add("FAIL", "checkpoint", f"no on-chain chk-1 record carries tenant_root {recomputed[:16]}…")
+        return
+    if onchain.body.get("tenant_count") != len(heads):
+        report.add(
+            "FAIL",
+            "checkpoint",
+            f"tenant_count {onchain.body.get('tenant_count')} != {len(heads)} heads in manifest",
+        )
+        return
+    report.add(
+        "PASS",
+        "checkpoint",
+        f"tenant_root matches on-chain chk-1 over {len(heads)} tenant head(s) (seq {onchain.seq})",
     )
 
 

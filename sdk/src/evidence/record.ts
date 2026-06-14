@@ -25,9 +25,19 @@
 // profile — additive, not a migration.
 
 import canonicalize from 'canonicalize';
+import { encodeLeaf } from './merkle.js';
 
 export const ODE_DECISION_VERSION = 'ode-2' as const;
 export const ODE_BATCH_VERSION = 'ode-2b' as const;
+export const ODE_CHECKPOINT_VERSION = 'chk-1' as const;
+/**
+ * Leaf contract for a checkpoint: one leaf per tenant topic head,
+ * leaf bytes = UTF-8(JCS({ running_hash, sequence_number, topic_id })). The
+ * running_hash is Hedera's own SHA-384 network running hash at that topic's
+ * head — the strongest possible commitment to a tenant Logbook's state, taken
+ * straight from consensus, not the advisory app prev_hash.
+ */
+export const CHECKPOINT_LEAF_SPEC = 'rfc6962-sha256/jcs-tenant-head-v1' as const;
 /** Hard cap on the canonical byte length of one on-chain record (one HCS message). */
 export const MAX_RECORD_BYTES = 1024;
 export const EVENT_SALT_BYTES = 32;
@@ -74,6 +84,27 @@ export interface OdeBatchRecord {
   range: { from_ts: string; to_ts: string };
   /** Leaf preimage contract: leaf bytes = UTF-8(JCS(log record)). */
   leaf_spec: 'rfc6962-sha256/jcs-v1';
+}
+
+/**
+ * The chk-1 cross-topic checkpoint record — one per operator per interval on
+ * the public `checkpoints` topic. Anchors a single RFC 6962 Merkle root over
+ * every tenant topic's head (its network running hash at a sequence number),
+ * so one constant-size record witnesses the whole estate's state at a point in
+ * consensus time. The ordered head list (the leaves) lives in an off-chain
+ * checkpoint manifest, exactly like a batch's leaves — the verifier recomputes
+ * the root from the manifest and FAILs on mismatch.
+ */
+export interface OdeCheckpointRecord {
+  v: typeof ODE_CHECKPOINT_VERSION;
+  prev_hash: string;
+  ts: string;
+  /** Window this checkpoint summarizes (advisory; consensus ts is authoritative). */
+  period: { from_ts: string; to_ts: string };
+  /** RFC 6962 SHA-256 Merkle root over the per-tenant head leaves. */
+  tenant_root: string;
+  tenant_count: number;
+  leaf_spec: typeof CHECKPOINT_LEAF_SPEC;
 }
 
 /** The sensitive halves of a decision event, committed (not stored) on-chain. */
@@ -148,7 +179,9 @@ export async function verifyFieldCommitment(
 }
 
 /** Canonical on-chain encoding of a record (the exact HCS message bytes). */
-export function encodeRecord(record: OdeDecisionRecord | OdeBatchRecord): Uint8Array {
+export function encodeRecord(
+  record: OdeDecisionRecord | OdeBatchRecord | OdeCheckpointRecord,
+): Uint8Array {
   const jcs = canonicalize(record as Parameters<typeof canonicalize>[0]);
   if (jcs === undefined) throw new Error('record is not JCS-serializable');
   return new TextEncoder().encode(jcs);
@@ -231,6 +264,73 @@ export function buildBatchRecord(params: BuildBatchRecordParams): {
   const encoded = encodeRecord(record);
   if (encoded.byteLength > MAX_RECORD_BYTES) {
     throw new Error(`encoded batch record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
+  }
+  return { record, encoded };
+}
+
+/** One tenant topic's head: the strongest commitment to its current state. */
+export interface TenantHead {
+  topicId: string;
+  sequenceNumber: number;
+  /** Lowercase hex of the topic head's Hedera SHA-384 network running hash. */
+  runningHashHex: string;
+}
+
+const TOPIC_ID_RE = /^\d+\.\d+\.\d+$/;
+const HEX_RE = /^[0-9a-f]+$/;
+
+/**
+ * Canonical checkpoint leaf bytes for one tenant head (CHECKPOINT_LEAF_SPEC).
+ * JCS sorts the keys, so the field order here is irrelevant — what matters is
+ * that the Python verifier builds the byte-identical object. Kept in the SDK so
+ * publisher (proxy), reader (indexer), and tests share one contract.
+ */
+export function checkpointLeaf(head: TenantHead): Uint8Array {
+  if (!TOPIC_ID_RE.test(head.topicId)) throw new Error(`invalid topic id: ${head.topicId}`);
+  if (!Number.isInteger(head.sequenceNumber) || head.sequenceNumber < 1) {
+    throw new Error(`sequence_number must be a positive integer: ${head.sequenceNumber}`);
+  }
+  const runningHash = head.runningHashHex.toLowerCase();
+  if (!HEX_RE.test(runningHash)) throw new Error('running_hash must be hex');
+  return encodeLeaf({
+    topic_id: head.topicId,
+    sequence_number: head.sequenceNumber,
+    running_hash: runningHash,
+  });
+}
+
+export interface BuildCheckpointRecordParams {
+  prevHash: string;
+  ts: string;
+  fromTs: string;
+  toTs: string;
+  /** RFC 6962 root over checkpointLeaf(head) for every tenant head. */
+  tenantRoot: string;
+  tenantCount: number;
+}
+
+/** Build the chk-1 cross-topic checkpoint record. */
+export function buildCheckpointRecord(params: BuildCheckpointRecordParams): {
+  record: OdeCheckpointRecord;
+  encoded: Uint8Array;
+} {
+  assertHex64('prevHash', params.prevHash);
+  assertHex64('tenantRoot', params.tenantRoot);
+  if (!Number.isInteger(params.tenantCount) || params.tenantCount < 1) {
+    throw new Error('tenantCount must be a positive integer (do not checkpoint an empty estate)');
+  }
+  const record: OdeCheckpointRecord = {
+    v: ODE_CHECKPOINT_VERSION,
+    prev_hash: params.prevHash,
+    ts: params.ts,
+    period: { from_ts: params.fromTs, to_ts: params.toTs },
+    tenant_root: params.tenantRoot,
+    tenant_count: params.tenantCount,
+    leaf_spec: CHECKPOINT_LEAF_SPEC,
+  };
+  const encoded = encodeRecord(record);
+  if (encoded.byteLength > MAX_RECORD_BYTES) {
+    throw new Error(`encoded checkpoint record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
   }
   return { record, encoded };
 }
