@@ -46,6 +46,17 @@ def _record_bytes(kind: str, prev_hash: str, n: int, salt: bytes = _SALT) -> byt
             "trace_commit": None,
             "payload_hash": "cd" * 32,
         }
+    elif kind == "ode-2u":
+        body = {
+            "v": "ode-2u",
+            "event_id": f"00000000-0000-4000-8000-{n:012d}",
+            "decision_type": "agent_decision",
+            "ts": f"2026-06-12T20:00:0{n}.000Z",
+            "prev_hash": prev_hash,
+            "unwarrant_category": "missing-justification",
+            "attempt_commit": commit_field(salt, "attempt", {"n": n}),
+            "payload_hash": "cd" * 32,
+        }
     else:
         logs = [{"call": i} for i in range(3)]
         body = {
@@ -217,3 +228,62 @@ def test_real_dump_shape_loads() -> None:
     }
     msg = TopicMessage.from_mirror(raw)
     assert json.loads(msg.message)["v"] == "ode-2"
+
+
+# --- OWT warrant-health reconciliation (the teeth) -----------------------------
+
+
+def test_count_warrant_records_and_reconcile_pass_and_fail() -> None:
+    from ailedger_cli.evidence import (
+        VerificationReport,
+        count_warrant_records,
+        verify_warrant_health,
+    )
+
+    # A tenant chain: 2 warranted (ode-2) + 1 unwarranted (ode-2u).
+    msgs = make_topic(["ode-2", "ode-2u", "ode-2"])
+    records = []
+    import json as _json
+
+    for m in sorted(msgs, key=lambda x: x.sequence_number):
+        body = _json.loads(m.message.decode())
+        from ailedger_cli.evidence import EvidenceRecord
+        import hashlib as _h
+
+        records.append(
+            EvidenceRecord(
+                seq=m.sequence_number,
+                consensus_ts="t",
+                kind=body["v"],
+                record_hash=_h.sha256(m.message).hexdigest(),
+                body=body,
+                raw=m.message,
+            )
+        )
+    warranted, by_cat = count_warrant_records(records)
+    assert warranted == 2
+    assert by_cat == {"missing-justification": 1}
+
+    # An honest owh-1 (total 3, unwarranted 1) reconciles.
+    r = VerificationReport(topic_id="owh")
+    honest = {
+        "operator_id": "op",
+        "total": 3,
+        "unwarranted": 1,
+        "by_category": {"missing-justification": 1},
+        "rate": 1 / 3,
+        "threshold": 0.05,
+        "min_sample": 30,
+        "verdict": "GAP",
+    }
+    verify_warrant_health(r, honest, warranted, by_cat)
+    assert r.findings[-1].level == "PASS"
+    assert r.ok
+
+    # A lying owh-1 (claims 0 unwarranted) FAILs at the exact mismatch.
+    r2 = VerificationReport(topic_id="owh")
+    lying = {**honest, "unwarranted": 0, "by_category": {}, "rate": 0.0, "verdict": "GAP"}
+    verify_warrant_health(r2, lying, warranted, by_cat)
+    assert r2.findings[-1].level == "FAIL"
+    assert "unwarranted" in r2.findings[-1].detail
+    assert not r2.ok

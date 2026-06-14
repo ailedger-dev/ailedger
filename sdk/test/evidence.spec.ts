@@ -166,6 +166,7 @@ describe('owh-1 warrant-health aggregate', () => {
       rate: 0.03,
       sampleSize: 1000,
       threshold: 0.05,
+      minSample: 30,
       verdict: 'PASS' as const,
     };
   }

@@ -191,6 +191,7 @@ describe('indexer', () => {
       rate: 0.03,
       sampleSize: 1000,
       threshold: 0.05,
+      minSample: 30,
       verdict: 'PASS',
     });
     mirror.push(WH_TOPIC, owh.encoded);

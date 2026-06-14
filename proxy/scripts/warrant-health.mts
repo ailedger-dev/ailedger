@@ -193,6 +193,7 @@ async function publish(operatorId: string, tenantRefs: string[], minSample: numb
     rate: health.rate,
     sampleSize: health.sampleSize,
     threshold: health.threshold,
+    minSample: health.minSample,
     verdict: health.verdict,
   });
 

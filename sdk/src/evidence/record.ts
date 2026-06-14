@@ -173,6 +173,8 @@ export interface OdeWarrantHealthRecord {
   rate: number;
   sample_size: number;
   threshold: number;
+  /** Sample floor below which the verdict is GAP — on-chain so the verdict is reproducible. */
+  min_sample: number;
   verdict: WarrantHealthVerdict;
 }
 
@@ -345,6 +347,7 @@ export interface BuildWarrantHealthRecordParams {
   rate: number;
   sampleSize: number;
   threshold: number;
+  minSample: number;
   verdict: WarrantHealthVerdict;
 }
 
@@ -371,6 +374,7 @@ export function buildWarrantHealthRecord(params: BuildWarrantHealthRecordParams)
     rate: params.rate,
     sample_size: params.sampleSize,
     threshold: params.threshold,
+    min_sample: params.minSample,
     verdict: params.verdict,
   };
   const encoded = encodeRecord(record);
