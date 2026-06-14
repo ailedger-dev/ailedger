@@ -65,7 +65,10 @@ class UnwarrantCategory(str, Enum):
     MISSING_JUSTIFICATION = "missing-justification"
     EMPTY_ALTERNATIVES = "empty-alternatives"
     WEAK_WARRANT = "weak-warrant"
-    # UNRESOLVED_OBLIGATION = "unresolved-obligation"  # async; OWT Phase D
+    #: Asynchronous (OWT cat-4) — not returned by classify_unwarrant (which is
+    #: synchronous); produced by the unresolved-obligation detector over the
+    #: sealed stream. See ailedger_detection.unresolved_flags.
+    UNRESOLVED_OBLIGATION = "unresolved-obligation"
 
 
 def classify_unwarrant(

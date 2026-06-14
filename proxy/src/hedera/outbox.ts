@@ -71,7 +71,11 @@ export interface QueuedUnwarrant {
   eventId: string;
   decisionType: string;
   ts: string;
-  unwarrantCategory: 'missing-justification' | 'empty-alternatives' | 'weak-warrant';
+  unwarrantCategory:
+    | 'missing-justification'
+    | 'empty-alternatives'
+    | 'weak-warrant'
+    | 'unresolved-obligation';
   /** The full attempted decision — committed at drain, sealed in the vault. */
   attempt: unknown;
   saltHex: string;

@@ -51,6 +51,10 @@ from ailedger_detection.warrant_health import (
     compute_warrant_health,
     wilson_interval,
 )
+from ailedger_detection.warrant_trend import (
+    WarrantTrendResult,
+    cusum_upper,
+)
 from ailedger_detection.disparate_impact import (
     DisparateImpactResult,
     disparate_impact_ratio,
@@ -70,7 +74,13 @@ from ailedger_detection.types import (
     InferredDetectionEvent,
     ProtectedClassCollectionMethod,
 )
-from ailedger_detection.unresolved_flags import unresolved_flag_accumulation
+from ailedger_detection.unresolved_flags import (
+    DEFAULT_UNRESOLVED_THRESHOLD,
+    UnresolvedFlagResult,
+    UnresolvedObligation,
+    unresolved_flag_accumulation,
+    unresolved_obligation_bodies,
+)
 
 __version__ = "0.3.0"
 
@@ -99,6 +109,12 @@ __all__ = [
     "WarrantHealthVerdict",
     "DEFAULT_UNWARRANT_THRESHOLD",
     "DEFAULT_MIN_SAMPLE",
+    "cusum_upper",
+    "WarrantTrendResult",
+    "unresolved_flag_accumulation",
+    "unresolved_obligation_bodies",
+    "UnresolvedFlagResult",
+    "UnresolvedObligation",
     # Type contracts
     "DetectionEvent",
     "InferredDetectionEvent",

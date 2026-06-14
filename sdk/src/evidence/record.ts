@@ -33,7 +33,11 @@ export const OWH_VERSION = 'owh-1' as const;
 export type WarrantHealthVerdict = 'PASS' | 'FLAG' | 'GAP';
 
 /** The frozen unwarrant-category wire strings (mirror of the detection enum). */
-export type UnwarrantCategory = 'missing-justification' | 'empty-alternatives' | 'weak-warrant';
+export type UnwarrantCategory =
+  | 'missing-justification'
+  | 'empty-alternatives'
+  | 'weak-warrant'
+  | 'unresolved-obligation';
 /** Hard cap on the canonical byte length of one on-chain record (one HCS message). */
 export const MAX_RECORD_BYTES = 1024;
 export const EVENT_SALT_BYTES = 32;

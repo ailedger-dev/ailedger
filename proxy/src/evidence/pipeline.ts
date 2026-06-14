@@ -145,7 +145,11 @@ export interface UnwarrantBody {
   event_id?: string;
   timestamp: string;
   decision_type: string;
-  unwarrant_category: 'missing-justification' | 'empty-alternatives' | 'weak-warrant';
+  unwarrant_category:
+    | 'missing-justification'
+    | 'empty-alternatives'
+    | 'weak-warrant'
+    | 'unresolved-obligation';
   /** The full attempted decision — sealed in the vault, committed on-chain. */
   attempt: unknown;
 }
@@ -154,6 +158,7 @@ const UNWARRANT_CATEGORIES = new Set([
   'missing-justification',
   'empty-alternatives',
   'weak-warrant',
+  'unresolved-obligation',
 ]);
 
 export function validateUnwarrant(body: unknown): UnwarrantBody {

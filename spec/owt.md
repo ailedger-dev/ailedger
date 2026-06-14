@@ -59,10 +59,19 @@ Unwarrant **categories** (the frozen wire strings):
 3. `weak-warrant` — a complete-shaped warrant whose declared
    `warrant.confidence` is below the runtime-injection threshold.
 
-Categories 1–3 are **synchronous** (decided at the gate). A fourth,
-`unresolved-obligation` (a required action from a prior flagged decision never
-taken within a window), is **asynchronous** — computed over the sealed stream,
-not at the gate — and is a roadmap item, not part of v1.
+Categories 1–3 are **synchronous** (decided at the gate). The fourth,
+`unresolved-obligation` (a required action from a prior decision never taken
+within a window), is **asynchronous** — computed over the (decrypted) sealed
+stream, not at the gate, by the reference `unresolved_flag_accumulation`. Its
+findings are recorded as `ode-2u` records with category
+`unresolved-obligation`, so they flow into the same warrant-health rate and
+reconciliation as the synchronous categories; the operator runs the detector
+over its own decision history and seals the findings.
+
+A rising rate that no single window's threshold catches is detected separately
+by a CUSUM changepoint over the per-window rate series (reference
+`cusum_upper`; Page 1954) — drift detection complementing the point-in-time
+verdict.
 
 The classification is deterministic and is the reference implementation's
 `classify_unwarrant`. Producers MUST route a warranted decision and an
