@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBatchRecord,
   buildDecisionRecord,
+  buildUnwarrantRecord,
   commitField,
   encodeRecord,
   generateEventSalt,
@@ -101,6 +102,53 @@ describe('ode-2 decision record', () => {
     const params = baseParams();
     params.prevHash = 'not-hex';
     await expect(buildDecisionRecord(params)).rejects.toThrow(/prevHash/);
+  });
+});
+
+describe('ode-2u unwarrant record', () => {
+  function unwarrantParams() {
+    return {
+      eventId: '3f2c1a9e-7b4d-4e0a-9c1f-2d5b8a6e4f01',
+      decisionType: 'agent_decision',
+      ts: '2026-06-12T17:00:00.000Z',
+      prevHash: '0'.repeat(64),
+      unwarrantCategory: 'missing-justification' as const,
+      salt: SALT,
+      attempt: { decision: 'acted', warrant: { rejected_alternatives: ['x'] } },
+      payloadHash: 'cd'.repeat(32),
+    };
+  }
+
+  it('builds a deterministic ode-2u under the size cap', async () => {
+    const a = await buildUnwarrantRecord(unwarrantParams());
+    const b = await buildUnwarrantRecord(unwarrantParams());
+    expect(toHex(a.encoded)).toBe(toHex(b.encoded));
+    expect(a.encoded.byteLength).toBeLessThanOrEqual(MAX_RECORD_BYTES);
+    expect(a.record.v).toBe('ode-2u');
+    expect(a.record.unwarrant_category).toBe('missing-justification');
+    expect(a.record.attempt_commit).toMatch(HEX64);
+  });
+
+  it('attempt_commit verifies against the attempt; the attempt is never in the bytes', async () => {
+    const params = unwarrantParams();
+    const { record, encoded } = await buildUnwarrantRecord(params);
+    expect(await verifyFieldCommitment(SALT, 'attempt', params.attempt, record.attempt_commit)).toBe(
+      true,
+    );
+    expect(await verifyFieldCommitment(SALT, 'attempt', { decision: 'other' }, record.attempt_commit)).toBe(
+      false,
+    );
+    // the raw attempted decision text must not leak into the on-chain record
+    expect(new TextDecoder().decode(encoded)).not.toContain('acted');
+  });
+
+  it('rejects malformed hex and oversize records', async () => {
+    await expect(buildUnwarrantRecord({ ...unwarrantParams(), prevHash: 'nope' })).rejects.toThrow(
+      /prevHash/,
+    );
+    await expect(
+      buildUnwarrantRecord({ ...unwarrantParams(), decisionType: 'x'.repeat(1100) }),
+    ).rejects.toThrow(/hard cap/);
   });
 });
 

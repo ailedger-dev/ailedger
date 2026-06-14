@@ -37,6 +37,12 @@ from ailedger_detection.decision_event import (
     validate_decision_event,
 )
 from ailedger_detection.emitter import RelayEmitter, RelayError
+from ailedger_detection.unwarrant import (
+    WEAK_WARRANT_THRESHOLD,
+    UnwarrantCategory,
+    classify_unwarrant,
+    to_unwarrant_ingest_body,
+)
 from ailedger_detection.disparate_impact import (
     DisparateImpactResult,
     disparate_impact_ratio,
@@ -73,6 +79,11 @@ __all__ = [
     "NO_LOOSER_ALTERNATIVE",
     "RelayEmitter",
     "RelayError",
+    # OWT — unwarrant classification (open-standard reference impl)
+    "classify_unwarrant",
+    "to_unwarrant_ingest_body",
+    "UnwarrantCategory",
+    "WEAK_WARRANT_THRESHOLD",
     # Type contracts
     "DetectionEvent",
     "InferredDetectionEvent",

@@ -41,6 +41,7 @@ export { computeInputsHash, sha256hex, sha256jcs, isJsonContentType } from './ha
 export {
   buildBatchRecord,
   buildDecisionRecord,
+  buildUnwarrantRecord,
   commitField,
   encodeRecord,
   generateEventSalt,
@@ -49,13 +50,17 @@ export {
   MAX_RECORD_BYTES,
   ODE_BATCH_VERSION,
   ODE_DECISION_VERSION,
+  ODE_UNWARRANT_VERSION,
 } from './evidence/record.js';
 export type {
   BuildBatchRecordParams,
   BuildDecisionRecordParams,
+  BuildUnwarrantRecordParams,
   DecisionCommitInputs,
   OdeBatchRecord,
   OdeDecisionRecord,
+  OdeUnwarrantRecord,
+  UnwarrantCategory,
 } from './evidence/record.js';
 export {
   encodeLeaf,

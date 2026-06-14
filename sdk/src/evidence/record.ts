@@ -28,6 +28,10 @@ import canonicalize from 'canonicalize';
 
 export const ODE_DECISION_VERSION = 'ode-2' as const;
 export const ODE_BATCH_VERSION = 'ode-2b' as const;
+export const ODE_UNWARRANT_VERSION = 'ode-2u' as const;
+
+/** The frozen unwarrant-category wire strings (mirror of the detection enum). */
+export type UnwarrantCategory = 'missing-justification' | 'empty-alternatives' | 'weak-warrant';
 /** Hard cap on the canonical byte length of one on-chain record (one HCS message). */
 export const MAX_RECORD_BYTES = 1024;
 export const EVENT_SALT_BYTES = 32;
@@ -148,7 +152,9 @@ export async function verifyFieldCommitment(
 }
 
 /** Canonical on-chain encoding of a record (the exact HCS message bytes). */
-export function encodeRecord(record: OdeDecisionRecord | OdeBatchRecord): Uint8Array {
+export function encodeRecord(
+  record: OdeDecisionRecord | OdeBatchRecord | OdeUnwarrantRecord,
+): Uint8Array {
   const jcs = canonicalize(record as Parameters<typeof canonicalize>[0]);
   if (jcs === undefined) throw new Error('record is not JCS-serializable');
   return new TextEncoder().encode(jcs);
@@ -231,6 +237,70 @@ export function buildBatchRecord(params: BuildBatchRecordParams): {
   const encoded = encodeRecord(record);
   if (encoded.byteLength > MAX_RECORD_BYTES) {
     throw new Error(`encoded batch record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
+  }
+  return { record, encoded };
+}
+
+/**
+ * The ode-2u unwarranted-decision record (OWT). The gap-honest counterpart of
+ * ode-2: a decision the agent attempted that lacked a sound warrant, recorded
+ * instead of silently dropped. It lives on the tenant's SAME Logbook topic and
+ * threads the SAME prev_hash chain as ode-2 — so total decisions
+ * (warranted + unwarranted) are network-counted by HCS sequence number, which
+ * is exactly what makes the unwarranted-rate denominator tamper-evident.
+ *
+ * The attempted decision's sensitive content is sealed in the vault (it may
+ * carry PII, like any decision payload); on-chain we keep only the
+ * non-personal structural fields, the category, and a salted commitment.
+ */
+export interface OdeUnwarrantRecord {
+  v: typeof ODE_UNWARRANT_VERSION;
+  event_id: string;
+  decision_type: string;
+  ts: string;
+  prev_hash: string;
+  unwarrant_category: UnwarrantCategory;
+  /** SHA-256(salt ‖ 'attempt' ‖ 0x3A ‖ JCS(attempt)) — provable later, not leaked. */
+  attempt_commit: string;
+  /** SHA-256 of the sealed attempt blob (vault content address). */
+  payload_hash: string;
+}
+
+export interface BuildUnwarrantRecordParams {
+  eventId: string;
+  decisionType: string;
+  ts: string;
+  prevHash: string;
+  unwarrantCategory: UnwarrantCategory;
+  /** Per-event salt; the attempt commitment hides under it. Lives in the payload. */
+  salt: Uint8Array;
+  /** The full attempted decision (sealed in the vault; committed here). */
+  attempt: unknown;
+  /** SHA-256 hex of the sealed attempt blob. */
+  payloadHash: string;
+}
+
+/** Build the ode-2u record for one unwarranted decision. */
+export async function buildUnwarrantRecord(
+  params: BuildUnwarrantRecordParams,
+): Promise<{ record: OdeUnwarrantRecord; encoded: Uint8Array }> {
+  assertHex64('prevHash', params.prevHash);
+  assertHex64('payloadHash', params.payloadHash);
+  const record: OdeUnwarrantRecord = {
+    v: ODE_UNWARRANT_VERSION,
+    event_id: params.eventId,
+    decision_type: params.decisionType,
+    ts: params.ts,
+    prev_hash: params.prevHash,
+    unwarrant_category: params.unwarrantCategory,
+    attempt_commit: await commitField(params.salt, 'attempt', params.attempt),
+    payload_hash: params.payloadHash,
+  };
+  const encoded = encodeRecord(record);
+  if (encoded.byteLength > MAX_RECORD_BYTES) {
+    throw new Error(
+      `encoded unwarrant record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES} hard cap`,
+    );
   }
   return { record, encoded };
 }
