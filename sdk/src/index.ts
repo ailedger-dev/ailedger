@@ -86,6 +86,14 @@ export {
   ENVELOPE_VERSION,
 } from './evidence/envelope.js';
 export type { SealedPayload } from './evidence/envelope.js';
+export {
+  computeWarrantHealth,
+  wilsonInterval,
+  DEFAULT_UNWARRANT_THRESHOLD,
+  DEFAULT_MIN_SAMPLE,
+  WILSON_Z_95,
+} from './evidence/warrant-health.js';
+export type { WarrantHealthResult } from './evidence/warrant-health.js';
 export { computeExtractorParamsHash } from './canonicalize.js';
 export { normalizeConfidence, normalizeTimestamp } from './normalize.js';
 
