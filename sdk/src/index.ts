@@ -90,6 +90,8 @@ export {
   ENVELOPE_VERSION,
 } from './evidence/envelope.js';
 export type { SealedPayload } from './evidence/envelope.js';
+export { fetchSealed, waitForSealed } from './evidence/ack.js';
+export type { SealedStatus, SealedPollOptions, WaitForSealedOptions } from './evidence/ack.js';
 export { computeExtractorParamsHash } from './canonicalize.js';
 export { normalizeConfidence, normalizeTimestamp } from './normalize.js';
 

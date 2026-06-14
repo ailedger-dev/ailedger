@@ -251,6 +251,70 @@ def verify_evidence_cmd(
         sys.exit(2)
 
 
+# -- events (read cut-over: indexer | mirror) ----------------------------------
+
+
+@cli.command(
+    "events",
+    help="List a tenant's sealed decision events from the indexer (new Hedera "
+    "rails), or recompute the list trustlessly from the public mirror. The "
+    "legacy Supabase reads (verify/export) are unaffected.",
+)
+@click.option("--tenant", "tenant_ref", metavar="REF", help="Tenant ref (required for --source indexer).")
+@click.option("--source", type=click.Choice(["indexer", "mirror"]), default="indexer", show_default=True, help="indexer = fast derived reads; mirror = trustless recompute, no infra.")
+@click.option("--indexer", "indexer_base", metavar="URL", help="Indexer base URL (default: config indexer-url).")
+@click.option("--topic", "topic_id", metavar="0.0.X", help="Tenant topic id (required for --source mirror).")
+@click.option("--mirror", "mirror_base", metavar="URL", help="Mirror REST base (default by --network).")
+@click.option("--network", default="testnet", show_default=True, help="testnet | mainnet (selects default mirror).")
+@click.option("--limit", default=100, show_default=True, help="Max events to list.")
+def events_cmd(
+    tenant_ref: str | None,
+    source: str,
+    indexer_base: str | None,
+    topic_id: str | None,
+    mirror_base: str | None,
+    network: str,
+    limit: int,
+) -> None:
+    if source == "indexer":
+        base = indexer_base or load_config().get("indexer-url")
+        if not base:
+            raise click.UsageError("set --indexer URL (or config indexer-url) for --source indexer")
+        if not tenant_ref:
+            raise click.UsageError("--tenant is required for --source indexer")
+        from ailedger_cli.indexer import IndexerClient
+
+        with IndexerClient(base) as ix:
+            events = ix.tenant_events(tenant_ref, limit=limit)
+        rows = [
+            (e.get("seq"), e.get("event_id"), e.get("decision_type"), e.get("ts")) for e in events
+        ]
+        src_desc = f"indexer {base}"
+    else:
+        if not topic_id:
+            raise click.UsageError("--topic is required for --source mirror")
+        from ailedger_cli.evidence import verify_topic
+        from ailedger_cli.mirror import DEFAULT_MIRRORS, fetch_topic_messages
+
+        base = mirror_base or DEFAULT_MIRRORS.get(network)
+        if base is None:
+            raise click.UsageError(f"unknown network {network!r} — pass --mirror explicitly")
+        report = verify_topic(topic_id, fetch_topic_messages(base, topic_id))
+        rows = [
+            (r.seq, r.body.get("event_id"), r.body.get("decision_type"), r.body.get("ts"))
+            for r in report.records
+            if r.kind == "ode-2"
+        ][:limit]
+        src_desc = f"mirror {base}"
+
+    if not rows:
+        click.echo(f"no decision events ({src_desc})")
+        return
+    click.echo(f"# {len(rows)} decision event(s) from {src_desc}")
+    for seq, event_id, decision_type, ts in rows:
+        click.echo(f"  seq {seq}  {event_id}  {decision_type}  {ts}")
+
+
 # -- export --------------------------------------------------------------------
 
 
