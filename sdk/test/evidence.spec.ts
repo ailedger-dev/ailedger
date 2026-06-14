@@ -4,6 +4,7 @@ import {
   buildBatchRecord,
   buildDecisionRecord,
   buildUnwarrantRecord,
+  buildWarrantHealthRecord,
   commitField,
   encodeRecord,
   generateEventSalt,
@@ -149,6 +150,39 @@ describe('ode-2u unwarrant record', () => {
     await expect(
       buildUnwarrantRecord({ ...unwarrantParams(), decisionType: 'x'.repeat(1100) }),
     ).rejects.toThrow(/hard cap/);
+  });
+});
+
+describe('owh-1 warrant-health aggregate', () => {
+  function owhParams() {
+    return {
+      prevHash: '0'.repeat(64),
+      operatorId: 'jv-fleet',
+      fromTs: '2026-06-01T00:00:00Z',
+      toTs: '2026-06-12T00:00:00Z',
+      total: 1000,
+      unwarranted: 30,
+      byCategory: { 'missing-justification': 20, 'weak-warrant': 10 },
+      rate: 0.03,
+      sampleSize: 1000,
+      threshold: 0.05,
+      verdict: 'PASS' as const,
+    };
+  }
+
+  it('builds a deterministic owh-1 under the size cap', () => {
+    const { record, encoded } = buildWarrantHealthRecord(owhParams());
+    expect(record.v).toBe('owh-1');
+    expect(record.verdict).toBe('PASS');
+    expect(record.by_category).toEqual({ 'missing-justification': 20, 'weak-warrant': 10 });
+    expect(encoded.byteLength).toBeLessThanOrEqual(MAX_RECORD_BYTES);
+    expect(toHex(encoded)).toBe(toHex(buildWarrantHealthRecord(owhParams()).encoded));
+  });
+
+  it('rejects inconsistent counts and bad prev_hash', () => {
+    expect(() => buildWarrantHealthRecord({ ...owhParams(), prevHash: 'x' })).toThrow(/prevHash/);
+    expect(() => buildWarrantHealthRecord({ ...owhParams(), unwarranted: 2000 })).toThrow(/\[0, total\]/);
+    expect(() => buildWarrantHealthRecord({ ...owhParams(), total: -1 })).toThrow(/non-negative/);
   });
 });
 

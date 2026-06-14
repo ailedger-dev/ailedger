@@ -42,6 +42,7 @@ export {
   buildBatchRecord,
   buildDecisionRecord,
   buildUnwarrantRecord,
+  buildWarrantHealthRecord,
   commitField,
   encodeRecord,
   generateEventSalt,
@@ -51,16 +52,20 @@ export {
   ODE_BATCH_VERSION,
   ODE_DECISION_VERSION,
   ODE_UNWARRANT_VERSION,
+  OWH_VERSION,
 } from './evidence/record.js';
 export type {
   BuildBatchRecordParams,
   BuildDecisionRecordParams,
   BuildUnwarrantRecordParams,
+  BuildWarrantHealthRecordParams,
   DecisionCommitInputs,
   OdeBatchRecord,
   OdeDecisionRecord,
   OdeUnwarrantRecord,
+  OdeWarrantHealthRecord,
   UnwarrantCategory,
+  WarrantHealthVerdict,
 } from './evidence/record.js';
 export {
   encodeLeaf,

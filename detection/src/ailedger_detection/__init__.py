@@ -43,6 +43,14 @@ from ailedger_detection.unwarrant import (
     classify_unwarrant,
     to_unwarrant_ingest_body,
 )
+from ailedger_detection.warrant_health import (
+    DEFAULT_MIN_SAMPLE,
+    DEFAULT_UNWARRANT_THRESHOLD,
+    WarrantHealthResult,
+    WarrantHealthVerdict,
+    compute_warrant_health,
+    wilson_interval,
+)
 from ailedger_detection.disparate_impact import (
     DisparateImpactResult,
     disparate_impact_ratio,
@@ -84,6 +92,13 @@ __all__ = [
     "to_unwarrant_ingest_body",
     "UnwarrantCategory",
     "WEAK_WARRANT_THRESHOLD",
+    # OWT — warrant-health verdict (Wilson gap-honest)
+    "compute_warrant_health",
+    "wilson_interval",
+    "WarrantHealthResult",
+    "WarrantHealthVerdict",
+    "DEFAULT_UNWARRANT_THRESHOLD",
+    "DEFAULT_MIN_SAMPLE",
     # Type contracts
     "DetectionEvent",
     "InferredDetectionEvent",
