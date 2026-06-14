@@ -7,7 +7,13 @@
 // broken link (WARN surface), never a reason to drop data.
 
 import { restMirror, type MirrorSource } from './mirror.ts';
-import { asTenantAnnouncement, parseMirrorMessage, sha256hexOf, decodeBase64 } from './parse.ts';
+import {
+  asOperatorAnnouncement,
+  asTenantAnnouncement,
+  parseMirrorMessage,
+  sha256hexOf,
+  decodeBase64,
+} from './parse.ts';
 import { IndexerStore } from './store.ts';
 import { GENESIS_PREV_HASH } from '@ailedger/sdk';
 
@@ -39,6 +45,53 @@ export async function ingestRegistry(
       store.upsertTenant(announcement);
       summary.announcements++;
     }
+  }
+  return summary;
+}
+
+/** Backfill the operators registry: discover operators (OWT second root). */
+export async function ingestOperatorsRegistry(
+  store: IndexerStore,
+  mirror: MirrorSource,
+  operatorsTopicId: string,
+): Promise<IngestSummary> {
+  const summary = base(operatorsTopicId);
+  const messages = await mirror.fetchMessages(operatorsTopicId, store.lastSeq(operatorsTopicId));
+  for (const msg of messages) {
+    const rec = await parseMirrorMessage(msg);
+    store.insertRecord(operatorsTopicId, rec, msg.message, null, null);
+    summary.newRecords++;
+    const announcement = asOperatorAnnouncement(rec);
+    if (announcement) {
+      store.upsertOperator(announcement);
+      summary.announcements++;
+    }
+  }
+  return summary;
+}
+
+/** Backfill one operator's warrant-health topic (owh-1) with chain checking. */
+export async function ingestOperatorTopic(
+  store: IndexerStore,
+  mirror: MirrorSource,
+  operatorId: string,
+  topicId: string,
+): Promise<IngestSummary> {
+  const summary = base(topicId);
+  const lastSeq = store.lastSeq(topicId);
+  let prevHash = GENESIS_PREV_HASH;
+  if (lastSeq > 0) prevHash = store.chainStatus(topicId)?.lastRecordHash ?? GENESIS_PREV_HASH;
+
+  const messages = await mirror.fetchMessages(topicId, lastSeq);
+  for (const msg of messages) {
+    const rec = await parseMirrorMessage(msg);
+    const claimed = (rec.body as Record<string, unknown>).prev_hash;
+    const linkOk = typeof claimed === 'string' ? claimed === prevHash : false;
+    store.insertRecord(topicId, rec, msg.message, prevHash, linkOk);
+    if (!linkOk) summary.brokenLinks++;
+    if (rec.body.v === 'owh-1') store.insertWarrantHealth(operatorId, rec);
+    summary.newRecords++;
+    prevHash = rec.recordHash;
   }
   return summary;
 }
@@ -82,16 +135,27 @@ export async function ingestTenantTopic(
   return summary;
 }
 
-/** Full sweep: registry first (discovery), then every known tenant topic. */
+/**
+ * Full sweep: tenants registry → tenant topics, then (if given) the operators
+ * registry → operator warrant-health topics. Both registries are trustless
+ * discovery roots; everything else is found on-chain.
+ */
 export async function ingestAll(
   store: IndexerStore,
   mirror: MirrorSource,
   registryTopicId: string,
+  operatorsTopicId?: string,
 ): Promise<IngestSummary[]> {
   const summaries: IngestSummary[] = [];
   summaries.push(await ingestRegistry(store, mirror, registryTopicId));
   for (const tenant of store.tenants()) {
     summaries.push(await ingestTenantTopic(store, mirror, tenant.tenantRef, tenant.topicId));
+  }
+  if (operatorsTopicId) {
+    summaries.push(await ingestOperatorsRegistry(store, mirror, operatorsTopicId));
+    for (const op of store.operators()) {
+      summaries.push(await ingestOperatorTopic(store, mirror, op.operatorId, op.warrantHealthTopicId));
+    }
   }
   return summaries;
 }

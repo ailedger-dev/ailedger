@@ -40,6 +40,41 @@ export function createIndexerApi(store: IndexerStore, state: ApiState = {}): Hon
     }),
   );
 
+  // OWT — the public cross-operator warrant-health board. Anyone reads any
+  // operator's published unwarranted rate + verdict + freshness, with no
+  // credentials. A null `latest` = operator announced but never published
+  // (gap-honest: visibly non-participating).
+  app.get('/v1/operators', (c) =>
+    c.json({
+      operators: store.operators().map((o) => ({
+        operator_id: o.operatorId,
+        operator_pubkey: o.operatorPubkey,
+        warrant_health_topic_id: o.warrantHealthTopicId,
+      })),
+    }),
+  );
+
+  app.get('/v1/board', (c) =>
+    c.json({
+      board: store.board().map((row) => ({
+        operator_id: row.operatorId,
+        warrant_health_topic_id: row.warrantHealthTopicId,
+        latest: row.latest
+          ? {
+              seq: row.latest.seq,
+              published_at: row.latest.consensusTs,
+              total: row.latest.total,
+              unwarranted: row.latest.unwarranted,
+              unwarranted_rate: row.latest.rate,
+              threshold: row.latest.threshold,
+              verdict: row.latest.verdict,
+              by_category: row.latest.byCategory,
+            }
+          : null,
+      })),
+    }),
+  );
+
   app.get('/v1/tenants/:ref/events', (c) => {
     const limit = Math.min(Number(c.req.query('limit') ?? 100), 1000);
     return c.json({ events: store.decisionsForTenant(c.req.param('ref'), limit) });

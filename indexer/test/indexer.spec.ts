@@ -6,6 +6,7 @@ import {
   buildBatchRecord,
   buildDecisionRecord,
   buildUnwarrantRecord,
+  buildWarrantHealthRecord,
   encodeLeaf,
   merkleRootHex,
   GENESIS_PREV_HASH,
@@ -160,6 +161,58 @@ describe('indexer', () => {
       byCategory: { 'missing-justification': 1 },
     });
     expect(h.rate).toBeCloseTo(1 / 3, 10);
+  });
+
+  it('discovers operators from registry.operators and builds the public board', async () => {
+    const OPERATORS_REGISTRY = '0.0.300';
+    const WH_TOPIC = '0.0.301';
+    // operator announcement on the operators registry
+    mirror.push(
+      OPERATORS_REGISTRY,
+      new TextEncoder().encode(
+        JSON.stringify({
+          v: 'reg-1',
+          kind: 'operator-created',
+          operator_id: 'jv-fleet',
+          operator_pubkey: 'cd'.repeat(32),
+          warrant_health_topic_id: WH_TOPIC,
+        }),
+      ),
+    );
+    // one owh-1 on the operator's warrant-health topic
+    const owh = buildWarrantHealthRecord({
+      prevHash: GENESIS_PREV_HASH,
+      operatorId: 'jv-fleet',
+      fromTs: '1970-01-01T00:00:00Z',
+      toTs: '2026-06-12T00:00:00Z',
+      total: 1000,
+      unwarranted: 30,
+      byCategory: { 'missing-justification': 30 },
+      rate: 0.03,
+      sampleSize: 1000,
+      threshold: 0.05,
+      verdict: 'PASS',
+    });
+    mirror.push(WH_TOPIC, owh.encoded);
+
+    // bootstrap from BOTH roots — tenants (empty here) + operators
+    await ingestAll(store, mirror, REGISTRY, OPERATORS_REGISTRY);
+
+    expect(store.operators()[0]).toMatchObject({ operatorId: 'jv-fleet', warrantHealthTopicId: WH_TOPIC });
+    const board = store.board();
+    expect(board).toHaveLength(1);
+    expect(board[0].latest).toMatchObject({
+      total: 1000,
+      unwarranted: 30,
+      rate: 0.03,
+      verdict: 'PASS',
+      byCategory: { 'missing-justification': 30 },
+    });
+
+    // cold rebuild from the same mirror reproduces the board
+    const b = new IndexerStore(':memory:');
+    await ingestAll(b, mirror, REGISTRY, OPERATORS_REGISTRY);
+    expect(b.board()).toEqual(board);
   });
 
   it('detects a broken link at the exact sequence', async () => {

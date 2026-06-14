@@ -24,6 +24,7 @@ export interface ParsedRecord {
     | { v: 'ode-2'; [k: string]: unknown }
     | { v: 'ode-2b'; [k: string]: unknown }
     | { v: 'ode-2u'; [k: string]: unknown }
+    | { v: 'owh-1'; [k: string]: unknown }
     | { v: 'reg-1'; [k: string]: unknown }
     | { v: 'unknown'; raw: string };
 }
@@ -50,6 +51,7 @@ export async function parseMirrorMessage(msg: MirrorMessage): Promise<ParsedReco
       parsed.v === 'ode-2' ||
       parsed.v === 'ode-2b' ||
       parsed.v === 'ode-2u' ||
+      parsed.v === 'owh-1' ||
       parsed.v === 'reg-1'
     ) {
       body = parsed as ParsedRecord['body'];
@@ -84,6 +86,26 @@ export function asTenantAnnouncement(rec: ParsedRecord): TenantAnnouncement | nu
     tenantRef: b.tenant_ref,
     topicId: b.topic_id,
     submitPubkey: String(b.submit_pubkey ?? ''),
+    announcedSeq: rec.seq,
+  };
+}
+
+export interface OperatorAnnouncement {
+  operatorId: string;
+  operatorPubkey: string;
+  warrantHealthTopicId: string;
+  announcedSeq: number;
+}
+
+/** Extract a reg-1 operator-created announcement, or null for other rows. */
+export function asOperatorAnnouncement(rec: ParsedRecord): OperatorAnnouncement | null {
+  const b = rec.body as Record<string, unknown>;
+  if (b.v !== 'reg-1' || b.kind !== 'operator-created') return null;
+  if (typeof b.operator_id !== 'string' || typeof b.warrant_health_topic_id !== 'string') return null;
+  return {
+    operatorId: b.operator_id,
+    operatorPubkey: String(b.operator_pubkey ?? ''),
+    warrantHealthTopicId: b.warrant_health_topic_id,
     announcedSeq: rec.seq,
   };
 }
