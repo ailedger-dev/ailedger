@@ -56,6 +56,7 @@ from ailedger_detection.types import (
     InferredDetectionEvent,
     ProtectedClassCollectionMethod,
 )
+from ailedger_detection.indexer_client import IndexerClient, IndexerError
 from ailedger_detection.unresolved_flags import unresolved_flag_accumulation
 
 __version__ = "0.3.0"
@@ -73,6 +74,9 @@ __all__ = [
     "NO_LOOSER_ALTERNATIVE",
     "RelayEmitter",
     "RelayError",
+    # Reads cut-over: indexer enumeration + sealing confirmation (metadata only)
+    "IndexerClient",
+    "IndexerError",
     # Type contracts
     "DetectionEvent",
     "InferredDetectionEvent",

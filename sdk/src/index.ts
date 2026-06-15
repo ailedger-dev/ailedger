@@ -40,22 +40,36 @@ export { computeInputsHash, sha256hex, sha256jcs, isJsonContentType } from './ha
 // the relay, the verifier, and the aDNA adapter. See docs/adr/016.
 export {
   buildBatchRecord,
+  buildCheckpointRecord,
   buildDecisionRecord,
+  buildGenesisRecord,
+  checkpointLeaf,
   commitField,
   encodeRecord,
   generateEventSalt,
   verifyFieldCommitment,
+  CHECKPOINT_LEAF_SPEC,
   GENESIS_PREV_HASH,
   MAX_RECORD_BYTES,
   ODE_BATCH_VERSION,
+  ODE_CHECKPOINT_VERSION,
   ODE_DECISION_VERSION,
+  ODE_GENESIS_VERSION,
 } from './evidence/record.js';
 export type {
   BuildBatchRecordParams,
+  BuildCheckpointRecordParams,
   BuildDecisionRecordParams,
+  BuildGenesisRecordParams,
   DecisionCommitInputs,
+  GenesisWitness,
+  HcsContinuityWitness,
   OdeBatchRecord,
+  OdeCheckpointRecord,
   OdeDecisionRecord,
+  OdeGenesisRecord,
+  PgPipeWitness,
+  TenantHead,
 } from './evidence/record.js';
 export {
   encodeLeaf,
@@ -76,6 +90,8 @@ export {
   ENVELOPE_VERSION,
 } from './evidence/envelope.js';
 export type { SealedPayload } from './evidence/envelope.js';
+export { fetchSealed, waitForSealed } from './evidence/ack.js';
+export type { SealedStatus, SealedPollOptions, WaitForSealedOptions } from './evidence/ack.js';
 export { computeExtractorParamsHash } from './canonicalize.js';
 export { normalizeConfidence, normalizeTimestamp } from './normalize.js';
 

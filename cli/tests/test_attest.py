@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import uuid
@@ -12,15 +13,14 @@ import pytest
 from click.testing import CliRunner
 
 from ailedger_cli.attest import (
-    BITCOIN_TESTNET,
+    HEDERA,
     MOCK,
+    ODE_CHECKPOINT_VERSION,
     SERVICE_ROLE_ENV_VAR,
     AttestClient,
     AttestError,
-    BackendDisabled,
     BackendUnavailable,
-    BitcoinMainnetBackend,
-    BitcoinTestnetBackend,
+    HederaAnchorBackend,
     MockBackend,
     compute,
     compute_root_hash,
@@ -73,8 +73,8 @@ def test_resolve_backend_defaults_to_mock(monkeypatch):
 
 
 def test_resolve_backend_from_env(monkeypatch):
-    monkeypatch.setenv("AILEDGER_ANCHOR_BACKEND", "bitcoin-testnet")
-    assert resolve_backend_name() == BITCOIN_TESTNET
+    monkeypatch.setenv("AILEDGER_ANCHOR_BACKEND", "hedera")
+    assert resolve_backend_name() == HEDERA
 
 
 def test_get_backend_unknown_name_raises():
@@ -102,25 +102,58 @@ def test_mock_backend_verify_rejects_non_hex():
     assert backend.verify("not-hex", "a" * 64) is False
 
 
-def test_bitcoin_testnet_publish_is_stub():
-    with pytest.raises(BackendUnavailable):
-        BitcoinTestnetBackend().publish("a" * 64)
+# ─── Hedera checkpoint backend (keyless, mirror-backed) ─────────────────────
 
 
-def test_bitcoin_testnet_verify_is_stub():
-    with pytest.raises(BackendUnavailable):
-        BitcoinTestnetBackend().verify("abc", "a" * 64)
+def _chk1_message(tenant_root: str, *, version: str = ODE_CHECKPOINT_VERSION) -> str:
+    """Base64 of a chk-1 message body, as a mirror serves it."""
+    body = {
+        "v": version,
+        "prev_hash": "0" * 64,
+        "ts": "2026-06-14T00:00:00.000Z",
+        "period": {"from_ts": "genesis", "to_ts": "2026-06-14T00:00:00.000Z"},
+        "tenant_root": tenant_root,
+        "tenant_count": 2,
+        "leaf_spec": "rfc6962-sha256/jcs-tenant-head-v1",
+    }
+    return base64.b64encode(json.dumps(body).encode("utf-8")).decode("ascii")
 
 
-def test_bitcoin_mainnet_publish_is_disabled():
-    # Money-spender. Never run without Jake signoff.
-    with pytest.raises(BackendDisabled):
-        BitcoinMainnetBackend().publish("a" * 64)
+def _mirror_serving(seq: int, message_b64: str) -> httpx.MockTransport:
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith(f"/messages/{seq}"):
+            return httpx.Response(200, json={"message": message_b64, "sequence_number": seq})
+        return httpx.Response(404, json={"error": "not found"})
+
+    return httpx.MockTransport(handle)
 
 
-def test_bitcoin_mainnet_verify_is_disabled():
-    with pytest.raises(BackendDisabled):
-        BitcoinMainnetBackend().verify("abc", "a" * 64)
+def test_hedera_publish_is_operator_side_not_cli():
+    with pytest.raises(BackendUnavailable, match="checkpoint"):
+        HederaAnchorBackend().publish("a" * 64)
+
+
+def test_hedera_verify_matches_onchain_root():
+    root = "ab" * 32
+    backend = HederaAnchorBackend(transport=_mirror_serving(5, _chk1_message(root)))
+    assert backend.verify("0.0.123:5", root) is True
+
+
+def test_hedera_verify_rejects_wrong_root():
+    backend = HederaAnchorBackend(transport=_mirror_serving(5, _chk1_message("ab" * 32)))
+    assert backend.verify("0.0.123:5", "cd" * 32) is False
+
+
+def test_hedera_verify_rejects_non_checkpoint_record():
+    backend = HederaAnchorBackend(
+        transport=_mirror_serving(5, _chk1_message("ab" * 32, version="ode-2"))
+    )
+    assert backend.verify("0.0.123:5", "ab" * 32) is False
+
+
+def test_hedera_verify_bad_tx_id_raises():
+    with pytest.raises(BackendUnavailable, match="topic:seq"):
+        HederaAnchorBackend().verify("not-a-ref", "ab" * 32)
 
 
 # ─── AttestClient (with a mocked httpx transport) ───────────────────────────
@@ -316,7 +349,9 @@ def test_attest_publish_via_cli(tmp_config, monkeypatch, fake_supabase):
     assert "customer_count 3" in result.output
 
 
-def test_attest_publish_refuses_mainnet(tmp_config, monkeypatch, fake_supabase):
+def test_attest_publish_hedera_points_to_operator_tool(tmp_config, monkeypatch, fake_supabase):
+    # Publishing the Hedera checkpoint is key-holding operator tooling, not a
+    # keyless CLI action: the backend refuses and points at checkpoint.mts.
     monkeypatch.setenv(SERVICE_ROLE_ENV_VAR, "srv-role-key")
     CliRunner().invoke(cli, ["config", "--set", "base-url=https://x.supabase.co"])
 
@@ -326,6 +361,6 @@ def test_attest_publish_refuses_mainnet(tmp_config, monkeypatch, fake_supabase):
         return AttestClient(base_url, key, transport=transport)
 
     monkeypatch.setattr("ailedger_cli.main.AttestClient", _client_factory)
-    result = CliRunner().invoke(cli, ["attest", "publish", "--backend", "bitcoin"])
+    result = CliRunner().invoke(cli, ["attest", "publish", "--backend", "hedera"])
     assert result.exit_code != 0
-    assert "disabled" in result.output.lower()
+    assert "checkpoint" in result.output.lower()

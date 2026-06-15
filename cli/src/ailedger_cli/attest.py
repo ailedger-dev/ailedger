@@ -1,28 +1,30 @@
 """Cross-customer chain-head anchoring.
 
 Computes a deterministic SHA-256 root hash across every customer's current
-chain-head, stores the result in ``ledger.attestations``, and publishes it to
-a public blockchain via a pluggable backend. Regulator-facing primer §3.5
-promises this; this module is the engineering substantiation.
+chain-head and publishes it to a public ledger via a pluggable backend.
+Regulator-facing primer §3.5 promises this; this module is the engineering
+substantiation.
 
 Backends
 --------
 ``mock``
     Dev/test default. The "tx id" is ``sha256(root_hash || wallclock_ms)``
     stored locally. No network calls.
-``bitcoin-testnet``
-    Stub. Raises :class:`BackendUnavailable` — wiring to BTCPay / BlockCypher
-    is intentionally out of scope for the seed implementation.
-``bitcoin``
-    Bitcoin MainNet. Hard-disabled: this backend sends real money and
-    requires explicit Jake signoff before the stub is replaced. Calling it
-    always raises :class:`BackendDisabled`.
+``hedera``
+    The Hedera checkpoint anchor (Phase 3). The anchor is a chk-1 record on the
+    public ``checkpoints`` topic, sealed by the operator's key-holding
+    checkpoint publisher (``proxy/scripts/checkpoint.mts``). This backend is
+    KEYLESS: ``verify`` reconciles a checkpoint against a public mirror by
+    ``topic:seq``; ``publish`` is intentionally not a CLI action (signing stays
+    operator-side). Replaces the removed Bitcoin OP_RETURN stubs.
 """
 
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import hashlib
+import json
 import os
 import time
 from collections.abc import Mapping
@@ -36,9 +38,17 @@ BACKEND_ENV_VAR = "AILEDGER_ANCHOR_BACKEND"
 SERVICE_ROLE_ENV_VAR = "AILEDGER_SERVICE_ROLE_KEY"
 
 MOCK = "mock"
-BITCOIN_TESTNET = "bitcoin-testnet"
-BITCOIN_MAINNET = "bitcoin"
-KNOWN_BACKENDS = (MOCK, BITCOIN_TESTNET, BITCOIN_MAINNET)
+HEDERA = "hedera"
+KNOWN_BACKENDS = (MOCK, HEDERA)
+
+# The on-chain checkpoint record version (mirror of the SDK's ODE_CHECKPOINT_VERSION).
+ODE_CHECKPOINT_VERSION = "chk-1"
+
+# Public mirror REST bases by network (keyless reads; overridable per backend).
+DEFAULT_MIRRORS = {
+    "testnet": "https://testnet.mirrornode.hedera.com",
+    "mainnet": "https://mainnet-public.mirrornode.hedera.com",
+}
 
 
 class AttestError(RuntimeError):
@@ -46,11 +56,7 @@ class AttestError(RuntimeError):
 
 
 class BackendUnavailable(AttestError):
-    """Backend is a stub — implementation deferred."""
-
-
-class BackendDisabled(AttestError):
-    """Backend is intentionally off (e.g. Bitcoin MainNet money-spender)."""
+    """Backend cannot service this operation here (e.g. publish is operator-side)."""
 
 
 # ─── Root-hash computation ──────────────────────────────────────────────────
@@ -133,60 +139,75 @@ class MockBackend:
         return _is_hex_sha256(expected_root_hash)
 
 
-class BitcoinTestnetBackend:
-    """Placeholder for BTCPay/BlockCypher-backed testnet OP_RETURN anchoring.
+class HederaAnchorBackend:
+    """Hedera checkpoint anchor — keyless, mirror-backed verification.
 
-    Seed implementation intentionally leaves the wire protocol unwired. When
-    this backend is filled in it should:
+    The anchor is a ``chk-1`` record on the public ``checkpoints`` topic, sealed
+    by the operator's key-holding checkpoint publisher
+    (``proxy/scripts/checkpoint.mts``). This backend is keyless by design — the
+    CLI never holds the registry submit key — so the split is:
 
-    1. Read credentials from ``~/gt-lab/.secrets/ailedger-attest-backend.env``
-       (never from config.toml).
-    2. Push an OP_RETURN transaction whose payload is the 32-byte root hash.
-    3. Return the tx id. Verification fetches the tx and asserts the
-       OP_RETURN payload matches the expected root hash.
+    * ``publish`` raises :class:`BackendUnavailable`. Signing is operator-side
+      tooling, not a CLI action (signing stays TS/KMS-side; Python stays
+      keyless, per the Phase 3 plan). Run the checkpoint publisher instead.
+    * ``verify`` fetches the checkpoint by ``tx_id`` (``"topic:seq"``) from a
+      public mirror and confirms its ``tenant_root`` equals the expected root.
+      No keys; reproducible by any third party — the FRE 707 posture.
+
+    The expected root for a checkpoint is recomputed from the off-chain head
+    manifest by ``ailedger verify-checkpoint`` (evidence.verify_checkpoint_manifest);
+    this backend is the lower-level by-reference point-check.
     """
 
-    name = BITCOIN_TESTNET
+    name = HEDERA
+
+    def __init__(
+        self,
+        *,
+        mirror_base: str | None = None,
+        network: str = "testnet",
+        timeout: float = 30.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        self._mirror_base = (
+            mirror_base or DEFAULT_MIRRORS.get(network) or DEFAULT_MIRRORS["testnet"]
+        ).rstrip("/")
+        self._timeout = timeout
+        self._transport = transport
 
     def publish(self, root_hash: str) -> PublishResult:
         raise BackendUnavailable(
-            "bitcoin-testnet backend is stubbed in the seed implementation. "
-            "Wire BTCPay/BlockCypher before using."
+            "the Hedera checkpoint anchor is sealed by the operator's key-holding "
+            "checkpoint publisher (proxy/scripts/checkpoint.mts), not the keyless "
+            "CLI. Run that to publish a chk-1; use this backend only to verify."
         )
 
     def verify(self, tx_id: str, expected_root_hash: str) -> bool:
-        raise BackendUnavailable(
-            "bitcoin-testnet backend is stubbed in the seed implementation. "
-            "Wire BTCPay/BlockCypher before using."
-        )
-
-
-class BitcoinMainnetBackend:
-    """Bitcoin MainNet anchor — hard-disabled.
-
-    Enabling this backend costs real BTC per anchor. The seed implementation
-    refuses to publish regardless of env-var gating. Jake must replace this
-    class with a real implementation (+ fund a wallet, + sign off) before it
-    can be turned on.
-    """
-
-    name = BITCOIN_MAINNET
-
-    def publish(self, root_hash: str) -> PublishResult:
-        raise BackendDisabled(
-            "bitcoin mainnet backend is disabled by design: it sends real BTC. "
-            "Replace BitcoinMainnetBackend with a signed-off implementation "
-            "before enabling."
-        )
-
-    def verify(self, tx_id: str, expected_root_hash: str) -> bool:
-        raise BackendDisabled("bitcoin mainnet backend is disabled by design — no verify path.")
+        topic_id, sep, seq = tx_id.partition(":")
+        if not sep or not topic_id or not seq.isdigit():
+            raise BackendUnavailable(
+                f"hedera tx_id must be 'topic:seq' (e.g. 0.0.1234:7), got {tx_id!r}"
+            )
+        url = f"{self._mirror_base}/api/v1/topics/{topic_id}/messages/{seq}"
+        with httpx.Client(timeout=self._timeout, transport=self._transport) as client:
+            res = client.get(url)
+            res.raise_for_status()
+            row = res.json()
+        message_b64 = row.get("message") if isinstance(row, dict) else None
+        if not isinstance(message_b64, str):
+            return False
+        try:
+            body = json.loads(base64.b64decode(message_b64).decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return False
+        if not isinstance(body, dict) or body.get("v") != ODE_CHECKPOINT_VERSION:
+            return False
+        return body.get("tenant_root") == expected_root_hash.lower()
 
 
 _BACKEND_FACTORIES: dict[str, type[AnchorBackend]] = {
     MOCK: MockBackend,
-    BITCOIN_TESTNET: BitcoinTestnetBackend,
-    BITCOIN_MAINNET: BitcoinMainnetBackend,
+    HEDERA: HederaAnchorBackend,
 }
 
 

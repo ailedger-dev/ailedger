@@ -12,6 +12,7 @@ import click
 from ailedger_cli import __version__
 from ailedger_cli.api import FetchOptions, LedgerClient
 from ailedger_cli.attest import (
+    HEDERA,
     SERVICE_ROLE_ENV_VAR,
     AttestClient,
     AttestError,
@@ -158,16 +159,17 @@ def verify_cmd(customer: str | None, since: str | None, until: str | None) -> No
 @cli.command(
     "verify-evidence",
     help="Offline, keyless verification of a Hedera evidence topic: network "
-    "running hash, app prev_hash chain, batch inclusion proofs, payload "
-    "commitments, multi-mirror cross-check.",
+    "running hash, app prev_hash chain, batch inclusion proofs, cross-topic "
+    "checkpoint roots, payload commitments, multi-mirror cross-check.",
 )
 @click.option("--topic", "topic_id", required=True, metavar="0.0.X", help="Tenant topic id.")
 @click.option("--archive", "archive_path", type=click.Path(path_type=Path), help="Verify from an archive/mirror-dump JSON file (fully offline).")
 @click.option("--mirror", "mirror_base", metavar="URL", help="Mirror REST base (default by --network).")
 @click.option("--network", default="testnet", show_default=True, help="testnet | mainnet (selects default mirror).")
 @click.option("--cross-mirror", "cross_mirror_base", metavar="URL", help="Second, independent mirror to cross-check against.")
-@click.option("--manifests", "manifests_path", type=click.Path(path_type=Path), help="Drainer manifests.jsonl — verifies every batch root + all inclusion proofs.")
+@click.option("--manifests", "manifests_path", type=click.Path(path_type=Path), help="Drainer manifests.jsonl (batch or checkpoint lines) — verifies every batch root + inclusion proofs, and every cross-topic checkpoint root.")
 @click.option("--payload", "payload_specs", multiple=True, metavar="EVENT_ID=FILE", help="Decrypted payload JSON for commitment verification (repeatable).")
+@click.option("--genesis-predecessor", "genesis_predecessor", metavar="0.0.X", help="Predecessor topic id — checks a gen-1 continuity witness against it (mirror read).")
 def verify_evidence_cmd(
     topic_id: str,
     archive_path: Path | None,
@@ -176,10 +178,17 @@ def verify_evidence_cmd(
     cross_mirror_base: str | None,
     manifests_path: Path | None,
     payload_specs: tuple[str, ...],
+    genesis_predecessor: str | None,
 ) -> None:
     import json as _json
 
-    from ailedger_cli.evidence import verify_batch_manifest, verify_commitments, verify_topic
+    from ailedger_cli.evidence import (
+        verify_batch_manifest,
+        verify_checkpoint_manifest,
+        verify_commitments,
+        verify_genesis_witness,
+        verify_topic,
+    )
     from ailedger_cli.mirror import (
         DEFAULT_MIRRORS,
         cross_check,
@@ -215,6 +224,8 @@ def verify_evidence_cmd(
             entry = _json.loads(line)
             if entry.get("kind") == "batch":
                 verify_batch_manifest(report, entry)
+            elif entry.get("kind") == "checkpoint":
+                verify_checkpoint_manifest(report, entry)
 
     for spec in payload_specs:
         event_id, _, file_part = spec.partition("=")
@@ -222,6 +233,12 @@ def verify_evidence_cmd(
             raise click.UsageError("--payload expects EVENT_ID=FILE")
         payload = _json.loads(Path(file_part).read_text(encoding="utf-8"))
         verify_commitments(report, event_id.strip(), payload)
+
+    if genesis_predecessor is not None:
+        pred_base = mirror_base or DEFAULT_MIRRORS.get(network)
+        if pred_base is None:
+            raise click.UsageError(f"unknown network {network!r} — pass --mirror for the predecessor")
+        verify_genesis_witness(report, fetch_topic_messages(pred_base, genesis_predecessor))
 
     click.echo(f"topic {topic_id} — {len(report.records)} records from {source}")
     for finding in report.findings:
@@ -232,6 +249,70 @@ def verify_evidence_cmd(
     )
     if not report.ok:
         sys.exit(2)
+
+
+# -- events (read cut-over: indexer | mirror) ----------------------------------
+
+
+@cli.command(
+    "events",
+    help="List a tenant's sealed decision events from the indexer (new Hedera "
+    "rails), or recompute the list trustlessly from the public mirror. The "
+    "legacy Supabase reads (verify/export) are unaffected.",
+)
+@click.option("--tenant", "tenant_ref", metavar="REF", help="Tenant ref (required for --source indexer).")
+@click.option("--source", type=click.Choice(["indexer", "mirror"]), default="indexer", show_default=True, help="indexer = fast derived reads; mirror = trustless recompute, no infra.")
+@click.option("--indexer", "indexer_base", metavar="URL", help="Indexer base URL (default: config indexer-url).")
+@click.option("--topic", "topic_id", metavar="0.0.X", help="Tenant topic id (required for --source mirror).")
+@click.option("--mirror", "mirror_base", metavar="URL", help="Mirror REST base (default by --network).")
+@click.option("--network", default="testnet", show_default=True, help="testnet | mainnet (selects default mirror).")
+@click.option("--limit", default=100, show_default=True, help="Max events to list.")
+def events_cmd(
+    tenant_ref: str | None,
+    source: str,
+    indexer_base: str | None,
+    topic_id: str | None,
+    mirror_base: str | None,
+    network: str,
+    limit: int,
+) -> None:
+    if source == "indexer":
+        base = indexer_base or load_config().get("indexer-url")
+        if not base:
+            raise click.UsageError("set --indexer URL (or config indexer-url) for --source indexer")
+        if not tenant_ref:
+            raise click.UsageError("--tenant is required for --source indexer")
+        from ailedger_cli.indexer import IndexerClient
+
+        with IndexerClient(base) as ix:
+            events = ix.tenant_events(tenant_ref, limit=limit)
+        rows = [
+            (e.get("seq"), e.get("event_id"), e.get("decision_type"), e.get("ts")) for e in events
+        ]
+        src_desc = f"indexer {base}"
+    else:
+        if not topic_id:
+            raise click.UsageError("--topic is required for --source mirror")
+        from ailedger_cli.evidence import verify_topic
+        from ailedger_cli.mirror import DEFAULT_MIRRORS, fetch_topic_messages
+
+        base = mirror_base or DEFAULT_MIRRORS.get(network)
+        if base is None:
+            raise click.UsageError(f"unknown network {network!r} — pass --mirror explicitly")
+        report = verify_topic(topic_id, fetch_topic_messages(base, topic_id))
+        rows = [
+            (r.seq, r.body.get("event_id"), r.body.get("decision_type"), r.body.get("ts"))
+            for r in report.records
+            if r.kind == "ode-2"
+        ][:limit]
+        src_desc = f"mirror {base}"
+
+    if not rows:
+        click.echo(f"no decision events ({src_desc})")
+        return
+    click.echo(f"# {len(rows)} decision event(s) from {src_desc}")
+    for seq, event_id, decision_type, ts in rows:
+        click.echo(f"  seq {seq}  {event_id}  {decision_type}  {ts}")
 
 
 # -- export --------------------------------------------------------------------
@@ -307,10 +388,20 @@ def attest_compute_cmd() -> None:
 @click.option(
     "--backend",
     metavar="NAME",
-    help=f"Override {SERVICE_ROLE_ENV_VAR[:-3]}ANCHOR_BACKEND. One of: mock, bitcoin-testnet, bitcoin.",
+    help="Override AILEDGER_ANCHOR_BACKEND. One of: mock, hedera.",
 )
 def attest_publish_cmd(backend: str | None) -> None:
     backend_name = (backend or resolve_backend_name()).lower()
+    if backend_name == HEDERA:
+        # The Hedera checkpoint anchor is sealed by the operator's key-holding
+        # publisher, not this keyless CLI — refuse before touching the (legacy,
+        # being-shed) Supabase client so the message is honest post-cutover.
+        raise click.ClickException(
+            "the Hedera checkpoint anchor is sealed by the operator checkpoint "
+            "publisher (proxy/scripts/checkpoint.mts), not this keyless CLI. Run "
+            "it on a cadence; verify with:\n  ailedger verify-evidence --topic "
+            "<checkpoints-topic> --manifests ~/.ailedger-outbox/checkpoints.jsonl"
+        )
     try:
         anchor = get_backend(backend_name)
     except AttestError as exc:

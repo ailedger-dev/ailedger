@@ -25,9 +25,20 @@
 // profile — additive, not a migration.
 
 import canonicalize from 'canonicalize';
+import { encodeLeaf } from './merkle.js';
 
 export const ODE_DECISION_VERSION = 'ode-2' as const;
 export const ODE_BATCH_VERSION = 'ode-2b' as const;
+export const ODE_CHECKPOINT_VERSION = 'chk-1' as const;
+export const ODE_GENESIS_VERSION = 'gen-1' as const;
+/**
+ * Leaf contract for a checkpoint: one leaf per tenant topic head,
+ * leaf bytes = UTF-8(JCS({ running_hash, sequence_number, topic_id })). The
+ * running_hash is Hedera's own SHA-384 network running hash at that topic's
+ * head — the strongest possible commitment to a tenant Logbook's state, taken
+ * straight from consensus, not the advisory app prev_hash.
+ */
+export const CHECKPOINT_LEAF_SPEC = 'rfc6962-sha256/jcs-tenant-head-v1' as const;
 /** Hard cap on the canonical byte length of one on-chain record (one HCS message). */
 export const MAX_RECORD_BYTES = 1024;
 export const EVENT_SALT_BYTES = 32;
@@ -74,6 +85,76 @@ export interface OdeBatchRecord {
   range: { from_ts: string; to_ts: string };
   /** Leaf preimage contract: leaf bytes = UTF-8(JCS(log record)). */
   leaf_spec: 'rfc6962-sha256/jcs-v1';
+}
+
+/**
+ * The chk-1 cross-topic checkpoint record — one per operator per interval on
+ * the public `checkpoints` topic. Anchors a single RFC 6962 Merkle root over
+ * every tenant topic's head (its network running hash at a sequence number),
+ * so one constant-size record witnesses the whole estate's state at a point in
+ * consensus time. The ordered head list (the leaves) lives in an off-chain
+ * checkpoint manifest, exactly like a batch's leaves — the verifier recomputes
+ * the root from the manifest and FAILs on mismatch.
+ */
+export interface OdeCheckpointRecord {
+  v: typeof ODE_CHECKPOINT_VERSION;
+  prev_hash: string;
+  ts: string;
+  /** Window this checkpoint summarizes (advisory; consensus ts is authoritative). */
+  period: { from_ts: string; to_ts: string };
+  /** RFC 6962 SHA-256 Merkle root over the per-tenant head leaves. */
+  tenant_root: string;
+  tenant_count: number;
+  leaf_spec: typeof CHECKPOINT_LEAF_SPEC;
+}
+
+/**
+ * Genesis witness — what message #1 on a fresh (mainnet) topic attests about
+ * the history that preceded it. Two shapes (runbook §3):
+ *   hcs-continuity — the predecessor is itself a public HCS topic (e.g. a
+ *     tenant's testnet Logbook). The witness is pointers anyone re-derives from
+ *     the predecessor: its final network running hash, final app-chain head,
+ *     record count. No double-compute needed — the source is on-chain.
+ *   pg-pipe-v0 — the predecessor is the legacy Postgres trigger chain. The
+ *     witness carries the chain head + a Merkle root over the rows + snapshot
+ *     time. This root is computed off-chain from a one-shot export, so it MUST
+ *     be double-computed independently before publish (genesis is append-only
+ *     forever; a wrong genesis is correctable only by append).
+ */
+export interface HcsContinuityWitness {
+  kind: 'hcs-continuity';
+  predecessor_topic_id: string;
+  final_seq: number;
+  /** Hex of the predecessor head's Hedera SHA-384 network running hash. */
+  final_running_hash: string;
+  /** SHA-256 of the predecessor's final message bytes (its app-chain head). */
+  final_app_head: string;
+  record_count: number;
+}
+
+export interface PgPipeWitness {
+  kind: 'pg-pipe-v0';
+  legacy_chain_head: string;
+  legacy_algo: 'pg-pipe-v0';
+  row_count: number;
+  merkle_root: string;
+  pg_snapshot_ts: string;
+}
+
+export type GenesisWitness = HcsContinuityWitness | PgPipeWitness;
+
+/**
+ * The gen-1 genesis attestation — message #1 on a topic. Its own prev_hash is
+ * the all-zero genesis (it starts this topic's chain); the cross-system
+ * continuity link lives in `witness`. The first real record (message #2) then
+ * chains onto this record's hash as normal, so each topic's prev_hash chain
+ * stays self-contained while the witness ties it to prior history.
+ */
+export interface OdeGenesisRecord {
+  v: typeof ODE_GENESIS_VERSION;
+  prev_hash: string;
+  ts: string;
+  witness: GenesisWitness;
 }
 
 /** The sensitive halves of a decision event, committed (not stored) on-chain. */
@@ -148,7 +229,9 @@ export async function verifyFieldCommitment(
 }
 
 /** Canonical on-chain encoding of a record (the exact HCS message bytes). */
-export function encodeRecord(record: OdeDecisionRecord | OdeBatchRecord): Uint8Array {
+export function encodeRecord(
+  record: OdeDecisionRecord | OdeBatchRecord | OdeCheckpointRecord | OdeGenesisRecord,
+): Uint8Array {
   const jcs = canonicalize(record as Parameters<typeof canonicalize>[0]);
   if (jcs === undefined) throw new Error('record is not JCS-serializable');
   return new TextEncoder().encode(jcs);
@@ -231,6 +314,133 @@ export function buildBatchRecord(params: BuildBatchRecordParams): {
   const encoded = encodeRecord(record);
   if (encoded.byteLength > MAX_RECORD_BYTES) {
     throw new Error(`encoded batch record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
+  }
+  return { record, encoded };
+}
+
+/** One tenant topic's head: the strongest commitment to its current state. */
+export interface TenantHead {
+  topicId: string;
+  sequenceNumber: number;
+  /** Lowercase hex of the topic head's Hedera SHA-384 network running hash. */
+  runningHashHex: string;
+}
+
+const TOPIC_ID_RE = /^\d+\.\d+\.\d+$/;
+const HEX_RE = /^[0-9a-f]+$/;
+
+/**
+ * Canonical checkpoint leaf bytes for one tenant head (CHECKPOINT_LEAF_SPEC).
+ * JCS sorts the keys, so the field order here is irrelevant — what matters is
+ * that the Python verifier builds the byte-identical object. Kept in the SDK so
+ * publisher (proxy), reader (indexer), and tests share one contract.
+ */
+export function checkpointLeaf(head: TenantHead): Uint8Array {
+  if (!TOPIC_ID_RE.test(head.topicId)) throw new Error(`invalid topic id: ${head.topicId}`);
+  if (!Number.isInteger(head.sequenceNumber) || head.sequenceNumber < 1) {
+    throw new Error(`sequence_number must be a positive integer: ${head.sequenceNumber}`);
+  }
+  const runningHash = head.runningHashHex.toLowerCase();
+  if (!HEX_RE.test(runningHash)) throw new Error('running_hash must be hex');
+  return encodeLeaf({
+    topic_id: head.topicId,
+    sequence_number: head.sequenceNumber,
+    running_hash: runningHash,
+  });
+}
+
+export interface BuildCheckpointRecordParams {
+  prevHash: string;
+  ts: string;
+  fromTs: string;
+  toTs: string;
+  /** RFC 6962 root over checkpointLeaf(head) for every tenant head. */
+  tenantRoot: string;
+  tenantCount: number;
+}
+
+/** Build the chk-1 cross-topic checkpoint record. */
+export function buildCheckpointRecord(params: BuildCheckpointRecordParams): {
+  record: OdeCheckpointRecord;
+  encoded: Uint8Array;
+} {
+  assertHex64('prevHash', params.prevHash);
+  assertHex64('tenantRoot', params.tenantRoot);
+  if (!Number.isInteger(params.tenantCount) || params.tenantCount < 1) {
+    throw new Error('tenantCount must be a positive integer (do not checkpoint an empty estate)');
+  }
+  const record: OdeCheckpointRecord = {
+    v: ODE_CHECKPOINT_VERSION,
+    prev_hash: params.prevHash,
+    ts: params.ts,
+    period: { from_ts: params.fromTs, to_ts: params.toTs },
+    tenant_root: params.tenantRoot,
+    tenant_count: params.tenantCount,
+    leaf_spec: CHECKPOINT_LEAF_SPEC,
+  };
+  const encoded = encodeRecord(record);
+  if (encoded.byteLength > MAX_RECORD_BYTES) {
+    throw new Error(`encoded checkpoint record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
+  }
+  return { record, encoded };
+}
+
+function assertGenesisWitness(witness: GenesisWitness): void {
+  if (witness.kind === 'hcs-continuity') {
+    if (!TOPIC_ID_RE.test(witness.predecessor_topic_id)) {
+      throw new Error(`invalid predecessor_topic_id: ${witness.predecessor_topic_id}`);
+    }
+    if (!HEX_RE.test(witness.final_running_hash.toLowerCase())) {
+      throw new Error('final_running_hash must be hex');
+    }
+    assertHex64('final_app_head', witness.final_app_head);
+    for (const [label, n] of [
+      ['final_seq', witness.final_seq],
+      ['record_count', witness.record_count],
+    ] as const) {
+      if (!Number.isInteger(n) || n < 1) throw new Error(`${label} must be a positive integer`);
+    }
+  } else if (witness.kind === 'pg-pipe-v0') {
+    assertHex64('legacy_chain_head', witness.legacy_chain_head);
+    assertHex64('merkle_root', witness.merkle_root);
+    if (witness.legacy_algo !== 'pg-pipe-v0') throw new Error("legacy_algo must be 'pg-pipe-v0'");
+    if (!Number.isInteger(witness.row_count) || witness.row_count < 0) {
+      throw new Error('row_count must be a non-negative integer');
+    }
+    if (!witness.pg_snapshot_ts) throw new Error('pg_snapshot_ts is required');
+  } else {
+    throw new Error(`unknown genesis witness kind: ${(witness as { kind: string }).kind}`);
+  }
+}
+
+export interface BuildGenesisRecordParams {
+  ts: string;
+  witness: GenesisWitness;
+}
+
+/**
+ * Build the gen-1 genesis record (message #1 on a topic). prev_hash is fixed to
+ * the all-zero genesis — a genesis is by definition the chain origin; only its
+ * witness reaches back to prior history.
+ */
+export function buildGenesisRecord(params: BuildGenesisRecordParams): {
+  record: OdeGenesisRecord;
+  encoded: Uint8Array;
+} {
+  assertGenesisWitness(params.witness);
+  const witness: GenesisWitness =
+    params.witness.kind === 'hcs-continuity'
+      ? { ...params.witness, final_running_hash: params.witness.final_running_hash.toLowerCase() }
+      : params.witness;
+  const record: OdeGenesisRecord = {
+    v: ODE_GENESIS_VERSION,
+    prev_hash: GENESIS_PREV_HASH,
+    ts: params.ts,
+    witness,
+  };
+  const encoded = encodeRecord(record);
+  if (encoded.byteLength > MAX_RECORD_BYTES) {
+    throw new Error(`encoded genesis record is ${encoded.byteLength} bytes > ${MAX_RECORD_BYTES}`);
   }
   return { record, encoded };
 }
