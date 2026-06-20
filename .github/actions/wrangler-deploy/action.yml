@@ -18,10 +18,15 @@ inputs:
     description: 'Wrangler command, e.g. "deploy".'
     required: true
   apiToken:
-    description: 'Cloudflare API token — pass ${{ secrets.CLOUDFLARE_API_TOKEN }}.'
+    # NOTE: keep this description free of ${{ }} — GitHub evaluates input
+    # descriptions when loading the composite manifest, and `secrets` is not a
+    # valid context inside a composite action (it throws "Unrecognized
+    # named-value: 'secrets'" and fails the deploy at validation time). The
+    # caller passes secrets.CLOUDFLARE_API_TOKEN from the workflow.
+    description: 'Cloudflare API token (caller passes secrets.CLOUDFLARE_API_TOKEN).'
     required: true
   accountId:
-    description: 'Cloudflare account ID — pass ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.'
+    description: 'Cloudflare account ID (caller passes secrets.CLOUDFLARE_ACCOUNT_ID).'
     required: true
   preCommands:
     description: 'Commands run before wrangler, e.g. "npm run canary" for the JCS chain-integrity canary.'
