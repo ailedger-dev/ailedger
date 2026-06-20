@@ -21,6 +21,15 @@ a team), reintroduce it **behind Cloudflare Access**, not on open `workers.dev`.
 Pages still gets per-PR preview deploys (`*.pages.dev`) — that is the
 "staging" for `landing` + `dashboard`, and it is isolated per PR.
 
+> ⚠️ **No tag = the proxy never deploys.** `proxy` and `redirect` reach
+> production *only* via a `v*` tag. Merging to main ships Pages but does **not**
+> touch the Workers. A Worker custom domain's DNS record + edge cert are
+> provisioned by `wrangler deploy`, so if no `v*` tag has ever run,
+> `proxy.ailedger.dev` / `dashboard.ailedger.dev` do not resolve at all and all
+> proxy traffic (incl. Stripe checkout/portal/webhooks) silently fails. This bit
+> us on 2026-06-19 — the repo had zero tags, so the proxy custom domain was never
+> provisioned. After any change to `proxy/` or `redirect/`, cut a tag.
+
 ---
 
 ## Day-to-day: shipping a change
@@ -49,10 +58,12 @@ Pages still gets per-PR preview deploys (`*.pages.dev`) — that is the
    git tag v2026.05.28
    git push origin v2026.05.28
    ```
-   CI requires approval on the `production` GitHub environment before the prod
-   Worker deploy runs (configure reviewers in repo Settings → Environments).
-   Once approved, `proxy` + `redirect` promote to prod. Pages prod deploy
-   happens on merge to main and is **not** gated on the tag.
+   The prod Worker deploy targets the `production` GitHub environment. **As of
+   2026-06-19 that environment has no protection rules**, so the tagged deploy
+   runs immediately with no reviewer gate — any `v*` tag ships `proxy` +
+   `redirect` straight to prod. To require sign-off, add reviewers in repo
+   Settings → Environments → `production`. Pages prod deploy happens on merge to
+   main and is **not** gated on the tag.
 
 ---
 
