@@ -1,0 +1,32 @@
+{
+  "pkg": "dashboard",
+  "globalName": "ProductApp",
+  "projectId": "5a265513-32bc-483e-9161-20b5d2125b06",
+  "shape": "package",
+  "tsconfig": "tsconfig.app.json",
+  "cssEntry": ".design-sync/dashboard-styles.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "extraEntries": ["./.design-sync/theme-provider.tsx"],
+  "provider": { "component": "DarkRoot" },
+  "overrides": {
+    "LogDetailDrawer": { "cardMode": "single", "primaryStory": "Default" },
+    "UpgradeModal": { "cardMode": "single", "primaryStory": "Report" }
+  },
+  "libOverrides": {
+    "common.mjs": "inject dummy Vite Supabase env into IIFE define so src/supabase.ts createClient() doesn't throw at bundle init"
+  },
+  "componentSrcMap": {
+    "AdminLogs": "src/components/AdminLogs.tsx",
+    "ApiKeys": "src/components/ApiKeys.tsx",
+    "Billing": "src/components/Billing.tsx",
+    "ChainIntegrityPanel": "src/components/ChainIntegrityPanel.tsx",
+    "Header": "src/components/Header.tsx",
+    "LogDetailDrawer": "src/components/LogDetailDrawer.tsx",
+    "LogTable": "src/components/LogTable.tsx",
+    "OnboardingChecklist": "src/components/OnboardingChecklist.tsx",
+    "ReportGenerator": "src/components/ReportGenerator.tsx",
+    "ResetPassword": "src/components/ResetPassword.tsx",
+    "SystemSettings": "src/components/SystemSettings.tsx",
+    "UpgradeModal": "src/components/UpgradeModal.tsx"
+  }
+}
