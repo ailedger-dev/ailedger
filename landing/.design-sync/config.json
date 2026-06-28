@@ -1,0 +1,16 @@
+{
+  "pkg": "landing",
+  "globalName": "MarketingDS",
+  "projectId": "702ae72d-518a-4188-8e18-6952d0ed2728",
+  "shape": "package",
+  "tsconfig": "tsconfig.app.json",
+  "cssEntry": ".design-sync/ds-styles.css",
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "PageShell": "src/ds/Section.tsx",
+    "Section": "src/ds/Section.tsx",
+    "Eyebrow": "src/ds/Eyebrow.tsx",
+    "DisplayHeading": "src/ds/Heading.tsx",
+    "BackHomeLink": "src/ds/BackHomeLink.tsx"
+  }
+}
