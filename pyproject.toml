@@ -1,0 +1,11 @@
+[project]
+name = "ailedger"
+version = "0.0.0"
+description = "AILedger Python tooling and scripts"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=3.4.2",
+]
+
+[tool.uv]
+package = false
