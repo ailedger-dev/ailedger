@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import HiringPage from './HiringPage'
+import HomeRedesign from './HomeRedesign'
 
 // Sign-up vs log-in URLs are split so the nav "Log in" CTA lands
 // returning users on the sign-in view, while primary CTAs (hero "Set it
@@ -60,6 +61,7 @@ const heroAnimClass = ((): string => {
 
 function App() {
   const path = window.location.pathname
+  if (path === '/home-v2') return <HomeRedesign />
   if (path === '/legal' || path === '/terms' || path === '/privacy') return <Legal />
   if (path === '/contact') return <Contact />
   if (path === '/guide/annex-iii') return <AnnexIIIGuide />
@@ -206,20 +208,14 @@ function Hero() {
         zIndex: 0,
       }} />
       <div style={{ maxWidth: 'min(92vw, 1280px)', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <div className={`hero-eyebrow fade-in fade-1 ${anim}`}>
-          <span className="hero-eyebrow-dot" aria-hidden="true" />
-          August 2, 2026 · EU AI Act Article 50 + FRIA enforcement
-        </div>
         <h1 className="hero-title" style={{
           fontSize: 'clamp(44px, 6.5vw, 76px)', fontWeight: 700, color: 'var(--fg-primary)',
           letterSpacing: '-2px', lineHeight: 1.05, marginBottom: 28,
         }}>
-          <span className="sr-only">AILedger — </span>
-          <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Audit-grade evidence for</span>
-          <span className={`hero-title-accent fade-in fade-2b ${anim}`} style={{ display: 'block' }}><span style={{ display: 'inline-block', position: 'relative', top: '-0.055em', fontSize: '1.05em', paddingBottom: '0.12em', background: 'linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' }}>every</span> AI call your product makes.</span>
+          <span className="sr-only">Compliance should be simple.</span>
         </h1>
         <p className={`hero-subtitle hero-mission fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(16px, 2.6vw, 20px)', color: 'var(--fg-secondary)', lineHeight: 1.55, maxWidth: 720, margin: '0 auto 24px', fontWeight: 500 }}>
-          AILedger makes AI decisions in high-risk industries substantively auditable. We catch bias, drift, and disparate impact in production. Harm gets prevented before any compounding effects, not after a regulator or lawsuit forces the conversation.
+        That's why I created aiLedger.
         </p>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
           AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule 707 admissibility and EU AI Act Articles 12, 19, 26, 27 (FRIA), and 50 (transparency).
