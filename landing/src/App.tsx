@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import HiringPage from './HiringPage'
-import HomeRedesign from './HomeRedesign'
 
 // Sign-up vs log-in URLs are split so the nav "Log in" CTA lands
 // returning users on the sign-in view, while primary CTAs (hero "Set it
@@ -61,7 +60,6 @@ const heroAnimClass = ((): string => {
 
 function App() {
   const path = window.location.pathname
-  if (path === '/home-v2') return <HomeRedesign />
   if (path === '/legal' || path === '/terms' || path === '/privacy') return <Legal />
   if (path === '/contact') return <Contact />
   if (path === '/guide/annex-iii') return <AnnexIIIGuide />
@@ -190,7 +188,7 @@ function Hero() {
   return (
     <section className="hero-section" style={{
       textAlign: 'center',
-      minHeight: '100vh',
+      minHeight: '62vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -209,19 +207,13 @@ function Hero() {
       }} />
       <div style={{ maxWidth: 'min(92vw, 1280px)', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <h1 className="hero-title" style={{
-          fontSize: 'clamp(44px, 6.5vw, 76px)', fontWeight: 700, color: 'var(--fg-primary)',
-          letterSpacing: '-2px', lineHeight: 1.05, marginBottom: 28,
+          fontSize: 'clamp(34px, 5vw, 56px)', fontWeight: 700, color: 'var(--fg-primary)',
+          letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: 20,
         }}>
-          <span className="sr-only">Compliance should be simple.</span>
+          <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Compliance should be easy.</span>
         </h1>
-        <p className={`hero-subtitle hero-mission fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(16px, 2.6vw, 20px)', color: 'var(--fg-secondary)', lineHeight: 1.55, maxWidth: 720, margin: '0 auto 24px', fontWeight: 500 }}>
-        That's why I created aiLedger.
-        </p>
-        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 20px' }}>
-          AILedger is the audit substrate for AI-influenced decisions in regulated and adversarial contexts. Three layers (Integrity Chain, Decision Event, Detection) ready for Federal Rule 707 admissibility and EU AI Act Articles 12, 19, 26, 27 (FRIA), and 50 (transparency).
-        </p>
-        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', color: 'var(--fg-muted)', lineHeight: 1.65, maxWidth: 620, margin: '0 auto 44px' }}>
-          No prompts are stored. No outputs are stored. Only SHA-256 fingerprints + metadata. The evidence a regulator or auditor can verify, without AILedger holding your customers' data.
+        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 1.6vw, 17px)', color: 'var(--fg-muted)', lineHeight: 1.55, maxWidth: 560, margin: '0 auto 36px' }}>
+          An open platform to build legal systems that scale with your products.
         </p>
         <div className={`hero-cta-group fade-in fade-4 ${anim}`} style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <a className="hero-cta-primary" href={DASHBOARD_URL} style={{
