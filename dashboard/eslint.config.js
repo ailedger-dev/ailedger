@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // .design-sync = design-sync inputs (preview stories, provider), not app code;
+  // .ds-sync / ds-bundle = generated sync scratch. None should be linted as app src.
+  globalIgnores(['dist', '.design-sync', '.ds-sync', 'ds-bundle']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
