@@ -37,6 +37,20 @@ are `export default`, so `export *` won't pick them up — each is re-exported a
 - `[RENDER_THIN] UpgradeModal (0px)` — it's a `fixed`-position modal; measured
   height is 0 but it renders fine (all 3 feature variants visible). Benign.
 
+## Known DS-pane lint (claude.ai/design check_design_system) — COSMETIC, expected
+The app's self-check flags ~17 CSS custom properties in `_ds_bundle.css` as
+unclassified/misplaced "tokens". ALL are Tailwind v4 framework internals, NOT
+AILedger tokens, and they are functionally harmless (components render fine):
+- 6 "under component-style selectors": `--tw-space-y-reverse` / `--tw-divide-y-reverse`
+  defaults Tailwind emits inside `:where(.space-y-* …)` utility rules.
+- 11 "unclassified": `--tw-translate-*`, `--tw-ring-*`, `--tw-border-style`,
+  `--tw-outline-style`, `--animate-spin`, `--animate-pulse`,
+  `--default-transition-*`, `--default-*-font-*` — Tailwind preflight/@theme defaults.
+The converter has NO token-prefix-ignore or `@kind` knob (checked), and editing the
+compiled stylesheet is pointless (re-sync regenerates it). The real filter would
+have to live in the claude.ai/design app (ignore `--tw-*`/`--animate-*`/`--default-*`),
+which we don't control. **Do not chase this on re-sync — it's framework noise.**
+
 ## Re-sync risks (watch-list)
 - **`.design-sync/dashboard-styles.css` is GENERATED** — it's a copy of the
   compiled Tailwind CSS from `dist/assets/*.css`. `cssEntry` points at it.
