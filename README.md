@@ -260,4 +260,4 @@ Detection layer ([github.com/ailedger-dev/ailedger-detection](https://github.com
 
 ---
 
-Contact: `ops@jvholdings.co`.
+Contact: `team@ailedger.dev`.
