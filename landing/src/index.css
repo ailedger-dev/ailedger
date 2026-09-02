@@ -10,132 +10,71 @@
  * ========================================================================== */
 
 :root {
+  /* ===== AILedger unified ledger palette (2026-09) — committed dark identity ===== */
   /* Surfaces */
-  --bg-page:            #ffffff;
-  --bg-page-soft:       rgba(0,0,0,0.015);
-  --bg-card:            #f4f4f5;
-  --bg-elevated:        #fafafa;
-  --bg-code:            #0d1017;                /* code block — stays dark both themes */
-  --bg-nav:             rgba(255,255,255,0.85);
-  --bg-nav-solid:       rgba(255,255,255,0.98);
+  --bg-page:            #0C110F;
+  --bg-page-soft:       rgba(240,244,241,0.015);
+  --bg-card:            rgba(240,244,241,0.03);
+  --bg-elevated:        rgba(240,244,241,0.05);
+  --bg-code:            #0d1017;
+  --bg-nav:             rgba(12,17,15,0.85);
+  --bg-nav-solid:       rgba(12,17,15,0.98);
 
   /* Text */
-  --fg-primary:         #0a0b0f;                /* headlines, logo, hero H1 */
-  --fg-secondary:       #18181b;                /* emphasized body */
-  --fg-body:            #27272a;                /* body copy */
-  --fg-muted:           #52525b;                /* secondary copy */
-  --fg-subtle:          #71717a;                /* tertiary copy */
-  --fg-ultrasubtle:     #a1a1aa;                /* footer, faint labels */
-  --fg-on-accent:       #ffffff;                /* text sitting on accent bg */
-  --fg-on-code:         #e2e8f0;                /* text inside dark code block */
+  --fg-primary:         #F0F4F1;
+  --fg-secondary:       #DDE5DF;
+  --fg-body:            #C7CFC9;
+  --fg-muted:           #ADB8B0;
+  --fg-subtle:          #8FA096;
+  --fg-ultrasubtle:     #75857B;
+  --fg-on-accent:       #07130C;   /* dark ink on seal green — AA, unlike white */
+  --fg-on-code:         #e2e8f0;
 
-  /* Accent — indigo family, tuned darker on light bg for WCAG AA contrast */
-  --accent:             #4f46e5;                /* button bg (indigo-600) */
-  --accent-hover:       #4338ca;
-  --accent-soft:        #6366f1;
-  --accent-text:        #4f46e5;                /* standalone accent text on light bg */
-  --accent-lighter:     #6366f1;                /* eyebrow pill text on light bg */
-  --accent-focus-ring:  rgba(79,70,229,0.55);
-  --accent-glow-shadow: rgba(79,70,229,0.35);
+  /* Accent — seal green family */
+  --accent:             #2F9E6E;
+  --accent-hover:       #37B47E;
+  --accent-soft:        #4CB586;
+  --accent-text:        #8FE0B4;
+  --accent-lighter:     #A9F0C1;
+  --accent-focus-ring:  rgba(143,224,180,0.6);
+  --accent-glow-shadow: rgba(47,158,110,0.45);
 
-  /* Hero 'every' gradient — 3-stop pronounced per Angela §1 spec.
-     Darker top-left (indigo-500), through violet-400, into a light
-     lift (indigo-100). Keeps all stops visible on white bg. */
-  --gradient-1:         #6366f1;  /* indigo-500 (dark start) */
-  --gradient-2:         #a78bfa;  /* violet-400 (mid) */
-  --gradient-3:         #e0e7ff;  /* indigo-100 (light lift) */
+  /* Gradient (legacy var consumers) */
+  --gradient-1:         #4CB586;
+  --gradient-2:         #A9F0C1;
+  --gradient-3:         #E4F7EC;
 
-  /* Borders (inverted alpha for light surface) */
-  --border-subtle:      rgba(0,0,0,0.05);
-  --border:             rgba(0,0,0,0.08);
-  --border-strong:      rgba(0,0,0,0.12);
-  --border-prominent:   rgba(0,0,0,0.18);
-  --border-accent-soft: rgba(99,102,241,0.25);
-  --border-accent:      rgba(99,102,241,0.45);
+  /* Borders */
+  --border-subtle:      rgba(240,244,241,0.06);
+  --border:             rgba(240,244,241,0.08);
+  --border-strong:      rgba(240,244,241,0.14);
+  --border-prominent:   rgba(240,244,241,0.20);
+  --border-accent-soft: rgba(79,214,150,0.25);
+  --border-accent:      rgba(79,214,150,0.5);
 
-  /* Surface tints on the page background */
-  --surface-tint-soft:    rgba(0,0,0,0.015);
-  --surface-tint:         rgba(0,0,0,0.03);
-  --surface-tint-strong:  rgba(0,0,0,0.05);
+  /* Surface tints */
+  --surface-tint-soft:    rgba(240,244,241,0.02);
+  --surface-tint:         rgba(240,244,241,0.04);
+  --surface-tint-strong:  rgba(240,244,241,0.07);
 
-  /* Indigo-tinted surfaces (used for eyebrow, callouts) */
-  --accent-tint-bg:     rgba(99,102,241,0.08);
-  --accent-tint-bg-soft: rgba(99,102,241,0.06);
+  /* Accent-tinted surfaces */
+  --accent-tint-bg:     rgba(47,158,110,0.10);
+  --accent-tint-bg-soft: rgba(47,158,110,0.07);
 
-  /* Hero ambient glow (radial stops) */
-  --hero-glow-inner:    rgba(99,102,241,0.10);
-  --hero-glow-mid:      rgba(99,102,241,0.03);
-  --hero-glow-dot:      rgba(99,102,241,0.35);
-  --hero-glow-dot-mid:  rgba(99,102,241,0.15);
-  --hero-eyebrow-dot:   #6366f1;
+  /* Ambient glow */
+  --hero-glow-inner:    rgba(47,158,110,0.14);
+  --hero-glow-mid:      rgba(47,158,110,0.05);
+  --hero-glow-dot:      rgba(143,224,180,0.25);
+  --hero-glow-dot-mid:  rgba(143,224,180,0.10);
+  --hero-eyebrow-dot:   #4CB586;
 
-  /* Inset highlights on buttons */
-  --btn-inset-hi:       rgba(255,255,255,0.18);
+  --btn-inset-hi:       rgba(255,255,255,0.10);
 
-  /* Functional status colors (for text on page bg — not inside code block) */
-  --color-success:      #16a34a;
-  --color-info:         #2563eb;
+  /* Status */
+  --color-success:      #7FD9A5;
+  --color-info:         #7FB8E8;
 
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-page:            #0a0b0f;
-    --bg-page-soft:       rgba(255,255,255,0.015);
-    --bg-card:            rgba(255,255,255,0.03);
-    --bg-elevated:        rgba(255,255,255,0.05);
-    --bg-nav:             rgba(10,11,15,0.85);
-    --bg-nav-solid:       rgba(10,11,15,0.98);
-
-    --fg-primary:         #ffffff;
-    --fg-secondary:       #f1f5f9;
-    --fg-body:            #e2e8f0;
-    --fg-muted:           #94a3b8;
-    --fg-subtle:          #64748b;
-    --fg-ultrasubtle:     #334155;
-    --fg-on-accent:       #ffffff;
-    --fg-on-code:         #e2e8f0;
-
-    --accent:             #4f46e5;
-    --accent-hover:       #4338ca;
-    --accent-soft:        #6366f1;
-    --accent-text:        #818cf8;
-    --accent-lighter:     #a5b4fc;
-    --accent-focus-ring:  rgba(129,140,248,0.6);
-    --accent-glow-shadow: rgba(79,70,229,0.6);
-
-    --gradient-1:         #818cf8;  /* indigo-400 (dark start on dark bg) */
-    --gradient-2:         #c4b5fd;  /* violet-300 (mid) */
-    --gradient-3:         #ede9fe;  /* violet-50 (light lift; stays visible on dark bg) */
-
-    --border-subtle:      rgba(255,255,255,0.05);
-    --border:             rgba(255,255,255,0.06);
-    --border-strong:      rgba(255,255,255,0.08);
-    --border-prominent:   rgba(255,255,255,0.12);
-    --border-accent-soft: rgba(99,102,241,0.18);
-    --border-accent:      rgba(99,102,241,0.5);
-
-    --surface-tint-soft:    rgba(255,255,255,0.015);
-    --surface-tint:         rgba(255,255,255,0.03);
-    --surface-tint-strong:  rgba(255,255,255,0.06);
-
-    --accent-tint-bg:     rgba(99,102,241,0.08);
-    --accent-tint-bg-soft: rgba(99,102,241,0.06);
-
-    --hero-glow-inner:    rgba(99,102,241,0.11);
-    --hero-glow-mid:      rgba(99,102,241,0.03);
-    --hero-glow-dot:      rgba(129,140,248,0.18);
-    --hero-glow-dot-mid:  rgba(129,140,248,0.08);
-    --hero-eyebrow-dot:   #818cf8;
-
-    --btn-inset-hi:       rgba(255,255,255,0.08);
-
-    --color-success:      #86efac;
-    --color-info:         #93c5fd;
-
-    color-scheme: dark;
-  }
+  color-scheme: dark;
 }
 
 /* Baseline */

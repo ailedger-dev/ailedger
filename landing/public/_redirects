@@ -4,8 +4,8 @@
 /llms-full.txt /llms-full.txt 200
 /sitemap.xml   /sitemap.xml   200
 
-# Charter (static, versioned)
-/charter/v1    /charter.html  200
+# Charter (static; versioned permalink resolves to the directory index)
+/charter/v1    /charter/  301
 
 # Privacy policy (static, canonical at trailing slash)
 /privacy       /privacy/  301

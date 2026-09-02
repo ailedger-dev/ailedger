@@ -24,32 +24,35 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
 :root {
-  --bg-page:    #ffffff;
-  --bg-card:    #f4f4f5;
-  --bg-rule:    #e4e4e7;
-  --fg-primary: #0a0b0f;
-  --fg-body:    #27272a;
-  --fg-muted:   #52525b;
-  --fg-subtle:  #71717a;
-  --accent:     #4f46e5;
+  --bg-page:    #0C110F;
+  --bg-card:    rgba(240,244,241,0.03);
+  --bg-rule:    rgba(240,244,241,0.10);
+  --fg-primary: #F0F4F1;
+  --fg-body:    #C7CFC9;
+  --fg-muted:   #ADB8B0;
+  --fg-subtle:  #8FA096;
+  --accent:     #8FE0B4;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-page:    #0a0b0f;
-    --bg-card:    rgba(255,255,255,0.03);
-    --bg-rule:    rgba(255,255,255,0.08);
-    --fg-primary: #ffffff;
-    --fg-body:    #e2e8f0;
-    --fg-muted:   #94a3b8;
-    --fg-subtle:  #71717a;
-    --accent:     #8b5cf6;
+    --bg-page:    #0C110F;
+    --bg-card:    rgba(240,244,241,0.03);
+    --bg-rule:    rgba(240,244,241,0.10);
+    --fg-primary: #F0F4F1;
+    --fg-body:    #C7CFC9;
+    --fg-muted:   #ADB8B0;
+    --fg-subtle:  #8FA096;
+    --accent:     #8FE0B4;
   }
 }
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg-page); color: var(--fg-body); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 .wrap { max-width: 720px; margin: 0 auto; padding: 64px 28px 96px; }
 .metabar { display: flex; flex-wrap: wrap; gap: 14px 24px; font-size: 13px; color: var(--fg-subtle); margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--bg-rule); letter-spacing: 0.02em; }
 .metabar a { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 3px; }
+a { color: var(--accent); text-decoration-color: var(--bg-rule); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--accent); }
 .metabar a:hover { color: var(--fg-primary); text-decoration-color: var(--accent); }
 h1 { font-size: clamp(34px, 5vw, 44px); font-weight: 700; letter-spacing: -0.025em; color: var(--fg-primary); line-height: 1.1; margin: 0 0 12px; }
 h1 .version { font-weight: 400; color: var(--fg-muted); font-size: 0.55em; letter-spacing: 0; margin-left: 8px; }
