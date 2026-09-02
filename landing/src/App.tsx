@@ -60,6 +60,7 @@ function App() {
   return (
     <div className="min-h-screen lh" style={{ background: "var(--bg-page)", color: "var(--fg-body)" }}>
       <Nav />
+      <LedgerOpening />
       <LedgerHero />
       <LedgerStrip />
       <TheRecord />
@@ -179,9 +180,34 @@ const LEDGER_EVENTS = [
   { k: 'verify.pass', d: 'chain=intact · height=48,220', h: 'f60c…ce13', ph: '31d0…88b4' },
 ]
 
+function LedgerOpening() {
+  return (
+    <section className="lh-open" aria-label="Opening: a decision being recorded and sealed">
+      <div className="lh-open-glow" aria-hidden="true" />
+      <div className="lh-open-wrap">
+        <h1 className="lh-open-h1">What did your AI do?</h1>
+        <div className="lh-open-card" role="img" aria-label="A recorded decision: hashed, chained, sealed">
+          <div className="lh-open-line lh-open-l1"><span className="lh-open-k">decision.recorded</span></div>
+          <div className="lh-open-line lh-open-l2"><span className="lh-open-f">agent</span> pipeline/variant-triage</div>
+          <div className="lh-open-line lh-open-l3"><span className="lh-open-f">action</span> schedule compute · 4 nodes</div>
+          <div className="lh-open-line lh-open-l4"><span className="lh-open-f">warrant</span> justification present · 1 alternative rejected</div>
+          <div className="lh-open-line lh-open-l5 lh-open-hash">
+            <span className="lh-open-f">sha256</span>
+            <span className="lh-open-scr" aria-hidden="true">3b9e7c1a0d4f52e8a71c6b0d9e2f4a83</span>
+            <span className="lh-open-fin">9f2ac41e77b0c41e ⇠ e1f4b83d0977</span>
+          </div>
+          <div className="lh-open-seal"><span className="lh-open-seal-dot" />sealed · block 48,214</div>
+        </div>
+        <p className="lh-open-sub">AILedger knows. Every decision — cryptographically on the record, verifiable by anyone, raw data never stored.</p>
+        <a className="lh-open-cue" href="#record-layer">See the record layer ↓</a>
+      </div>
+    </section>
+  )
+}
+
 function LedgerHero() {
   return (
-    <section className="lh-hero">
+    <section className="lh-hero" id="record-layer">
       <div className="lh-wrap">
         <p className="lh-eyebrow">append-only · tamper-evident · open core</p>
         <h1 className="lh-h1">
