@@ -36,7 +36,7 @@ AILedger is a substrate, not a logging tool. The unit of analysis is the **Decis
 
 ## Charter
 
-AILedger ships with a public Charter (v1.2) that names refused customer categories and refused feature categories in writing. Amendments require unanimous Board of Directors approval. Charter is published at [ailedger.dev/charter](https://ailedger.dev/charter).
+AILedger ships with a public Charter (v1.5) that names refused customer categories and refused feature categories in writing. Amendments require unanimous Board of Directors approval. Charter is published at [ailedger.dev/charter](https://ailedger.dev/charter).
 
 Refusing customers and features is the product working as designed, not a missed-revenue problem.
 

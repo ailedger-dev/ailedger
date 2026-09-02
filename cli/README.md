@@ -34,7 +34,7 @@ ailedger config --get api-key
 If you have not installed the keyring extra, set the key in the environment:
 
 ```sh
-export AILEDGER_API_KEY=ail_sk_…
+export AILEDGER_API_KEY=agl_sk_…
 ```
 
 ## Subcommands

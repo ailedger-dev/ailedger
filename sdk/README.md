@@ -3,7 +3,7 @@
 Producer-side SDK for AILedger Detection Event emission.
 
 **Version:** 0.2.0
-**License:** MIT
+**License:** AGPL-3.0-or-later (commercial license available)
 **Spec:** `gt-lab/docs/param-canonicalization-spec-v1.md` (Jake-ratified 2026-05-18)
 
 ---

@@ -144,11 +144,11 @@ type Role = {
 
 const ROLES: readonly Role[] = [
   {
-    title: 'Founding Sales',
-    meta: 'Go-to-market · Remote (US / EU)',
+    title: 'Founding Sales — paused',
+    meta: 'Go-to-market · Remote (US / EU) · not actively hiring while we build the network layer',
     description:
       'Own go-to-market from zero. Find the regulated-industry buyers who need defensible AI evidence, build the pipeline, and shape how a new category gets sold. You’ll work directly with compliance leaders, general counsel, and risk owners — and you’ll qualify hard, because the deals that fit our substrate compound and the ones that don’t cost more than they pay.',
-    href: 'mailto:careers@ailedger.dev?subject=Founding%20Sales',
+    href: 'mailto:careers@ailedger.dev?subject=Expression%20of%20interest',
   },
 ]
 

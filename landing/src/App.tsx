@@ -1078,7 +1078,7 @@ puts(computed == stored_hash ? 'verified ✓' : 'MISMATCH ✗')
             </div>
 
             <p style={{ marginTop: 20, fontSize: 13, color: 'var(--fg-ultrasubtle)', lineHeight: 1.7 }}>
-              Bulk export of inference rows in CSV / JSONL is on the roadmap and will land alongside SOC 2 Type I (Q3 2026 target). Until then, rows are queryable from the dashboard.
+              Bulk export of inference rows in CSV / JSONL is on the roadmap and will land alongside SOC 2 Type I (timing announced when the audit is scheduled). Until then, rows are queryable from the dashboard.
             </p>
           </section>
 
@@ -1259,7 +1259,7 @@ puts(computed == stored_hash ? 'verified ✓' : 'MISMATCH ✗')
                   {([
                     ['ANY', '/proxy/<provider>/<...path>', 'Forward to the upstream provider, log the call. Provider must be openai, anthropic, or gemini.'],
                     ['GET', '/health', 'Liveness check. Returns 200 with { "status": "ok" }.'],
-                    ['—', '/audit/export', 'Bulk export of inference rows (CSV / JSONL) — coming soon, ships alongside SOC 2 Type I (Q3 2026 target).'],
+                    ['—', '/audit/export', 'Bulk export of inference rows (CSV / JSONL) — coming soon, ships alongside SOC 2 Type I.'],
                   ] as Array<[string, string, string]>).map(([m, path, purp]) => (
                     <tr key={path} style={{ borderBottom: '1px solid var(--surface-tint-strong)' }}>
                       <td style={{ padding: '10px 12px', color: 'var(--fg-ultrasubtle)', fontFamily: 'ui-monospace, monospace', fontSize: 12, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{m}</td>
@@ -1516,7 +1516,7 @@ function About() {
           AILedger is audit logging infrastructure for AI systems operating under the EU AI Act. Every inference becomes a hash-chained, SHA-256-fingerprinted record an auditor can verify. No raw prompts or outputs are stored; only metadata and one-way fingerprints.
         </p>
         <p style={{ color: 'var(--fg-body)', fontSize: 17, lineHeight: 1.75, marginBottom: 40 }}>
-          AILedger is a product of <strong>Joyner Ventures LLC</strong>, founded by <strong>Jake Joyner</strong> in 2026, based in Venice, California. The company's mission is to make AI decisions in high-risk industries substantively auditable — catching bias, drift, and disparate impact in production before harm compounds, not after a regulator or lawsuit forces the conversation.
+          AILedger is built by <strong>AILedger, PBC</strong>, a Delaware public benefit corporation founded by <strong>Jake Joyner</strong> in 2026, based in Venice, California. The company's mission is to make AI decisions in high-risk industries substantively auditable — catching bias, drift, and disparate impact in production before harm compounds, not after a regulator or lawsuit forces the conversation.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginBottom: 16 }}>
@@ -1530,7 +1530,7 @@ function About() {
           Where we are
         </h2>
         <p style={{ color: 'var(--fg-body)', fontSize: 16, lineHeight: 1.75, marginBottom: 32 }}>
-          Joyner Ventures LLC — Venice, California, United States. AILedger's audit-record data resides in AWS eu-central-1 (Frankfurt, Germany), via Supabase. Nothing leaves the EU. SOC 2 Type I is targeted for Q3 2026; Type II for Q3 2027.
+          AILedger, PBC — Venice, California, United States. AILedger's audit-record data resides in AWS eu-central-1 (Frankfurt, Germany), via Supabase. Nothing leaves the EU. SOC 2 Type I is planned; timing will be announced when the audit is scheduled.
         </p>
 
         <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginBottom: 16 }}>
@@ -1538,7 +1538,7 @@ function About() {
         </h2>
         <div style={{ padding: '24px 28px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-tint)', marginBottom: 32 }}>
           <p style={{ color: 'var(--fg-body)', fontSize: 15, lineHeight: 1.75, marginBottom: 12 }}>
-            AILedger (this site, <strong>ailedger.dev</strong>) is the EU-AI-Act audit-logging product by Joyner Ventures LLC. We are <strong>not affiliated</strong> with the following similarly-named entities:
+            AILedger (this site, <strong>ailedger.dev</strong>) is the tamper-evident record layer for AI systems, built by AILedger, PBC. We are <strong>not affiliated</strong> with the following similarly-named entities:
           </p>
           <ul style={{ color: 'var(--fg-muted)', fontSize: 14, lineHeight: 1.9, paddingLeft: 20, margin: 0 }}>
             <li><code>theailedger.com</code> — an AI news and analysis publication operated by AnalyticsWeek LLC. Not affiliated with AILedger or Joyner Ventures LLC.</li>
@@ -1677,7 +1677,7 @@ function PricingPage() {
       positioning: 'For engineering teams shipping LLM features that will need audit evidence before they need an auditor.',
       bullets: [
         'Proxy drop-in for Anthropic, OpenAI, and Google — swap your base URL, inherit auth, keep shipping.',
-        'Chain of custody on every request/response (SHA-256 fingerprints; full chain verification ships alongside SOC 2 Type I, Q3 2026 target).',
+        'Chain of custody on every request/response (SHA-256 fingerprints; full chain verification ships alongside SOC 2 Type I).',
         'Dashboard and `ailedger verify` CLI for on-demand chain verification.',
         '6-month retention baseline for free plan.',
         'Single-tenant workspace, 2 seats, community support (docs + GitHub).',

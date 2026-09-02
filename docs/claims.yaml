@@ -61,3 +61,11 @@ claims:
   - claim: "Your data is stored on-chain"
     status: never
     say_instead: "Salted commitments and structural fields on-chain; payloads encrypted in customer-controllable storage; subject identifiers never on-chain in any form"
+
+  - claim: "Decision-memorialization architecture: patent pending"
+    status: allowed
+    since: "Provisional application on file (June 2026); filing record held by counsel — say 'patent pending', never a number publicly"
+
+  - claim: "Being wired into live agent infrastructure spanning a national health authority, a leading supercomputing center, and tier-one research universities"
+    status: allowed
+    condition: "Category-level ONLY. Naming any institution requires that institution's logged consent; the dataroom dual-sign law governs partner naming"
