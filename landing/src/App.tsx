@@ -84,7 +84,7 @@ function Nav() {
     }}>
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', cursor: 'pointer' }}>
-          <img src="/favicon.svg" alt="AILedger" style={{ width: 20, height: 20, marginTop: -1 }} />
+          <img src="/favicon.svg?v=20260902" alt="AILedger" style={{ width: 20, height: 20, marginTop: -1 }} />
           <span style={{ color: 'var(--fg-primary)', fontWeight: 600, fontSize: 16, letterSpacing: '-0.3px' }}>AILedger</span>
         </a>
 
