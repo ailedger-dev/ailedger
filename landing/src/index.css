@@ -348,3 +348,82 @@ details > summary > span:last-child {
   white-space: nowrap;
   border: 0;
 }
+
+/* ===== Ledger homepage (2026-09 redesign) — scoped under .lh ===== */
+.lh {
+  --bg-page:#0C110F; --fg-body:#C7CFC9; --fg-primary:#F0F4F1; --fg-secondary:#DDE5DF;
+  --fg-muted:#ADB8B0; --fg-subtle:#8FA096; --fg-ultrasubtle:#6B7A71;
+  --border:rgba(240,244,241,.08); --border-subtle:rgba(240,244,241,.06);
+  --border-strong:rgba(240,244,241,.18); --surface-tint-soft:#121A15;
+  --accent:#2F9E6E; --fg-on-accent:#07130C; --accent-text:#8FE0B4;
+  --lh-paper:#F2EEE3; --lh-paper-ink:#18201B; --lh-amber:#D9A441;
+  font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  background:var(--bg-page);
+}
+.lh-wrap { max-width:880px; margin:0 auto; padding:0 32px; }
+.lh-eyebrow {
+  font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--accent-text); margin-bottom:20px;
+}
+.lh-eyebrow-amber { color:var(--lh-amber); }
+.lh-hero { padding:110px 0 72px; }
+.lh-h1 {
+  font-size:clamp(38px,6vw,68px); font-weight:600; letter-spacing:-0.03em;
+  line-height:1.06; color:var(--fg-primary); margin-bottom:26px;
+}
+.lh-h1-accent { color:var(--accent-text); }
+.lh-sub { font-size:clamp(16px,1.8vw,19px); line-height:1.6; color:var(--fg-muted); max-width:58ch; margin-bottom:36px; }
+.lh-ctas { display:flex; gap:14px; flex-wrap:wrap; }
+.lh-cta-primary {
+  padding:13px 26px; background:var(--accent); color:var(--fg-on-accent);
+  font-weight:600; font-size:15px; border-radius:10px; text-decoration:none;
+}
+.lh-cta-primary:hover { filter:brightness(1.1); }
+.lh-cta-secondary {
+  padding:13px 26px; color:var(--fg-secondary); font-size:15px; text-decoration:none;
+  border-radius:10px; border:1px solid var(--border-strong);
+}
+.lh-cta-secondary:hover { border-color:var(--accent-text); color:var(--fg-primary); }
+
+/* signature: append-only chain of paper records */
+.lh-strip { overflow:hidden; padding:34px 0; border-top:1px solid var(--border-subtle); border-bottom:1px solid var(--border-subtle); background:var(--surface-tint-soft); }
+.lh-chain { display:flex; width:max-content; align-items:center; animation:lh-scroll 52s linear infinite; }
+.lh-strip:hover .lh-chain { animation-play-state:paused; }
+.lh-entry-group { display:flex; align-items:center; }
+.lh-entry {
+  display:flex; flex-direction:column; gap:3px; background:var(--lh-paper); color:var(--lh-paper-ink);
+  font-family:'IBM Plex Mono',monospace; border-radius:6px; padding:12px 16px; min-width:250px;
+  box-shadow:0 1px 0 rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.25);
+}
+.lh-entry-kind { font-size:11.5px; font-weight:600; letter-spacing:.05em; color:#1F6B4A; text-transform:uppercase; }
+.lh-entry-detail { font-size:12.5px; }
+.lh-entry-hash { font-size:11px; color:#6B7A71; }
+.lh-linkline { display:block; width:44px; height:1px; background:var(--border-strong); position:relative; }
+.lh-linkline::after {
+  content:''; position:absolute; left:50%; top:50%; width:7px; height:7px;
+  transform:translate(-50%,-50%) rotate(45deg); background:var(--accent);
+}
+@keyframes lh-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .lh-chain { animation:none; } }
+
+.lh-section { padding:96px 0; }
+.lh-section-tint { background:var(--surface-tint-soft); border-top:1px solid var(--border-subtle); border-bottom:1px solid var(--border-subtle); }
+.lh-h2 { font-size:clamp(26px,4vw,38px); font-weight:600; letter-spacing:-0.02em; color:var(--fg-primary); margin-bottom:18px; }
+.lh-body { font-size:17px; line-height:1.75; color:var(--fg-muted); max-width:64ch; margin-bottom:28px; }
+.lh-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:34px; }
+.lh-card { border:1px solid var(--border); border-radius:10px; padding:24px 22px; background:rgba(240,244,241,.02); }
+.lh-card-title { font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-text); margin-bottom:10px; }
+.lh-card-body { font-size:15px; line-height:1.65; color:var(--fg-muted); }
+.lh-fieldlog { border-top:1px solid var(--border); margin-top:8px; }
+.lh-fieldrow { display:flex; gap:24px; padding:15px 0; border-bottom:1px solid var(--border); align-items:baseline; }
+.lh-fieldkey { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--accent-text); min-width:200px; }
+.lh-fieldval { font-size:15px; color:var(--fg-muted); line-height:1.55; }
+.lh-serifline { font-family:'IBM Plex Serif',Georgia,serif; font-style:italic; font-size:clamp(28px,4.6vw,46px); color:var(--fg-primary); line-height:1.2; margin-bottom:22px; }
+.lh-textlink { font-size:15px; color:var(--accent-text); text-decoration:none; border-bottom:1px solid var(--border-strong); padding-bottom:2px; }
+.lh-textlink:hover { color:var(--fg-primary); }
+.lh a:focus-visible, .lh button:focus-visible { outline:2px solid var(--accent-text); outline-offset:3px; }
+@media (max-width:760px) {
+  .lh-cards { grid-template-columns:1fr; }
+  .lh-fieldrow { flex-direction:column; gap:4px; }
+  .lh-hero { padding:72px 0 56px; }
+}

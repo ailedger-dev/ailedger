@@ -47,16 +47,6 @@ if (typeof window !== 'undefined') {
   if (og) og.content = href
 }
 
-// Resolve hero-entry-animation state exactly once per page load (survives strict-mode
-// double-render; gated so returning-from-internal-route users don't re-watch the reveal).
-const heroAnimClass = ((): string => {
-  if (typeof window === 'undefined') return ''
-  try {
-    if (window.sessionStorage.getItem('hero-played') === '1') return 'no-anim'
-    window.sessionStorage.setItem('hero-played', '1')
-  } catch { /* sessionStorage unavailable — play the animation */ }
-  return ''
-})()
 
 function App() {
   const path = window.location.pathname
@@ -68,17 +58,14 @@ function App() {
   if (path === '/about') return <About />
   if (path === '/hiring') return <HiringPage />
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-page)", color: "var(--fg-body)", fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen lh" style={{ background: "var(--bg-page)", color: "var(--fg-body)" }}>
       <Nav />
-      <Hero />
-      <TrustBar />
-      <HowItWorks />
-      <AgentNetworks />
-      <Compliance />
-      <CodeSnippet />
-      <Pricing />
-      <FAQ />
-      <CTA />
+      <LedgerHero />
+      <LedgerStrip />
+      <TheRecord />
+      <TheNetworks />
+      <TheHumans />
+      <TheCode />
       <Footer />
     </div>
   )
@@ -181,432 +168,118 @@ function Nav() {
   )
 }
 
-function Hero() {
-  // Play the staggered entry once per tab, then skip on re-renders / internal nav.
-  // Resolved once at module scope below, so strict-mode double-render doesn't swallow it.
-  const anim = heroAnimClass
+const LEDGER_EVENTS = [
+  { k: 'inference.recorded', d: 'model=claude · 812ms', h: '9f2a…c41e', ph: 'e1f4…0977' },
+  { k: 'agent.decision', d: 'warrant=granted · scope=pipeline/run', h: 'c03d…ae55', ph: '9f2a…c41e' },
+  { k: 'advisory.exchange', d: 'advisor→executor · accepted', h: '5b7e…c2aa', ph: 'c03d…ae55' },
+  { k: 'verify.pass', d: 'chain=intact · height=48,213', h: 'e1f4…b83d', ph: '5b7e…c2aa' },
+  { k: 'human.ratified', d: 'operator sign-off · charter v1.5', h: '77aa…d4e2', ph: 'e1f4…b83d' },
+  { k: 'compute.scheduled', d: 'job=variant-triage · nodes=4', h: 'ab44…21cd', ph: '77aa…d4e2' },
+  { k: 'inference.recorded', d: 'model=gemini · 644ms', h: '31d0…88b4', ph: 'ab44…21cd' },
+  { k: 'verify.pass', d: 'chain=intact · height=48,220', h: 'f60c…ce13', ph: '31d0…88b4' },
+]
 
+function LedgerHero() {
   return (
-    <section className="hero-section" style={{
-      textAlign: 'center',
-      minHeight: '62vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '64px 32px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* Ambient glow behind hero — quieter, wider spread */}
-      <div aria-hidden="true" className="hero-glow" style={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: 1100, height: 1100,
-        background: 'radial-gradient(circle, var(--hero-glow-inner) 0%, var(--hero-glow-mid) 40%, transparent 72%)',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }} />
-      <div style={{ maxWidth: 'min(92vw, 1280px)', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <h1 className="hero-title" style={{
-          fontSize: 'clamp(34px, 5vw, 56px)', fontWeight: 700, color: 'var(--fg-primary)',
-          letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: 20,
-        }}>
-          <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>The tamper-evident record layer for AI systems.</span>
+    <section className="lh-hero">
+      <div className="lh-wrap">
+        <p className="lh-eyebrow">append-only · tamper-evident · open core</p>
+        <h1 className="lh-h1">
+          AI agents are doing real work.<br />
+          <span className="lh-h1-accent">AILedger keeps the record.</span>
         </h1>
-        <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 1.6vw, 17px)', color: 'var(--fg-muted)', lineHeight: 1.55, maxWidth: 560, margin: '0 auto 36px' }}>
-          AILedger memorializes what AI did — every inference and decision hashed, chained, and verifiable — without ever storing raw data. Open core, from EU AI Act audit trails to autonomous agent networks.
+        <p className="lh-sub">
+          A cryptographic ledger for what AI systems actually did — every inference, decision,
+          and hand-off hashed, chained, and verifiable by anyone. The raw data is never stored.
         </p>
-        <div className={`hero-cta-group fade-in fade-4 ${anim}`} style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a className="hero-cta-primary" href={DASHBOARD_URL} style={{
-            padding: '14px 28px', background: 'var(--accent)', color: 'var(--fg-on-accent)',
-            fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none',
-            letterSpacing: '-0.005em',
-          }}>
-            Set it up
-          </a>
-          <a className="hero-cta-secondary" href="#how-it-works" style={{
-            padding: '14px 28px', color: 'var(--fg-muted)', fontSize: 15,
-            textDecoration: 'none', borderRadius: 12,
-            border: '1px solid var(--border-strong)',
-          }}>
-            Read how it works
-          </a>
+        <div className="lh-ctas">
+          <a className="lh-cta-primary" href="/charter/v1">Read the charter</a>
+          <a className="lh-cta-secondary" href="/docs">Ledger docs</a>
         </div>
       </div>
     </section>
   )
 }
 
-function AgentNetworks() {
+function LedgerStrip() {
+  const chain = [...LEDGER_EVENTS, ...LEDGER_EVENTS]
   return (
-    <section className="section-pad" style={{
-      padding: '96px 32px',
-      borderTop: '1px solid var(--border-subtle)',
-      background: 'var(--surface-tint-soft)',
-    }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>Built for agent networks</h2>
-        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 20 }}>
-          AI systems increasingly act through networks of agents — advising each other, making decisions, touching real infrastructure. AILedger is the memorialization layer for those networks: every decision, advisory exchange, and outcome becomes a verifiable, append-only event.
-        </p>
-        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
-          When someone asks what your agents did and why, AILedger is the durable, cryptographic answer. <span style={{ color: 'var(--fg-subtle)' }}>Decision-memorialization architecture: patent pending.</span>
-        </p>
-      </div>
-    </section>
-  )
-}
-
-function TrustBar() {
-  return (
-    <section className="section-pad trust-bar" style={{
-      borderTop: '1px solid var(--border-subtle)',
-      borderBottom: '1px solid var(--border)',
-      background: 'var(--surface-tint-soft)',
-      padding: '96px 32px',
-    }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 20 }}>
-          What AILedger stores: SHA-256 fingerprints of inputs and outputs, plus metadata (timestamp, model, latency, status). What it doesn't store: the raw prompts or responses themselves. Records are hash-chained and append-only; data resides in EU-central-1 (Frankfurt).
-        </p>
-        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
-          The EU AI Act phases in starting August 2, 2026, with Article 27 Fundamental Rights Impact Assessment (FRIA) for deployers in credit, insurance, public services, education, and employment; Article 50 transparency obligations; financial-sector high-risk AI; and GPAI provider duties binding on that date. The May 2026 Digital Omnibus moved most other Annex III high-risk obligations to December 2, 2027, and Annex I product-embedded systems to August 2, 2028. FRIAs are living documents — continuous evidence infrastructure is what makes them defensible.
-        </p>
-      </div>
-    </section>
-  )
-}
-
-function HowItWorks() {
-  const steps = [
-    {
-      n: '01',
-      title: 'Point your API calls at AILedger.',
-      body: 'Change your base URL to our proxy; pass your AILedger key as a header. Your application code stays intact. The proxy forwards your request to the upstream provider (OpenAI, Anthropic, Gemini) and returns the response unchanged. Logging happens asynchronously and does not block your response.',
-    },
-    {
-      n: '02',
-      title: 'Every inference becomes an entry.',
-      body: 'Inputs and outputs are hashed (SHA-256), and the hash plus metadata — timestamp, model name, latency, status — are written to an append-only log in EU-central-1 (Frankfurt). Raw prompts and outputs are never stored. GDPR-compatible by construction.',
-    },
-    {
-      n: '03',
-      title: 'Export the Article 12 audit trail.',
-      body: "Your compliance team clicks once. AILedger generates a formatted audit report — every inference hashed, timestamped, ordered, hash-chained — ready for a regulator's review.",
-    },
-  ]
-  return (
-    <section id="how-it-works" className="section-pad" style={{ padding: '96px 32px' }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ marginBottom: 48 }}>
-          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>How it works</h2>
-          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
-            Three steps, each reversible: point, log, export.
-          </p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          {steps.map((s) => (
-            <div key={s.n} style={{ display: 'flex', gap: 20 }}>
-              <div style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--accent-text)', fontWeight: 600, letterSpacing: 1, flexShrink: 0, paddingTop: 4, width: 32 }}>{s.n}</div>
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 10, lineHeight: 1.4 }}>{s.title}</h3>
-                <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75 }}>{s.body}</p>
-              </div>
+    <section className="lh-strip" aria-label="A live view of ledger records: hashed events chained in order">
+      <div className="lh-chain">
+        {chain.map((e, i) => (
+          <div key={i} className="lh-entry-group">
+            <div className="lh-entry">
+              <span className="lh-entry-kind">{e.k}</span>
+              <span className="lh-entry-detail">{e.d}</span>
+              <span className="lh-entry-hash">#{e.h} ⇠ #{e.ph}</span>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function Compliance() {
-  const paragraphs = [
-    {
-      title: 'Article 12, specifically.',
-      body: "AILedger doesn't attempt to certify your compliance — that's not something any vendor can do. It produces the logs Article 12 calls for: every inference from a high-risk AI system, logged throughout the system's lifetime, in a form an auditor can verify.",
-    },
-    {
-      title: 'GDPR by construction.',
-      body: "Raw prompts and outputs never enter AILedger's storage. Only SHA-256 fingerprints plus metadata. No personal data collected means no personal data to leak, subpoena, or subject-access.",
-    },
-    {
-      title: 'Append-only by enforcement.',
-      body: 'Records cannot be modified or deleted — not by you, not by us, not by a root DB user. Append-only is a DB-trigger-level guarantee, not a UI checkbox.',
-    },
-    {
-      title: 'Hash-chained, exportable, auditor-reviewable.',
-      body: "Every record links to the prior one by hash. A tamper-detection pass traces the chain end-to-end. Your compliance team exports the full chain — with metadata, timestamps, and hash-verification — for a regulator's review.",
-    },
-    {
-      title: 'SOC 2 Type II on track for Q3 2027.',
-      body: "We're auditing toward SOC 2 Type II with Q3 2027 as the realistic — not aspirational — delivery window. The logging + access-control substrate a SOC 2 audit examines has been in place since v1; the audit engagement is what's scheduled. SOC 2 Type I ships ahead of it in Q3 2026.",
-    },
-  ]
-  return (
-    <section className="section-pad" style={{
-      padding: '96px 32px',
-      borderTop: '1px solid var(--border)',
-      borderBottom: '1px solid var(--border)',
-      background: 'var(--surface-tint-soft)',
-    }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ marginBottom: 48 }}>
-          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 20 }}>
-            Built as infrastructure for auditing AI, not a dashboard with logging bolted on.
-          </h2>
-          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
-            The whole system is designed to produce records regulators will accept — and to be incapable of producing records regulators won't.
-          </p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-          {paragraphs.map((p) => (
-            <div key={p.title}>
-              <h3 style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8, lineHeight: 1.4 }}>{p.title}</h3>
-              <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75 }}>{p.body}</p>
-            </div>
-          ))}
-        </div>
-        <figure style={{
-          marginTop: 48, marginBottom: 0,
-          padding: '28px 32px', borderRadius: 12,
-          border: '1px solid var(--border-accent)',
-          background: 'var(--accent-tint-bg-soft)',
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
-            Customer question
+            <span className="lh-linkline" aria-hidden="true" />
           </div>
-          <p style={{ fontSize: 17, color: 'var(--fg-body)', fontStyle: 'italic', lineHeight: 1.6, marginBottom: 14 }}>
-            Why can't we just hash ourselves?
-          </p>
-          <blockquote style={{ fontSize: 17, color: 'var(--fg-body)', lineHeight: 1.7, margin: 0, borderLeft: '2px solid var(--border-accent)', paddingLeft: 18 }}>
-            "A customer could hash themselves. But then their audit defense is 'trust our internal log.' Our chain is externally verifiable by a regulator in SQL. That's the product."
-          </blockquote>
-        </figure>
+        ))}
       </div>
     </section>
   )
 }
 
-function CodeSnippet() {
-  return (
-    <section className="section-pad" style={{ padding: '96px 32px' }}>
-      <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
-        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16, lineHeight: 1.15 }}>Integration is one URL and one header.</h2>
-        <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 44, lineHeight: 1.7 }}>Two lines change. The rest of your application code stays intact.</p>
-        <div style={{
-          textAlign: 'left', borderRadius: 12,
-          border: '1px solid var(--border-prominent)',
-          background: 'var(--bg-code)', overflow: 'hidden',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 18px', borderBottom: '1px solid var(--border)',
-          }}>
-            {['#ef4444','#f59e0b','#22c55e'].map((c) => (
-              <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, opacity: 0.6 }} />
-            ))}
-            <span style={{ fontSize: 12, color: 'var(--fg-ultrasubtle)', marginLeft: 8, fontFamily: 'monospace' }}>your_app.py</span>
-          </div>
-          <pre style={{ padding: '28px 24px', fontSize: 13.5, lineHeight: 2, overflowX: 'auto', margin: 0 }}>
-            <code style={{ fontFamily: 'ui-monospace, monospace' }}>
-              <span style={{ color: 'var(--fg-ultrasubtle)' }}># Before{'\n'}</span>
-              <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: 'var(--fg-on-code)' }}> = </span>
-              <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: 'var(--fg-on-code)' }}>(api_key=</span>
-              <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: 'var(--fg-on-code)' }}>){'\n\n'}</span>
-              <span style={{ color: 'var(--fg-ultrasubtle)' }}># After{'\n'}</span>
-              <span style={{ color: '#93c5fd' }}>client</span>
-              <span style={{ color: 'var(--fg-on-code)' }}> = </span>
-              <span style={{ color: '#fcd34d' }}>OpenAI</span>
-              <span style={{ color: 'var(--fg-on-code)' }}>({'\n'}{'  '}api_key=</span>
-              <span style={{ color: '#86efac' }}>"your-key"</span>
-              <span style={{ color: 'var(--fg-on-code)' }}>,{'\n'}{'  '}base_url=</span>
-              <span style={{ color: '#86efac' }}>"{PROXY_URL}/proxy/openai"</span>
-              <span style={{ color: 'var(--fg-on-code)' }}>,{'\n'}{'  '}default_headers=</span>
-              <span style={{ color: 'var(--fg-on-code)' }}>{'{'}  </span>
-              <span style={{ color: '#86efac' }}>"x-ailedger-key"</span>
-              <span style={{ color: 'var(--fg-on-code)' }}>: </span>
-              <span style={{ color: '#86efac' }}>"agl_sk_..."</span>
-              <span style={{ color: 'var(--fg-on-code)' }}> {'}'}{'\n)' }</span>
-            </code>
-          </pre>
-        </div>
-        <p style={{ fontSize: 15, color: 'var(--fg-muted)', lineHeight: 1.75, marginTop: 32, textAlign: 'left' }}>
-          Works with OpenAI, Anthropic, Gemini, and any OpenAI-compatible API. From the moment the base URL switches, every request flows through AILedger and produces a record. If you remove AILedger tomorrow, your application goes back to calling the provider directly — no lock-in, no migration, no ceremony.
-        </p>
-      </div>
-    </section>
-  )
-}
-
-function Pricing() {
-  const tiers = [
+function TheRecord() {
+  const cards = [
     {
-      name: 'Ledger',
-      band: 'Free · $149/mo · $499/mo',
-      body: "For engineering teams shipping LLM features that will need audit evidence before they need an auditor. Free covers up to 10,000 inferences per month; Pro at $149/month extends to 100,000; Scale at $499/month to 1,000,000. Usage-based above. All plans include the Article 12 audit trail, SHA-256 fingerprinted records, and EU data residency (Frankfurt).",
-      cta: 'Start free',
-      href: DASHBOARD_URL,
-      highlight: false,
+      title: 'Hashed',
+      body: 'Inputs and outputs become SHA-256 fingerprints. A record proves an exchange happened — without keeping what was said.',
     },
     {
-      name: 'Evidence',
-      band: '$40,000 / year · annual contract',
-      body: 'For the DPO, counsel, and engineering lead who need to hand an auditor a defensible artifact — not a screenshot. Ships alongside SOC 2 Type I (Q3 2026 target). Design-partner pricing available for the first cohort.',
-      cta: 'Apply for design partnership',
-      href: '/contact',
-      highlight: true,
+      title: 'Chained',
+      body: 'Every entry commits to the one before it. Change anything, anywhere, and the chain breaks loudly.',
     },
     {
-      name: 'Audit',
-      band: 'From $80,000 / year · custom-scoped',
-      body: 'For regulated verticals (BaFin MaRisk, FCA SYSC, AMF RG, Solvency II, MiCA) plus EU AI Act financial-sector high-risk obligations binding August 2, 2026. Sectoral overlays configured to your binding retention floor; MSA with custom order form.',
-      cta: 'Talk to us',
-      href: '/contact',
-      highlight: false,
+      title: 'Verifiable',
+      body: 'Anyone with the log can recompute the chain — a collaborator, a regulator, a court. Trust becomes arithmetic.',
     },
   ]
-
   return (
-    <section id="pricing" className="section-pad" style={{ padding: '96px 32px', borderTop: '1px solid var(--border)', scrollMarginTop: '120px' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ marginBottom: 48, maxWidth: 720 }}>
-          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>
-            Pricing.
-          </h2>
-          <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.7 }}>
-            Three tiers, priced by where you are in the compliance journey.
-          </p>
-        </div>
-        <div className="three-col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'stretch' }}>
-          {tiers.map((tier) => (
-            <div key={tier.name} className="tier-card" style={{
-              borderRadius: 12,
-              border: tier.highlight ? '1px solid var(--border-accent)' : '1px solid var(--border)',
-              background: tier.highlight ? 'var(--accent-tint-bg-soft)' : 'var(--surface-tint)',
-              padding: '32px 28px',
-              display: 'flex', flexDirection: 'column',
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: tier.highlight ? 'var(--accent-text)' : 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-                {tier.name}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 16, lineHeight: 1.4 }}>
-                {tier.band}
-              </div>
-              <p style={{ fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 24, flex: 1 }}>
-                {tier.body}
-              </p>
-              <a href={tier.href} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '12px 20px', borderRadius: 10,
-                fontSize: 14, fontWeight: 600, textDecoration: 'none',
-                background: tier.highlight ? 'var(--accent)' : 'var(--border)',
-                color: tier.highlight ? 'var(--fg-on-accent)' : 'var(--fg-body)',
-                border: tier.highlight ? 'none' : '1px solid var(--border-prominent)',
-              }}>
-                {tier.cta}
-              </a>
+    <section className="lh-section">
+      <div className="lh-wrap">
+        <p className="lh-eyebrow">the record</p>
+        <h2 className="lh-h2">Three properties, no trust required.</h2>
+        <div className="lh-cards">
+          {cards.map((c) => (
+            <div key={c.title} className="lh-card">
+              <h3 className="lh-card-title">{c.title}</h3>
+              <p className="lh-card-body">{c.body}</p>
             </div>
           ))}
         </div>
-        <div style={{ textAlign: 'center', marginTop: 40 }}>
-          <a href="/pricing" style={{
-            fontSize: 15, color: 'var(--accent-text)', fontWeight: 500, textDecoration: 'none',
-            borderBottom: '1px solid var(--hero-glow-dot)', paddingBottom: 2,
-          }}>
-            See full pricing →
-          </a>
-        </div>
       </div>
     </section>
   )
 }
 
-function FAQ() {
-  const items = [
-    {
-      q: 'What is the EU AI Act Article 12?',
-      a: 'The EU AI Act — the regulation formally cited as 2024/1689 — requires operators of high-risk AI systems to maintain automatic logging of events throughout the system\'s lifetime. Article 12 is the specific provision that sets those logging requirements. AILedger is purpose-built to give you the audit trail Article 12 calls for: hash-chained entries in an append-only log, exportable for regulator review.',
-    },
-    {
-      q: 'Does AILedger store my prompts or AI outputs?',
-      a: 'No. AILedger stores SHA-256 fingerprints of inputs and outputs, plus metadata (timestamp, model, latency, status). The raw content never enters our systems. One-way fingerprints let you prove a specific inference happened without anyone — including us — retaining the content. This is what makes AILedger GDPR-compatible by construction.',
-    },
-    {
-      q: 'How long does integration take?',
-      a: 'One URL change, one header addition. For OpenAI, Anthropic, Gemini, or any OpenAI-compatible API, integration means pointing your existing client at our proxy and passing your AILedger key as a header. Teams are typically logging their first inference within a minute of account creation.',
-    },
-    {
-      q: 'Does AILedger add latency to my AI calls?',
-      a: 'The proxy hop adds 150-300ms on average via Cloudflare\'s global edge network — within the variance LLM responses already produce. The audit record is durably committed to a write-buffer before your response returns (sub-20ms KV write); the database ingest then happens asynchronously. Your application never waits on database logging to finish, and the audit record cannot be lost if the database is briefly unavailable.',
-    },
-    {
-      q: 'Which AI providers are supported?',
-      a: 'OpenAI, Anthropic, and Google Gemini natively. Any API that follows the OpenAI-compatible format works unchanged.',
-    },
-    {
-      q: 'Is AILedger sufficient for EU AI Act compliance on its own?',
-      a: 'No — and no single tool is. AILedger produces the logging and record-keeping infrastructure Article 12 requires. Full EU AI Act compliance also involves conformity assessments, transparency obligations, and human oversight — none of which AILedger provides. We handle the audit trail piece: the specific part a regulator asks for first.',
-    },
-    {
-      q: 'Where is data stored?',
-      a: 'All data — fingerprints and metadata, never raw content — lives in AWS eu-central-1 (Frankfurt), via Supabase. Applies to every plan including Free. Nothing leaves the EU.',
-    },
-    {
-      q: 'Is AILedger an "AI audit" tool or an "audit of AI" tool?',
-      a: 'The second. "AI audit" platforms typically use AI to help auditors process evidence for general security/quality certifications (ISO 27001, NIS-2, DORA). AILedger is different: we build the infrastructure that lets regulators audit your AI system itself — every inference your application makes becomes a fingerprinted, hash-chained record. If you\'re shipping AI and need an Article 12 audit trail, AILedger. If you\'re going through ISO 27001 and want AI-assisted auditing, that\'s a different category of product.',
-    },
+function TheNetworks() {
+  const rows = [
+    ['research networks', 'multi-institution agent pipelines with a verifiable shared memory'],
+    ['scientific computing', 'HPC orchestration with chain-of-custody on every decision'],
+    ['agent-to-agent systems', 'advisory exchanges memorialized as evidence'],
+    ['regulated AI', 'EU AI Act Article 12-shaped trails, GDPR-compatible by construction'],
   ]
-
   return (
-    <section className="section-pad" style={{
-      padding: '96px 32px',
-      borderTop: '1px solid var(--border)',
-    }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: 12 }}>
-            Frequently asked questions
-          </h2>
-          <p style={{ fontSize: 16, color: 'var(--fg-subtle)' }}>
-            Everything you need to know before integrating.
-          </p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {items.map((item) => (
-            <details key={item.q} style={{
-              borderRadius: 10,
-              border: '1px solid var(--border)',
-              background: 'var(--surface-tint)',
-              overflow: 'hidden',
-            }}>
-              <summary style={{
-                padding: '18px 22px',
-                fontSize: 15,
-                fontWeight: 500,
-                color: 'var(--fg-secondary)',
-                cursor: 'pointer',
-                listStyle: 'none',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 16,
-              }}>
-                {item.q}
-                <span style={{ color: 'var(--fg-ultrasubtle)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>+</span>
-              </summary>
-              <div style={{
-                padding: '0 22px 18px',
-                fontSize: 14,
-                color: 'var(--fg-subtle)',
-                lineHeight: 1.8,
-              }}>
-                {item.a}
-              </div>
-            </details>
+    <section className="lh-section lh-section-tint">
+      <div className="lh-wrap">
+        <p className="lh-eyebrow">the networks</p>
+        <h2 className="lh-h2">Built where agents do science.</h2>
+        <p className="lh-body">
+          AILedger’s substrate is being wired into live agent infrastructure for scientific
+          research — work spanning a national health authority, a leading supercomputing
+          center, and tier-one research universities, aimed first at rare-disease and
+          undiagnosed-patient science. When an autonomous pipeline classifies a variant or
+          schedules a compute run, the ledger holds the durable account of what happened —
+          and why it can be trusted.
+        </p>
+        <div className="lh-fieldlog">
+          {rows.map(([k, v]) => (
+            <div key={k} className="lh-fieldrow">
+              <span className="lh-fieldkey">{k}</span>
+              <span className="lh-fieldval">{v}</span>
+            </div>
           ))}
         </div>
       </div>
@@ -614,27 +287,39 @@ function FAQ() {
   )
 }
 
-function CTA() {
+function TheHumans() {
   return (
-    <section className="section-pad" style={{
-      padding: '96px 32px', textAlign: 'center',
-      borderTop: '1px solid var(--border)',
-    }}>
-      <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>
-          Start before the deadline.
-        </h2>
-        <p style={{ fontSize: 17, color: 'var(--fg-muted)', marginBottom: 40, lineHeight: 1.7 }}>
-          Free to start. No credit card required. Integration takes about a minute: one URL, one header, one account.
+    <section className="lh-section">
+      <div className="lh-wrap">
+        <p className="lh-eyebrow lh-eyebrow-amber">the humans</p>
+        <p className="lh-serifline">Agents draft. Humans ratify.</p>
+        <p className="lh-body">
+          AILedger ships under a public charter that names the customers we refuse, the features
+          we won’t build, and the decisions that require board review. Every system we ship
+          keeps a human hand on the record.
         </p>
-        <a className="hero-cta-primary" href={DASHBOARD_URL} style={{
-          display: 'inline-block', padding: '14px 28px',
-          background: 'var(--accent)', color: 'var(--fg-on-accent)',
-          fontWeight: 600, fontSize: 15, borderRadius: 12, textDecoration: 'none',
-          letterSpacing: '-0.005em',
-        }}>
-          Create your account
-        </a>
+        <a className="lh-textlink" href="/charter/v1">Read charter v1.5 →</a>
+      </div>
+    </section>
+  )
+}
+
+function TheCode() {
+  return (
+    <section className="lh-section lh-section-tint">
+      <div className="lh-wrap">
+        <p className="lh-eyebrow">the code</p>
+        <h2 className="lh-h2">Runs in the open.</h2>
+        <p className="lh-body">
+          The core is AGPLv3 on GitHub. A drop-in proxy records OpenAI, Anthropic, and Gemini
+          traffic today — one URL, one header — with records held in EU data centers and a
+          CLI to verify any chain yourself. Decision-memorialization architecture: patent pending.
+        </p>
+        <div className="lh-ctas">
+          <a className="lh-cta-secondary" href="https://github.com/ailedger-dev/ailedger">GitHub</a>
+          <a className="lh-cta-secondary" href="/docs">Quick start</a>
+          <a className="lh-cta-secondary" href="/privacy/">Privacy policy</a>
+        </div>
       </div>
     </section>
   )
@@ -2142,7 +1827,7 @@ function PricingPage() {
   ]
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-page)", color: "var(--fg-body)", fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen lh" style={{ background: "var(--bg-page)", color: "var(--fg-body)" }}>
       <Nav />
 
       {/* Header banner */}
