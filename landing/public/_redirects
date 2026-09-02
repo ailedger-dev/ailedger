@@ -7,9 +7,8 @@
 # Charter (static, versioned)
 /charter/v1    /charter.html  200
 
-# Privacy policy (static, canonical)
-/privacy       /privacy/index.html  200
-/privacy/      /privacy/index.html  200
+# Privacy policy (static, canonical at trailing slash)
+/privacy       /privacy/  301
 
 # SPA catch-all (must be last)
 /* /index.html 200
