@@ -12,61 +12,61 @@
 :root {
   /* ===== AILedger unified ledger palette (2026-09) — committed dark identity ===== */
   /* Surfaces */
-  --bg-page:            #0C110F;
-  --bg-page-soft:       rgba(240,244,241,0.015);
-  --bg-card:            rgba(240,244,241,0.03);
-  --bg-elevated:        rgba(240,244,241,0.05);
+  --bg-page:            #0A0E16;
+  --bg-page-soft:       rgba(242,245,249,0.015);
+  --bg-card:            rgba(242,245,249,0.03);
+  --bg-elevated:        rgba(242,245,249,0.05);
   --bg-code:            #0d1017;
-  --bg-nav:             rgba(12,17,15,0.85);
-  --bg-nav-solid:       rgba(12,17,15,0.98);
+  --bg-nav:             rgba(10,14,22,0.85);
+  --bg-nav-solid:       rgba(10,14,22,0.98);
 
   /* Text */
-  --fg-primary:         #F0F4F1;
-  --fg-secondary:       #DDE5DF;
-  --fg-body:            #C7CFC9;
-  --fg-muted:           #ADB8B0;
-  --fg-subtle:          #8FA096;
-  --fg-ultrasubtle:     #75857B;
-  --fg-on-accent:       #07130C;   /* dark ink on seal green — AA, unlike white */
+  --fg-primary:         #F2F5F9;
+  --fg-secondary:       #DEE5EC;
+  --fg-body:            #C6CEDA;
+  --fg-muted:           #A9B4C2;
+  --fg-subtle:          #8B98A9;
+  --fg-ultrasubtle:     #75828F;
+  --fg-on-accent:       #ffffff;   /* dark ink on seal green — AA, unlike white */
   --fg-on-code:         #e2e8f0;
 
   /* Accent — seal green family */
-  --accent:             #2F9E6E;
-  --accent-hover:       #37B47E;
-  --accent-soft:        #4CB586;
-  --accent-text:        #8FE0B4;
-  --accent-lighter:     #A9F0C1;
-  --accent-focus-ring:  rgba(143,224,180,0.6);
-  --accent-glow-shadow: rgba(47,158,110,0.45);
+  --accent:             #0F62FE;
+  --accent-hover:       #3D7EFF;
+  --accent-soft:        #4589FF;
+  --accent-text:        #78A9FF;
+  --accent-lighter:     #A6C8FF;
+  --accent-focus-ring:  rgba(120,169,255,0.6);
+  --accent-glow-shadow: rgba(15,98,254,0.45);
 
   /* Gradient (legacy var consumers) */
-  --gradient-1:         #4CB586;
-  --gradient-2:         #A9F0C1;
-  --gradient-3:         #E4F7EC;
+  --gradient-1:         #4589FF;
+  --gradient-2:         #A6C8FF;
+  --gradient-3:         #EDF4FF;
 
   /* Borders */
-  --border-subtle:      rgba(240,244,241,0.06);
-  --border:             rgba(240,244,241,0.08);
-  --border-strong:      rgba(240,244,241,0.14);
-  --border-prominent:   rgba(240,244,241,0.20);
-  --border-accent-soft: rgba(79,214,150,0.25);
-  --border-accent:      rgba(79,214,150,0.5);
+  --border-subtle:      rgba(242,245,249,0.06);
+  --border:             rgba(242,245,249,0.08);
+  --border-strong:      rgba(242,245,249,0.14);
+  --border-prominent:   rgba(242,245,249,0.20);
+  --border-accent-soft: rgba(69,137,255,0.25);
+  --border-accent:      rgba(69,137,255,0.5);
 
   /* Surface tints */
-  --surface-tint-soft:    rgba(240,244,241,0.02);
-  --surface-tint:         rgba(240,244,241,0.04);
-  --surface-tint-strong:  rgba(240,244,241,0.07);
+  --surface-tint-soft:    rgba(242,245,249,0.02);
+  --surface-tint:         rgba(242,245,249,0.04);
+  --surface-tint-strong:  rgba(242,245,249,0.07);
 
   /* Accent-tinted surfaces */
-  --accent-tint-bg:     rgba(47,158,110,0.10);
-  --accent-tint-bg-soft: rgba(47,158,110,0.07);
+  --accent-tint-bg:     rgba(15,98,254,0.10);
+  --accent-tint-bg-soft: rgba(15,98,254,0.07);
 
   /* Ambient glow */
-  --hero-glow-inner:    rgba(47,158,110,0.14);
-  --hero-glow-mid:      rgba(47,158,110,0.05);
-  --hero-glow-dot:      rgba(143,224,180,0.25);
-  --hero-glow-dot-mid:  rgba(143,224,180,0.10);
-  --hero-eyebrow-dot:   #4CB586;
+  --hero-glow-inner:    rgba(15,98,254,0.14);
+  --hero-glow-mid:      rgba(15,98,254,0.05);
+  --hero-glow-dot:      rgba(120,169,255,0.25);
+  --hero-glow-dot-mid:  rgba(120,169,255,0.10);
+  --hero-eyebrow-dot:   #4589FF;
 
   --btn-inset-hi:       rgba(255,255,255,0.10);
 
@@ -290,12 +290,12 @@ details > summary > span:last-child {
 
 /* ===== Ledger homepage (2026-09 redesign) — scoped under .lh ===== */
 .lh {
-  --bg-page:#0C110F; --fg-body:#C7CFC9; --fg-primary:#F0F4F1; --fg-secondary:#DDE5DF;
-  --fg-muted:#ADB8B0; --fg-subtle:#8FA096; --fg-ultrasubtle:#6B7A71;
-  --border:rgba(240,244,241,.08); --border-subtle:rgba(240,244,241,.06);
-  --border-strong:rgba(240,244,241,.18); --surface-tint-soft:#121A15;
-  --accent:#2F9E6E; --fg-on-accent:#07130C; --accent-text:#8FE0B4;
-  --lh-paper:#F2EEE3; --lh-paper-ink:#18201B; --lh-amber:#D9A441;
+  --bg-page:#0A0E16; --fg-body:#C6CEDA; --fg-primary:#F2F5F9; --fg-secondary:#DEE5EC;
+  --fg-muted:#A9B4C2; --fg-subtle:#8B98A9; --fg-ultrasubtle:#737E8E;
+  --border:rgba(242,245,249,.08); --border-subtle:rgba(242,245,249,.06);
+  --border-strong:rgba(242,245,249,.18); --surface-tint-soft:#10151E;
+  --accent:#0F62FE; --fg-on-accent:#ffffff; --accent-text:#78A9FF;
+  --lh-paper:#F1EFE9; --lh-paper-ink:#171B23; --lh-amber:#D9A441;
   font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
   background:var(--bg-page);
 }
@@ -334,9 +334,9 @@ details > summary > span:last-child {
   font-family:'IBM Plex Mono',monospace; border-radius:6px; padding:12px 16px; min-width:250px;
   box-shadow:0 1px 0 rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.25);
 }
-.lh-entry-kind { font-size:11.5px; font-weight:600; letter-spacing:.05em; color:#1F6B4A; text-transform:uppercase; }
+.lh-entry-kind { font-size:11.5px; font-weight:600; letter-spacing:.05em; color:#1949C8; text-transform:uppercase; }
 .lh-entry-detail { font-size:12.5px; }
-.lh-entry-hash { font-size:11px; color:#6B7A71; }
+.lh-entry-hash { font-size:11px; color:#737E8E; }
 .lh-linkline { display:block; width:44px; height:1px; background:var(--border-strong); position:relative; }
 .lh-linkline::after {
   content:''; position:absolute; left:50%; top:50%; width:7px; height:7px;
@@ -350,7 +350,7 @@ details > summary > span:last-child {
 .lh-h2 { font-size:clamp(26px,4vw,38px); font-weight:600; letter-spacing:-0.02em; color:var(--fg-primary); margin-bottom:18px; }
 .lh-body { font-size:17px; line-height:1.75; color:var(--fg-muted); max-width:64ch; margin-bottom:28px; }
 .lh-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:34px; }
-.lh-card { border:1px solid var(--border); border-radius:10px; padding:24px 22px; background:rgba(240,244,241,.02); }
+.lh-card { border:1px solid var(--border); border-radius:10px; padding:24px 22px; background:rgba(242,245,249,.02); }
 .lh-card-title { font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-text); margin-bottom:10px; }
 .lh-card-body { font-size:15px; line-height:1.65; color:var(--fg-muted); }
 .lh-fieldlog { border-top:1px solid var(--border); margin-top:8px; }
