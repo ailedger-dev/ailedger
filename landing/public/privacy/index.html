@@ -1,0 +1,318 @@
+<!doctype html>
+<!-- Rendered from the reviewed AILedger privacy policy (last updated April 12, 2026). -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AILedger — Privacy Policy</title>
+<meta name="description" content="AILedger's privacy policy. We store SHA-256 fingerprints and metadata — never raw AI inputs or outputs." />
+<link rel="canonical" href="https://ailedger.dev/privacy" />
+<meta property="og:title" content="AILedger — Privacy Policy" />
+<meta property="og:url" content="https://ailedger.dev/privacy" />
+<meta property="og:image" content="https://ailedger.dev/og.png" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg-page:    #ffffff;
+  --bg-card:    #f4f4f5;
+  --bg-rule:    #e4e4e7;
+  --fg-primary: #0a0b0f;
+  --fg-body:    #27272a;
+  --fg-muted:   #52525b;
+  --fg-subtle:  #71717a;
+  --accent:     #4f46e5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page:    #0a0b0f;
+    --bg-card:    rgba(255,255,255,0.03);
+    --bg-rule:    rgba(255,255,255,0.08);
+    --fg-primary: #ffffff;
+    --fg-body:    #e2e8f0;
+    --fg-muted:   #94a3b8;
+    --fg-subtle:  #71717a;
+    --accent:     #8b5cf6;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg-page); color: var(--fg-body); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 64px 28px 96px; }
+.metabar { display: flex; flex-wrap: wrap; gap: 14px 24px; font-size: 13px; color: var(--fg-subtle); margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--bg-rule); letter-spacing: 0.02em; }
+.metabar a { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 3px; }
+.metabar a:hover { color: var(--fg-primary); text-decoration-color: var(--accent); }
+h1 { font-size: clamp(34px, 5vw, 44px); font-weight: 700; letter-spacing: -0.025em; color: var(--fg-primary); line-height: 1.1; margin: 0 0 12px; }
+h1 .version { font-weight: 400; color: var(--fg-muted); font-size: 0.55em; letter-spacing: 0; margin-left: 8px; }
+h2 { font-size: clamp(22px, 3vw, 26px); font-weight: 600; letter-spacing: -0.015em; color: var(--fg-primary); margin: 56px 0 16px; line-height: 1.25; }
+p { margin: 0 0 18px; color: var(--fg-body); }
+ul { padding-left: 24px; margin: 0 0 18px; }
+ul li { margin-bottom: 8px; color: var(--fg-body); }
+.lead { font-size: 19px; color: var(--fg-body); margin-bottom: 32px; }
+.footer-meta { margin-top: 80px; padding-top: 28px; border-top: 1px solid var(--bg-rule); font-size: 13px; color: var(--fg-subtle); line-height: 1.7; }
+.footer-meta a { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 3px; }
+.footer-meta a:hover { color: var(--fg-primary); text-decoration-color: var(--accent); }
+.provenance { font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--fg-subtle); margin-top: 22px; letter-spacing: 0; }
+.provenance .fp { color: var(--fg-muted); }
+</style>
+
+</head>
+<body>
+<main class="wrap" style="max-width:720px;margin:0 auto;padding:64px 24px;">
+<p style="margin-bottom:32px;"><a href="/" style="color:var(--accent);text-decoration:none;">&larr; ailedger.dev</a></p>
+<h1 id="privacy-policy">Privacy Policy</h1>
+<p>Last updated: April 12, 2026</p>
+<h2 id="information-we-collect">1. Information we collect</h2>
+<p>We collect the following categories of personal information:</p>
+<p><strong>Account and Contact Information.</strong> Account email
+address.</p>
+<p><strong>Payment Information.</strong> Billing information (processed
+by Stripe - we do not store card data).</p>
+<p><strong>Internet or Network Activity Information.</strong> AI
+inference metadata: model name, provider, latency, status code,
+timestamp, and SHA-256 hashes of inputs/outputs.</p>
+<h2 id="information-we-do-not-collect">2. Information we do not
+collect</h2>
+<p>Raw AI inputs and/or outputs are never stored. We cannot reconstruct
+what was sent to and/or received from any AI provider.</p>
+<h2 id="how-we-collect-information">3. How we collect information</h2>
+<p>We obtain the personal information described above from the following
+sources:</p>
+<ul>
+<li><p>Directly from you, such as when you create an account or provide
+billing information.</p></li>
+<li><p>Automatically through our Services, such as AI inference metadata
+collected during your use of our software.</p></li>
+<li><p>From third-party service providers, such as Stripe for payment
+processing.</p></li>
+</ul>
+<h2 id="how-we-use-your-information">4. How we use your information</h2>
+<p>We use the personal information we collect for the following business
+and commercial purposes:</p>
+<ul>
+<li><p>To provide you with our Services and software
+functionality.</p></li>
+<li><p>To fulfill and manage subscriptions, purchases, orders, and
+payments.</p></li>
+<li><p>To process transactions and maintain billing records.</p></li>
+<li><p>To improve our Services, including analyzing usage patterns and
+system performance.</p></li>
+<li><p>To maintain and operate our systems and infrastructure.</p></li>
+<li><p>To comply with legal obligations, including financial
+record-keeping requirements.</p></li>
+<li><p>To enforce our Terms of Service and other agreements with
+you.</p></li>
+<li><p>To protect the rights, property, and safety of our company,
+customers, and others.</p></li>
+</ul>
+<h2 id="legal-basis-gdpr">5. Legal basis (GDPR)</h2>
+<p>We process your data to perform the Terms of Service agreement you
+have with us (Art. 6(1)(b) GDPR) and to comply with financial
+record-keeping obligations (Art. 6(1)(c) GDPR).</p>
+<h2 id="disclosure-of-your-information">6. Disclosure of your
+information</h2>
+<p>We may disclose the personal information we collect as follows:</p>
+<p><strong>To Service Providers and Contractors.</strong> We disclose
+personal information to third-party service providers who perform
+services on our behalf, such as: - Payment processors (Stripe) for
+billing and payment processing. - Cloud infrastructure providers (AWS
+via Supabase) for data storage and hosting.</p>
+<p>These service providers are contractually obligated to keep personal
+information confidential and use it only for the purposes for which we
+disclose it to them.</p>
+<p><strong>For Legal Purposes.</strong> We may disclose your personal
+information: - To comply with any court order, law, or legal process,
+including responding to government or regulatory requests. - To enforce
+our Terms of Service and other agreements. - If we believe disclosure is
+necessary to protect the rights, property, or safety of our company,
+customers, or others.</p>
+<p><strong>Business Transfers.</strong> We may disclose personal
+information to a buyer or other successor in the event of a merger,
+acquisition, restructuring, or sale of assets.</p>
+<p>We do not sell or share your personal information with third parties
+for their marketing purposes.</p>
+<h2 id="data-residency">7. Data residency</h2>
+<p>All data is stored in the EU, namely AWS eu-central-1 (Frankfurt,
+Germany) via Supabase. This applies to all plans.</p>
+<h2 id="retention">8. Retention</h2>
+<p>We retain personal information for as long as reasonably necessary to
+fulfill the purposes described in this policy or as otherwise legally
+permitted or required.</p>
+<p>Inference logs are append-only and retained indefinitely by design -
+this is core to the compliance value of the service. Account data is
+deleted upon request, subject to our legal obligations and legitimate
+business needs.</p>
+<h2 id="data-security">9. Data security</h2>
+<p>We use commercially reasonable administrative, physical, and
+technical measures designed to protect your personal information from
+accidental loss or destruction and from unauthorized access, use,
+alteration, and disclosure. However, no system is completely secure, and
+we cannot guarantee the absolute security of your information. Any
+transmission of personal information is at your own risk.</p>
+<p>The safety and security of your information also depends on you. You
+are responsible for taking steps to protect your personal information
+against unauthorized use, disclosure, and access.</p>
+<h2 id="your-rights">10. Your rights</h2>
+<p><strong>EU Residents.</strong> If you are located in the European
+Union, you have the right to access, rectify, and erase personal data.
+Contact support@ailedger.dev to exercise these rights. Note: inference
+log hashes cannot be deleted as they contain no personal data.</p>
+<p><strong>Your State Privacy Rights.</strong> Depending on your state
+of residency, you may have certain rights related to your personal
+information, including:</p>
+<ul>
+<li><p><strong>Access and Data Portability.</strong> You may confirm
+whether we process your personal information and access a copy of the
+personal information we maintain about you.</p></li>
+<li><p><strong>Correction.</strong> You may request that we correct
+inaccuracies in your personal information.</p></li>
+<li><p><strong>Deletion.</strong> You may request that we delete
+personal information about you, subject to certain exceptions under
+applicable law.</p></li>
+<li><p><strong>Opt Out of Sales, Sharing, and Targeted
+Advertising.</strong> You may request that we do not sell or share your
+personal information or use it for targeted advertising purposes.
+However, we do not currently sell or share personal information or
+engage in targeted advertising.</p></li>
+</ul>
+<p><strong>Important:</strong> The exact scope of these rights varies by
+state, and there are exceptions where we may not be able to fulfill your
+request.</p>
+<p>To exercise any of these rights, please contact us at
+support@ailedger.dev.</p>
+<p><strong>Nevada Residents.</strong> Nevada law provides residents with
+a limited right to opt out of certain personal information sales. If you
+are a Nevada resident and wish to exercise this right, you may submit a
+request to support@ailedger.dev. However, we do not currently sell
+personal information as defined under Nevada law.</p>
+<h2 id="california-residents">11. California residents</h2>
+<p>If you are a California resident, the California Consumer Privacy Act
+(CCPA) and California Privacy Rights Act (CPRA) provide you with
+specific rights regarding your personal information. This section
+describes those rights and how to exercise them.</p>
+<h3 id="personal-information-we-collect">Personal Information We
+Collect</h3>
+<p>We have collected the following categories of personal information
+from California consumers within the last 12 months:</p>
+<table style="width:98%;">
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 45%" />
+<col style="width: 19%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Category</strong></th>
+<th style="text-align: left;"><strong>Examples</strong></th>
+<th style="text-align: left;"><strong>Collected</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">A. Identifiers</td>
+<td style="text-align: left;">Email address, account identifiers</td>
+<td style="text-align: left;">YES</td>
+</tr>
+<tr>
+<td style="text-align: left;">B. California Customer Records (Cal. Civ.
+Code § 1798.80(e))</td>
+<td style="text-align: left;">Name, email address, billing information,
+payment card information</td>
+<td style="text-align: left;">YES</td>
+</tr>
+<tr>
+<td style="text-align: left;">F. Internet or Network Activity</td>
+<td style="text-align: left;">AI inference metadata (model name,
+provider, latency, status code, timestamp, SHA-256 hashes)</td>
+<td style="text-align: left;">YES</td>
+</tr>
+</tbody>
+</table>
+<p>We do not collect sensitive personal information as defined by the
+CCPA.</p>
+<h3 id="sources-of-personal-information">Sources of Personal
+Information</h3>
+<p>We obtain personal information from the following sources: - Directly
+from you when you create an account or use our Services. - Automatically
+through your use of our Services. - From third-party service providers
+such as payment processors.</p>
+<h3
+id="business-or-commercial-purposes-for-collecting-personal-information">Business
+or Commercial Purposes for Collecting Personal Information</h3>
+<p>We use personal information for the business and commercial purposes
+described in Section 4 (How we use your information) of this policy,
+including: - Providing and maintaining our Services. - Processing
+transactions and billing. - Improving our Services and system
+performance. - Complying with legal obligations. - Protecting our rights
+and the security of our Services.</p>
+<h3 id="disclosure-of-personal-information">Disclosure of Personal
+Information</h3>
+<p>We have disclosed the following categories of personal information to
+service providers for business purposes in the preceding 12 months: -
+Categories A, B, and F to payment processors and cloud infrastructure
+providers.</p>
+<p>We do not sell or share personal information as those terms are
+defined under the CCPA.</p>
+<h3 id="your-california-privacy-rights">Your California Privacy
+Rights</h3>
+<p>As a California resident, you have the following rights:</p>
+<p><strong>Right to Know.</strong> You may request that we disclose: -
+The categories of personal information we collected about you. - The
+categories of sources from which we collected your personal information.
+- Our business or commercial purpose for collecting personal
+information. - The categories of third parties with whom we share
+personal information. - The specific pieces of personal information we
+collected about you.</p>
+<p><strong>Right to Delete.</strong> You may request that we delete
+personal information we collected from you, subject to certain
+exceptions.</p>
+<p><strong>Right to Correct.</strong> You may request that we correct
+inaccurate personal information we maintain about you.</p>
+<p><strong>Right to Opt-Out.</strong> You have the right to opt out of
+the sale or sharing of your personal information. However, we do not
+sell or share personal information.</p>
+<p><strong>Right to Non-Discrimination.</strong> You have the right not
+to receive discriminatory treatment for exercising your CCPA privacy
+rights.</p>
+<h3 id="how-to-exercise-your-california-rights">How to Exercise Your
+California Rights</h3>
+<p>To exercise your rights to know, delete, or correct, please submit a
+request by emailing support@ailedger.dev.</p>
+<p>We will verify your identity before processing your request. You may
+be required to provide information to confirm your identity, such as
+your email address and account details.</p>
+<p>We will respond to verifiable requests within 45 days of receipt. If
+we require more time, we will inform you of the reason and extension
+period in writing.</p>
+<p><strong>Authorized Agents.</strong> You may designate an authorized
+agent to make a request on your behalf. We may require verification of
+both your identity and the authorized agent's authority to act on your
+behalf.</p>
+<h3 id="contact-for-california-privacy-rights">Contact for California
+Privacy Rights</h3>
+<p>For questions about your California privacy rights or to submit a
+request, contact us at support@ailedger.dev.</p>
+<h2 id="childrens-privacy">12. Children's privacy</h2>
+<p>Our Services are not intended for, and we do not knowingly collect
+personal information from, individuals under the age of 18. Our Services
+are designed for business users who are authorized to enter into
+contracts on behalf of their organizations. If we learn we have
+collected personal information from someone under 18 without appropriate
+authorization, we will delete that information.</p>
+<h2 id="changes-to-this-privacy-policy">13. Changes to this privacy
+policy</h2>
+<p>We may update this privacy policy from time to time. We will notify
+you of any changes by updating the "Last updated" date at the top of
+this policy and posting the updated policy on our website. Your
+continued use of our Services after we make changes constitutes
+acceptance of those changes. We encourage you to review this policy
+periodically.</p>
+<h2 id="contact-us">14. Contact us</h2>
+<p>If you have questions about this privacy policy or wish to exercise
+your privacy rights, please contact us at:</p>
+<p>support@ailedger.dev</p>
+
+</main>
+</body>
+</html>

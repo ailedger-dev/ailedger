@@ -73,6 +73,7 @@ function App() {
       <Hero />
       <TrustBar />
       <HowItWorks />
+      <AgentNetworks />
       <Compliance />
       <CodeSnippet />
       <Pricing />
@@ -210,10 +211,10 @@ function Hero() {
           fontSize: 'clamp(34px, 5vw, 56px)', fontWeight: 700, color: 'var(--fg-primary)',
           letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: 20,
         }}>
-          <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>Compliance should be easy.</span>
+          <span className={`hero-title-line fade-in fade-2a ${anim}`} style={{ display: 'block' }}>The tamper-evident record layer for AI systems.</span>
         </h1>
         <p className={`hero-subtitle fade-in fade-3 ${anim}`} style={{ fontSize: 'clamp(15px, 1.6vw, 17px)', color: 'var(--fg-muted)', lineHeight: 1.55, maxWidth: 560, margin: '0 auto 36px' }}>
-          An open platform to build legal systems that scale with your products.
+          AILedger memorializes what AI did — every inference and decision hashed, chained, and verifiable — without ever storing raw data. Open core, from EU AI Act audit trails to autonomous agent networks.
         </p>
         <div className={`hero-cta-group fade-in fade-4 ${anim}`} style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <a className="hero-cta-primary" href={DASHBOARD_URL} style={{
@@ -231,6 +232,26 @@ function Hero() {
             Read how it works
           </a>
         </div>
+      </div>
+    </section>
+  )
+}
+
+function AgentNetworks() {
+  return (
+    <section className="section-pad" style={{
+      padding: '96px 32px',
+      borderTop: '1px solid var(--border-subtle)',
+      background: 'var(--surface-tint-soft)',
+    }}>
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        <h2 className="section-title" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.025em', marginBottom: 16 }}>Built for agent networks</h2>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75, marginBottom: 20 }}>
+          AI systems increasingly act through networks of agents — advising each other, making decisions, touching real infrastructure. AILedger is the memorialization layer for those networks: every decision, advisory exchange, and outcome becomes a verifiable, append-only event.
+        </p>
+        <p style={{ fontSize: 17, color: 'var(--fg-muted)', lineHeight: 1.75 }}>
+          When someone asks what your agents did and why, AILedger is the durable, cryptographic answer. <span style={{ color: 'var(--fg-subtle)' }}>Decision-memorialization architecture: patent pending.</span>
+        </p>
       </div>
     </section>
   )
@@ -631,7 +652,7 @@ function Footer() {
           <a href="/legal" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Legal</a>
           <a href="/contact" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Contact</a>
           <a href="/docs" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Docs</a>
-          <span className="footer-tagline" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>EU AI Act record-keeping infrastructure</span>
+          <span className="footer-tagline" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>Tamper-evident audit infrastructure for AI systems · Patent pending</span>
         </div>
       </div>
     </footer>
@@ -1763,6 +1784,9 @@ function Legal() {
         ))}
 
         <h2 id="privacy" style={{ fontSize: 26, fontWeight: 700, color: 'var(--fg-primary)', letterSpacing: '-0.3px', marginTop: 64, marginBottom: 24, paddingBottom: 12, borderBottom: '1px solid var(--border-strong)' }}>Privacy Policy</h2>
+        <p style={{ fontSize: 15, color: 'var(--fg-subtle)', lineHeight: 1.8, marginBottom: 24 }}>
+          The canonical, full policy is published at <a href="/privacy/" style={{ color: 'var(--accent)' }}>ailedger.dev/privacy</a>. The summary below is provided for convenience.
+        </p>
         {privacySections.map((s) => (
           <div key={s.title} style={{ marginBottom: 36, paddingLeft: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-secondary)', marginBottom: 8 }}>{s.title}</h3>

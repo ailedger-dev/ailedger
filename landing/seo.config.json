@@ -1,8 +1,11 @@
 {
-  "title": "AILedger",
-  "description": "AILedger: Compliance for the AI Era",
+  "title": "AILedger — The Tamper-Evident Record Layer for AI Systems",
+  "description": "AILedger — the tamper-evident record layer for AI systems. Hash-chained audit trails for AI decisions, from EU AI Act compliance to autonomous agent networks.",
   "keywords": [
     "AILedger",
+    "AI agent audit trail",
+    "decision memorialization",
+    "tamper-evident logging",
     "EU AI Act compliance",
     "EU AI Act audit logging",
     "EU AI Act Article 12",
