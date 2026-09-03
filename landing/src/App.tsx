@@ -60,13 +60,15 @@ function App() {
   return (
     <div className="min-h-screen lh" style={{ background: "var(--bg-page)", color: "var(--fg-body)" }}>
       <Nav />
-      <LedgerOpening />
-      <LedgerHero />
+      <Boundary />
+      <WhatCrosses />
       <LedgerStrip />
-      <TheRecord />
+      <TheSubstrate />
       <TheNetworks />
+      <WhyRecord />
       <TheHumans />
       <TheCode />
+      <TheCompany />
       <Footer />
     </div>
   )
@@ -170,57 +172,91 @@ function Nav() {
 }
 
 const LEDGER_EVENTS = [
-  { k: 'inference.recorded', d: 'model=claude · 812ms', h: '9f2a…c41e', ph: 'e1f4…0977' },
-  { k: 'agent.decision', d: 'warrant=granted · scope=pipeline/run', h: 'c03d…ae55', ph: '9f2a…c41e' },
-  { k: 'advisory.exchange', d: 'advisor→executor · accepted', h: '5b7e…c2aa', ph: 'c03d…ae55' },
-  { k: 'verify.pass', d: 'chain=intact · height=48,213', h: 'e1f4…b83d', ph: '5b7e…c2aa' },
-  { k: 'human.ratified', d: 'operator sign-off · charter v1.5', h: '77aa…d4e2', ph: 'e1f4…b83d' },
-  { k: 'compute.scheduled', d: 'job=variant-triage · nodes=4', h: 'ab44…21cd', ph: '77aa…d4e2' },
-  { k: 'inference.recorded', d: 'model=gemini · 644ms', h: '31d0…88b4', ph: 'ab44…21cd' },
-  { k: 'verify.pass', d: 'chain=intact · height=48,220', h: 'f60c…ce13', ph: '31d0…88b4' },
+  { k: 'workload.spec', d: 'variant-triage · 3 targets · records attached: 0', h: '9f2a…c41e', ph: 'e1f4…0977' },
+  { k: 'compute.scheduled', d: 'coordinator → cluster · 4 nodes', h: 'c03d…ae55', ph: '9f2a…c41e' },
+  { k: 'extraction.committed', d: 'source span present · evidence=consensus', h: '5b7e…c2aa', ph: 'c03d…ae55' },
+  { k: 'extraction.abstained', d: 'no source for resource_tier=remote', h: 'e1f4…b83d', ph: '5b7e…c2aa' },
+  { k: 'result.returned', d: 'cluster → data node · de-identified', h: '77aa…d4e2', ph: 'e1f4…b83d' },
+  { k: 'verify.pass', d: 'chain=intact · height=48,220', h: 'ab44…21cd', ph: '77aa…d4e2' },
+  { k: 'human.ratified', d: 'clinician sign-off · charter v1.5', h: '31d0…88b4', ph: 'ab44…21cd' },
+  { k: 'data.stayed', d: 'records crossing the boundary: 0', h: 'f60c…ce13', ph: '31d0…88b4' },
 ]
 
-function LedgerOpening() {
+function Boundary() {
   return (
-    <section className="lh-open" aria-label="Opening: a decision being recorded and sealed">
-      <div className="lh-open-glow" aria-hidden="true" />
-      <div className="lh-open-wrap">
-        <h1 className="lh-open-h1">What did your AI do?</h1>
-        <div className="lh-open-card" role="img" aria-label="A recorded decision: hashed, chained, sealed">
-          <div className="lh-open-line lh-open-l1"><span className="lh-open-k">decision.recorded</span></div>
-          <div className="lh-open-line lh-open-l2"><span className="lh-open-f">agent</span> pipeline/variant-triage</div>
-          <div className="lh-open-line lh-open-l3"><span className="lh-open-f">action</span> schedule compute · 4 nodes</div>
-          <div className="lh-open-line lh-open-l4"><span className="lh-open-f">warrant</span> justification present · 1 alternative rejected</div>
-          <div className="lh-open-line lh-open-l5 lh-open-hash">
-            <span className="lh-open-f">sha256</span>
-            <span className="lh-open-scr" aria-hidden="true">3b9e7c1a0d4f52e8a71c6b0d9e2f4a83</span>
-            <span className="lh-open-fin">9f2ac41e77b0c41e ⇠ e1f4b83d0977</span>
+    <section className="lh-bnd" aria-label="Opening: the data stays in place while a workload specification and a result cross between institutions, and every crossing is recorded">
+      <div className="lh-bnd-glow" aria-hidden="true" />
+      <div className="lh-bnd-wrap">
+        <h1 className="lh-bnd-h1">
+          <span className="lh-bnd-l lh-bnd-l1">The data stays home.</span>
+          <span className="lh-bnd-l lh-bnd-l2">The science travels.</span>
+          <span className="lh-bnd-l lh-bnd-l3 lh-bnd-accent">Every step is on the record.</span>
+        </h1>
+
+        <div className="lh-bnd-diagram" role="img" aria-label="Three institutions: a data node where records stay, a coordinating node, and a compute node. A workload specification moves right, a result moves left, the records never move, and each crossing is appended to a hash chain.">
+          <div className="lh-bnd-nodes">
+            <div className="lh-bnd-node">
+              <span className="lh-bnd-node-k">data node</span>
+              <span className="lh-bnd-node-d">hospital · owns the question</span>
+              <span className="lh-bnd-stays">records never leave</span>
+            </div>
+            <div className="lh-bnd-node">
+              <span className="lh-bnd-node-k">coordinating node</span>
+              <span className="lh-bnd-node-d">schedules · records every step</span>
+            </div>
+            <div className="lh-bnd-node">
+              <span className="lh-bnd-node-k">compute node</span>
+              <span className="lh-bnd-node-d">supercomputer · runs the work</span>
+            </div>
+            <div className="lh-bnd-packet lh-bnd-spec" aria-hidden="true">workload.spec →</div>
+            <div className="lh-bnd-packet lh-bnd-result" aria-hidden="true">← result</div>
           </div>
-          <div className="lh-open-seal"><span className="lh-open-seal-dot" />sealed · block 48,214</div>
+          <div className="lh-bnd-chain" aria-hidden="true">
+            <span className="lh-bnd-rec lh-bnd-r1">spec.sent <em>#9f2a…c41e</em></span>
+            <span className="lh-bnd-rec lh-bnd-r2">compute.scheduled <em>#c03d…ae55</em></span>
+            <span className="lh-bnd-rec lh-bnd-r3">result.returned <em>#77aa…d4e2</em></span>
+            <span className="lh-bnd-rec lh-bnd-r4 lh-bnd-zero">records.moved <em>0</em></span>
+          </div>
         </div>
-        <p className="lh-open-sub">AILedger knows. Every decision — cryptographically on the record, verifiable by anyone, raw data never stored.</p>
-        <a className="lh-open-cue" href="#record-layer">See the record layer ↓</a>
+
+        <p className="lh-bnd-sub">
+          AILedger builds the infrastructure that lets hospitals, foundations, universities and
+          supercomputers run AI pipelines together — without moving sensitive data, and with a
+          verifiable account of what happened.
+        </p>
+        <div className="lh-ctas">
+          <a className="lh-cta-primary" href="#substrate">See how it works</a>
+          <a className="lh-cta-secondary" href="/charter/v1">Read the charter</a>
+        </div>
       </div>
     </section>
   )
 }
 
-function LedgerHero() {
+function WhatCrosses() {
+  const rows: [string, string, string][] = [
+    ['crosses', 'a workload specification', 'what to compute, against which targets, on which nodes'],
+    ['crosses', 'a result set', 'de-identified outputs, returned to the institution that owns the question'],
+    ['never crosses', 'a record', 'a patient file, a raw dataset, an identifier — in any form'],
+    ['always recorded', 'every crossing', 'every scheduling decision, every commit-or-abstain — hashed, chained, verifiable by anyone'],
+  ]
   return (
-    <section className="lh-hero" id="record-layer">
+    <section className="lh-section" id="boundary-rule">
       <div className="lh-wrap">
-        <p className="lh-eyebrow">append-only · tamper-evident · open core</p>
-        <h1 className="lh-h1">
-          AI agents are doing real work.<br />
-          <span className="lh-h1-accent">AILedger keeps the record.</span>
-        </h1>
-        <p className="lh-sub">
-          A cryptographic ledger for what AI systems actually did — every inference, decision,
-          and hand-off hashed, chained, and verifiable by anyone. The raw data is never stored.
+        <p className="lh-eyebrow">the boundary rule</p>
+        <h2 className="lh-h2">What crosses. What never does.</h2>
+        <p className="lh-body">
+          Federated science breaks when the data-location question is discovered mid-project instead of
+          settled before it. The rule is simple enough to hold: specifications and results move, records
+          don’t, and everything that moves is on the ledger.
         </p>
-        <div className="lh-ctas">
-          <a className="lh-cta-primary" href="/charter/v1">Read the charter</a>
-          <a className="lh-cta-secondary" href="/docs">Ledger docs</a>
+        <div className="lh-fieldlog">
+          {rows.map(([k, v, d]) => (
+            <div key={k + v} className="lh-fieldrow">
+              <span className={`lh-fieldkey ${k === 'never crosses' ? 'lh-fieldkey-never' : ''}`}>{k}</span>
+              <span className="lh-fieldval"><strong className="lh-fieldval-strong">{v}</strong> — {d}</span>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -247,31 +283,40 @@ function LedgerStrip() {
   )
 }
 
-function TheRecord() {
+function TheSubstrate() {
   const cards = [
     {
-      title: 'Hashed',
-      body: 'Inputs and outputs become SHA-256 fingerprints. A record proves an exchange happened — without keeping what was said.',
+      title: 'Context graph',
+      body: 'Knowledge that carries its own provenance. Every statement records its source sentence, evidence tier, jurisdiction, and the dates it holds. Nothing enters without a citation — and where the evidence is absent, the system says so, and that abstention is recorded too.',
+      status: 'in design with research partners',
     },
     {
-      title: 'Chained',
-      body: 'Every entry commits to the one before it. Change anything, anywhere, and the chain breaks loudly.',
+      title: 'Record',
+      body: 'A hash-chained ledger of every decision, hand-off and inference. Inputs and outputs become SHA-256 fingerprints; every entry commits to the one before it; anyone with the log can recompute the chain. Change anything, anywhere, and it breaks loudly.',
+      status: 'live · open source · patent pending',
     },
     {
-      title: 'Verifiable',
-      body: 'Anyone with the log can recompute the chain — a collaborator, a regulator, a court. Trust becomes arithmetic.',
+      title: 'Orchestration',
+      body: 'Workload specifications dispatched across institutions and routed back as results, with compute accountability attributed per node. Federation runs on the open aDNA standard; AILedger keeps the record of it.',
+      status: 'in design · aDNA (MIT) + AILedger',
     },
   ]
   return (
-    <section className="lh-section">
+    <section className="lh-section lh-section-tint" id="substrate">
       <div className="lh-wrap">
-        <p className="lh-eyebrow">the record</p>
-        <h2 className="lh-h2">Three properties, no trust required.</h2>
+        <p className="lh-eyebrow">the substrate</p>
+        <h2 className="lh-h2">Three components. One layer institutions can share.</h2>
+        <p className="lh-body">
+          The problem isn’t any one model. It’s that the data, the compute and the question live in three
+          places that don’t trust each other’s servers. The substrate is what lets them work as one system
+          anyway — and prove it afterward.
+        </p>
         <div className="lh-cards">
           {cards.map((c) => (
             <div key={c.title} className="lh-card">
               <h3 className="lh-card-title">{c.title}</h3>
               <p className="lh-card-body">{c.body}</p>
+              <p className="lh-card-status">{c.status}</p>
             </div>
           ))}
         </div>
@@ -351,6 +396,45 @@ function TheCode() {
   )
 }
 
+function WhyRecord() {
+  return (
+    <section className="lh-section">
+      <div className="lh-wrap">
+        <p className="lh-eyebrow">why a record layer</p>
+        <h2 className="lh-h2">Logs can be edited. A chain can’t be edited quietly.</h2>
+        <p className="lh-body">
+          Regulators are beginning to ask for evidence rather than assurances — the EU AI Act’s Article 12
+          record-keeping duty is the first of many. A record that anyone can verify, that stores fingerprints
+          and never raw data, is what makes an autonomous science network trustworthy. It is also what every
+          organization running agents will need next.
+        </p>
+        <a className="lh-textlink" href="/docs">How verification works →</a>
+      </div>
+    </section>
+  )
+}
+
+function TheCompany() {
+  return (
+    <section className="lh-section">
+      <div className="lh-wrap">
+        <p className="lh-eyebrow">the company</p>
+        <h2 className="lh-h2">Two founders. One public benefit.</h2>
+        <p className="lh-body">
+          AILedger, PBC is a Delaware public benefit corporation founded in 2026 by two people — one who
+          builds record layers, one who runs science networks. The public-benefit mission is written into the
+          charter, and the first place we’re proving the work is where trust is hardest to earn: rare-disease
+          science across institutions that have never shared a server.
+        </p>
+        <div className="lh-ctas">
+          <a className="lh-cta-secondary" href="/about">About</a>
+          <a className="lh-cta-secondary" href="/contact">Work with us</a>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function Footer() {
   return (
     <footer style={{
@@ -363,7 +447,7 @@ function Footer() {
           <a href="/legal" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Legal</a>
           <a href="/contact" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Contact</a>
           <a href="/docs" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14, textDecoration: 'none' }}>Docs</a>
-          <span className="footer-tagline" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>Tamper-evident audit infrastructure for AI systems · Patent pending</span>
+          <span className="footer-tagline" style={{ color: 'var(--fg-ultrasubtle)', fontSize: 14 }}>Infrastructure for federated AI science · Patent pending</span>
         </div>
       </div>
     </footer>
