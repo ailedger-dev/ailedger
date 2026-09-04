@@ -1,22 +1,22 @@
 {
-  "title": "AILedger — The Tamper-Evident Record Layer for AI Systems",
-  "description": "AILedger — the tamper-evident record layer for AI systems. Hash-chained audit trails for AI decisions, from EU AI Act compliance to autonomous agent networks.",
+  "title": "AILedger \u2014 the federated context layer for AI agents in medical research",
+  "description": "AILedger: agents run inside an institution's own environment, query peer institutions without moving records, and write every decision to an append-only record that verifies offline.",
   "keywords": [
     "AILedger",
-    "AI agent audit trail",
-    "decision memorialization",
-    "tamper-evident logging",
-    "EU AI Act compliance",
-    "EU AI Act audit logging",
+    "federated context layer",
+    "AI agents medical research",
+    "federated learning healthcare",
+    "decision record",
+    "tamper-evident audit trail",
     "EU AI Act Article 12",
-    "AI audit trail",
-    "AI compliance evidence",
-    "AI decision logging",
-    "high-risk AI systems",
-    "ISO 42001",
-    "NIST AI RMF"
+    "rare disease research network",
+    "aDNA standard",
+    "RFC 8785"
   ],
   "canonical": "https://ailedger.dev/",
   "homepageLoc": "https://ailedger.dev/",
-  "stampSitemapLocs": ["https://ailedger.dev/", "https://ailedger.dev/llms.txt"]
+  "stampSitemapLocs": [
+    "https://ailedger.dev/",
+    "https://ailedger.dev/llms.txt"
+  ]
 }

@@ -368,7 +368,69 @@ details > summary > span:last-child {
 }
 
 
-/* ===== Opening: a decision being recorded and sealed ===== */
+/* ===== Opening: the boundary — data stays, work travels, every crossing recorded ===== */
+.lh-bnd { position:relative; display:flex; align-items:center; overflow:hidden; border-bottom:1px solid var(--border-subtle); }
+.lh-bnd-glow { position:absolute; left:50%; top:40%; width:1200px; height:1200px; transform:translate(-50%,-50%);
+  background:radial-gradient(circle, rgba(15,98,254,.14) 0%, rgba(15,98,254,.04) 40%, transparent 70%); pointer-events:none; }
+.lh-bnd-wrap { position:relative; max-width:960px; margin:0 auto; padding:120px 32px 96px; width:100%; }
+.lh-bnd-h1 { display:flex; flex-direction:column; gap:.04em; font-size:clamp(36px,6.4vw,76px); font-weight:600; letter-spacing:-0.035em; line-height:1.02; color:var(--fg-primary); margin:0 0 44px; }
+.lh-bnd-l { display:block; opacity:0; animation: lh-fade-up .7s ease-out forwards; }
+.lh-bnd-l1 { animation-delay:.05s } .lh-bnd-l2 { animation-delay:.28s } .lh-bnd-l3 { animation-delay:.52s }
+.lh-bnd-accent { color:var(--accent-text); }
+
+/* diagram */
+.lh-bnd-diagram { opacity:0; animation: lh-fade-up .7s .8s ease-out forwards; margin-bottom:40px; }
+/* packets travel in a lane ABOVE the cards so they never cover node text */
+.lh-bnd-nodes { position:relative; display:grid; grid-template-columns:repeat(3,1fr); gap:56px; align-items:stretch; padding-top:40px; }
+.lh-bnd-nodes::before { content:''; position:absolute; left:14%; right:14%; top:16px; height:1px; background:var(--border-strong); z-index:0; }
+.lh-bnd-node { position:relative; z-index:1; display:flex; flex-direction:column; gap:5px; background:var(--lh-paper); color:var(--lh-paper-ink);
+  font-family:'IBM Plex Mono',monospace; border-radius:8px; padding:16px 18px; min-height:96px;
+  box-shadow:0 1px 0 rgba(0,0,0,.5), 0 14px 36px rgba(0,0,0,.4); }
+.lh-bnd-node-k { font-size:11.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:#1949C8; }
+.lh-bnd-node-d { font-size:12.5px; color:#3A4250; }
+.lh-bnd-stays { margin-top:auto; align-self:flex-start; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#8B3A1C;
+  border:1px solid rgba(139,58,28,.45); border-radius:4px; padding:2px 7px; }
+.lh-bnd-packet { position:absolute; top:16px; z-index:2; transform:translateY(-50%); font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+  letter-spacing:.04em; padding:5px 10px; border-radius:6px; background:var(--accent); color:#fff; white-space:nowrap; opacity:0; }
+.lh-bnd-spec   { left:14%; transform:translate(-50%,-50%); animation: lh-spec 9s .9s ease-in-out infinite; }
+.lh-bnd-result { left:86%; transform:translate(-50%,-50%); animation: lh-result 9s .9s ease-in-out infinite; }
+/* ponytail: animating `left` (not transform) so % is the track width; fine at 3 nodes */
+@keyframes lh-spec {
+  0%   { opacity:0; left:14%; }
+  4%   { opacity:1; }
+  30%  { opacity:1; left:86%; }
+  30.1%, 100% { opacity:0; left:86%; }
+}
+@keyframes lh-result {
+  0%, 38% { opacity:0; left:86%; }
+  42%  { opacity:1; }
+  68%  { opacity:1; left:14%; }
+  68.1%, 100% { opacity:0; left:14%; }
+}
+.lh-bnd-chain { display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px; padding-top:16px; border-top:1px dashed var(--border-strong); }
+.lh-bnd-rec { font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--fg-muted); opacity:0; animation: lh-rec 9s .9s linear infinite; }
+.lh-bnd-rec em { font-style:normal; color:var(--accent-text); margin-left:6px; }
+.lh-bnd-r1 { animation-delay:1.7s } .lh-bnd-r2 { animation-delay:3.2s } .lh-bnd-r3 { animation-delay:6.6s } .lh-bnd-r4 { animation-delay:7.4s }
+.lh-bnd-zero em { color:var(--lh-amber); }
+@keyframes lh-rec { 0% { opacity:0; transform:translateY(4px) } 3% { opacity:1; transform:none } 92% { opacity:1 } 100% { opacity:0 } }
+.lh-bnd-sub { font-size:clamp(16px,1.9vw,20px); line-height:1.55; color:var(--fg-muted); max-width:62ch; margin:0 0 28px; opacity:0; animation: lh-fade-up .6s 1.3s ease-out forwards; }
+.lh-bnd .lh-ctas { opacity:0; animation: lh-fade-up .6s 1.6s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .lh-bnd-l, .lh-bnd-diagram, .lh-bnd-sub, .lh-bnd .lh-ctas, .lh-bnd-rec { animation:none !important; opacity:1 !important; transform:none !important; }
+  .lh-bnd-packet { animation:none !important; opacity:1 !important; }
+  .lh-bnd-spec { left:36% } .lh-bnd-result { left:64% }
+}
+@media (max-width:760px) {
+  .lh-bnd { min-height:auto } .lh-bnd-wrap { padding:64px 24px 48px }
+  .lh-bnd-nodes { grid-template-columns:1fr; gap:14px } .lh-bnd-nodes::before, .lh-bnd-packet { display:none }
+}
+
+/* substrate card status + boundary-rule emphasis */
+.lh-card-status { margin-top:14px; padding-top:10px; border-top:1px solid var(--border); font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--fg-subtle); }
+.lh-fieldkey-never { color:var(--lh-amber); }
+.lh-fieldval-strong { color:var(--fg-primary); font-weight:600; }
+
+/* ===== (retired 2026-09-02) Opening: a decision being recorded and sealed — kept for /docs reuse ===== */
 .lh-open { position:relative; min-height:88vh; display:flex; align-items:center; overflow:hidden; border-bottom:1px solid var(--border-subtle); }
 .lh-open-glow { position:absolute; inset:auto; left:50%; top:45%; width:1100px; height:1100px; transform:translate(-50%,-50%);
   background:radial-gradient(circle, rgba(15,98,254,.16) 0%, rgba(15,98,254,.05) 38%, transparent 70%); pointer-events:none; }
