@@ -1,9 +1,8 @@
 {
-  "title": "AILedger \u2014 Consilium, the federated context layer for AI agents in medical research",
-  "description": "AILedger builds Consilium: agents run inside an institution's own environment, query peer institutions without moving records, and write every decision to an append-only record that verifies offline.",
+  "title": "AILedger \u2014 the federated context layer for AI agents in medical research",
+  "description": "AILedger: agents run inside an institution's own environment, query peer institutions without moving records, and write every decision to an append-only record that verifies offline.",
   "keywords": [
     "AILedger",
-    "Consilium",
     "federated context layer",
     "AI agents medical research",
     "federated learning healthcare",
