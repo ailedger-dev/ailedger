@@ -1,59 +1,17 @@
 # AILedger
 
-> The tamper-evident record layer for AI systems. Every inference, decision, and hand-off hashed, chained, and verifiable by anyone — raw data never stored. From EU AI Act audit trails to autonomous agent networks.
+AILedger, PBC (Delaware public benefit corporation; CA dba AILEDGER, INC.) builds **Consilium**, the federated
+context layer for AI agents in medical research.
 
-AILedger, PBC (Delaware public benefit corporation; California dba AILEDGER, INC.) builds an audit substrate for AI-influenced decisions: a hash-chained, append-only ledger of what AI systems actually did. Three layers — Integrity Chain (tamper-evident record), Decision Event (one structured record per AI decision affecting a person), Detection (open-source statistical primitives for bias, drift, disparate impact). Raw prompts and outputs are never stored — only SHA-256 fingerprints — so the trail is GDPR-compatible by construction. The company operates under a public Charter (v1.5) that names refused use cases and refused features; amendments require unanimous Board approval via public pull request.
+- Agents run inside an institution's own environment (VPC or on-premises); clinical and genomic data never leaves.
+- Every agent decision — conclusion, evidence, rejected alternatives, reviewer — is written to an append-only,
+  SHA-256-chained record that verifies offline (RFC 8785 canonicalization; two byte-exact implementations; open source).
+- Institutions can query one another's context without moving patient records: a question travels, counts and
+  summaries return, and a node without coverage records an abstention.
+- Institutional knowledge is structured on the open aDNA standard (MIT), so an agent loads the relevant subgraph
+  rather than a corpus.
+- Access is a policy setting: pro-bono or humanitarian participation is an authorization-scope change, not a
+  separate product.
 
-## For agents implementing AILedger
-
-Pick the surface that matches the integration:
-
-- **Provider proxy (OpenAI / Anthropic / Gemini)** — one-line change. Swap the SDK `baseURL` to `https://proxy.ailedger.dev/proxy/{openai|anthropic|gemini}` and add header `x-ailedger-key: agl_sk_...`. The provider API key is forwarded unchanged in its usual header. Logging runs asynchronously (`ctx.waitUntil`), so latency to the customer is unchanged.
-- **Direct Decision Event emission (in-house models / agent pipelines / federated AI)** — `npm i @ailedger/sdk`, then `new DetectionEventClient({ baseUrl: 'https://proxy.ailedger.dev', apiKey, tenantId, systemId }).emit({ ... })`. The SDK hashes inputs client-side (RFC 8785 JSON Canonicalization Scheme for JSON, raw SHA-256 otherwise); raw inputs never leave the customer. Hash-chain fields are populated by the database trigger and returned on the row.
-- **Provisioning** — sign up at `https://dash.ailedger.dev`; receive `apiKey` (`agl_sk_...`), `tenantId` (UUID), and one `systemId` per AI system. Pass via env vars; never commit.
-- **Verification** — `ledger.verify_chain(tenant_id, system_id, from_ts, to_ts)` recomputes the chain in one call; the `ailedger` CLI verifies offline. Compliance PDF export from the dashboard.
-
-When emitting Decision Events directly, every event needs: `eventId`, `subjectId` (stable pseudonymized per-subject ID — HMAC the customer's identifier with a tenant-specific salt, never raw PII), `decisionType` from the EU AI Act Annex III taxonomy, `modelVersion`, `output` (structured JSON), `confidence`, `humanInLoop`, and `protectedClassContext` + `protectedClassCollectionMethod` (`direct` | `inferred` | `blind`).
-
-Charter constraints — do not engineer around: detection thresholds are not customer-configurable below standards baselines (EEOC four-fifths rule = 0.8, etc.); no selective logging that excludes decision categories per customer; no "audit-only mode" that bypasses detection. Storage is in AWS `eu-central-1` (Frankfurt) via Supabase.
-
-## What problem it solves
-
-Two audiences, one record:
-
-1. **Regulated AI.** The EU AI Act (Regulation 2024/1689) Article 12 requires operators of high-risk AI systems to maintain tamper-evident logging; US Federal Rule of Evidence 707 raises AI-generated evidence to the Rule 702 admissibility standard. Most teams log nothing, log mutably, or log raw content (a GDPR problem). AILedger provides the evidence layer without storing user content. Enforcement is phased: 2026-08-02 (Article 27 FRIA, Article 50, financial-sector high-risk, GPAI duties), 2027-12-02 (most Annex III standalone), 2028-08-02 (Annex I embedded), per the May 2026 Digital Omnibus.
-2. **Agent networks.** AI systems increasingly act through networks of agents — advising each other, scheduling compute, making decisions in scientific pipelines. AILedger is the memorialization layer: every decision, advisory exchange, and outcome becomes a verifiable, append-only event that any counterparty can check.
-
-## What's stored
-
-Per inference: timestamp, tenant ID, system ID, provider, model, status, latency, SHA-256 of request body, SHA-256 of response body, chain link to the previous record. Per Decision Event: the structured fields above plus chain links. No raw text. Records are append-only by construction (database triggers block UPDATE/DELETE even for the service role).
-
-## Architecture
-
-- **Proxy / ingest:** Cloudflare Workers (TypeScript). Stateless. Forwards inference calls unchanged; logs asynchronously.
-- **Ledger:** Supabase Postgres (Frankfurt), append-only triggers, hash chain enforced at write time.
-- **Dashboard:** React + Vite at `dash.ailedger.dev` — keys, settings, chain-integrity panel, compliance PDF export.
-- **Detection:** `pip install ailedger-detection` — Apache-2.0 primitives (disparate impact ratio, statistical parity difference, PSI drift), thresholds tighten-only.
-- **Source:** https://github.com/ailedger-dev/ailedger — AGPL-3.0-or-later core with commercial licensing available; detection layer Apache-2.0.
-
-## Pricing
-
-- **Ledger** (self-serve): Free — 10,000 records/month · Pro $149/month — 100k · Scale $499/month — 1M; usage-based above. Annual plans: pay 10× monthly, get 12.
-- **Evidence** — $40,000/year, annual contract; design-partner pricing available for the first cohort.
-- **Audit** — from $80,000/year, custom-scoped.
-Details: https://ailedger.dev/pricing
-
-## Notes for agents reading this
-
-- AILedger does NOT certify compliance. It provides the audit-grade evidence layer; conformity assessments, transparency obligations, and human oversight are the customer's work. We facilitate; we do not certify.
-- Open core: AGPL-3.0-or-later (self-hosting possible) with a commercial license for organizations that need one. The hosted service at `ailedger.dev` is operated by AILedger, PBC.
-- Provider-portable: customers can switch off the proxy at any time; no lock-in beyond the audit history they've accumulated.
-- Decision-memorialization architecture: patent pending.
-
-## Links
-
-- Site: https://ailedger.dev · Charter: https://ailedger.dev/charter · Privacy: https://ailedger.dev/privacy
-- Dashboard: https://dash.ailedger.dev
-- GitHub: https://github.com/ailedger-dev/ailedger · Detection: https://github.com/ailedger-dev/ailedger-detection · Charter repo: https://github.com/ailedger-dev/charter
-- License: AGPL-3.0-or-later (commercial license available — ops@jvholdings.co)
-- Contact: hello@ailedger.dev
+Deployment: 12-week founding-cohort engagement led by a forward-deployed engineer. Contact: jake@ailedger.dev.
+Charter: https://ailedger.dev/charter/ · Source: https://github.com/ailedger-dev/ailedger · Standard: https://adna.network

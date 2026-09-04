@@ -3,180 +3,826 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- Favicon -->
+    <meta name="color-scheme" content="only light" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260902" />
     <link rel="shortcut icon" href="/favicon.svg?v=20260902" />
     <link rel="apple-touch-icon" href="/favicon.svg?v=20260902" />
-
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital@1&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <!-- Primary SEO -->
-    <title>AILedger — Infrastructure for Federated AI Science</title>
-    <meta name="description" content="AILedger — the tamper-evident record layer for AI systems. Hash-chained audit trails for AI decisions, from EU AI Act compliance to autonomous agent networks." />
-    <meta name="keywords" content="AILedger, AI agent audit trail, decision memorialization, tamper-evident logging, EU AI Act compliance, EU AI Act audit logging, EU AI Act Article 12, AI audit trail, AI compliance evidence, AI decision logging, high-risk AI systems, ISO 42001, NIST AI RMF" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;600&display=swap">
+    <!-- Primary SEO (kept in sync with seo.config.json; `npm run seo:check`) -->
+    <title>AILedger — Consilium, the federated context layer for AI agents in medical research</title>
+    <meta name="description" content="AILedger builds Consilium: agents run inside an institution's own environment, query peer institutions without moving records, and write every decision to an append-only record that verifies offline." />
+    <meta name="keywords" content="AILedger, Consilium, federated context layer, AI agents medical research, federated learning healthcare, decision record, tamper-evident audit trail, EU AI Act Article 12, rare disease research network, aDNA standard, RFC 8785" />
     <meta name="author" content="AILedger" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://ailedger.dev/" />
     <link rel="alternate" type="text/markdown" title="LLM-friendly summary" href="/llms.txt" />
-
-    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ailedger.dev" />
     <meta property="og:site_name" content="AILedger" />
-    <meta property="og:title" content="AILedger — Infrastructure for Federated AI Science" />
-    <meta property="og:description" content="The data stays home. The science travels. Every step is on the record. AILedger builds the infrastructure that lets hospitals, foundations, universities and supercomputers run AI pipelines together — without moving sensitive data, with a verifiable record." />
+    <meta property="og:title" content="AILedger — Consilium, the federated context layer for AI agents in medical research" />
+    <meta property="og:description" content="AILedger builds Consilium: agents run inside an institution's own environment, query peer institutions without moving records, and write every decision to an append-only record that verifies offline." />
     <meta property="og:image" content="https://ailedger.dev/og.png?v=20260902" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_US" />
-
-    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@ailedger" />
-    <meta name="twitter:title" content="AILedger — The Tamper-Evident Record Layer for AI Systems" />
-    <meta name="twitter:description" content="AILedger — the tamper-evident record layer for AI systems. Hash-chained audit trails for AI decisions, from EU AI Act compliance to autonomous agent networks." />
+    <meta name="twitter:title" content="AILedger — Consilium, the federated context layer for AI agents in medical research" />
+    <meta name="twitter:description" content="AILedger builds Consilium: agents run inside an institution's own environment, query peer institutions without moving records, and write every decision to an append-only record that verifies offline." />
     <meta name="twitter:image" content="https://ailedger.dev/og.png?v=20260902" />
-
-    <!-- Site name for Google — strengthened with Organization + logo + publisher link -->
-    <script type="application/ld+json">
+    <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@graph": [
     {
-      "@context": "https://schema.org",
-      "@graph": [
+      "@type": "Organization",
+      "@id": "https://ailedger.dev/#organization",
+      "name": "AILedger",
+      "legalName": "AILedger, PBC",
+      "alternateName": [
+        "AI Ledger",
+        "ailedger"
+      ],
+      "url": "https://ailedger.dev/",
+      "description": "AILedger, PBC builds Consilium, the federated context layer for AI agents in medical research: in-environment execution, cross-institution queries without moving records, and a verifiable decision record.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://ailedger.dev/logo-512.png?v=20260902",
+        "width": 512,
+        "height": 512
+      },
+      "founders": [
         {
-          "@type": "Organization",
-          "@id": "https://ailedger.dev/#organization",
-          "name": "AILedger",
-          "legalName": "AILedger, PBC",
-          "alternateName": ["AI Ledger", "ailedger"],
-          "url": "https://ailedger.dev/",
-          "description": "AI compliance and audit logging infrastructure for the EU AI Act. Every inference becomes a hash-chained, SHA-256-fingerprinted record an auditor can verify.",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://ailedger.dev/logo-512.png?v=20260902",
-            "width": 512,
-            "height": 512
-          },
-          "founder": {
-            "@type": "Person",
-            "name": "Jake Joyner",
-            "url": "https://ailedger.dev/about"
-          },
-          "foundingDate": "2026-04",
-          "foundingLocation": {
-            "@type": "Place",
-            "address": {
-              "@type": "PostalAddress",
-              "addressLocality": "Los Angeles",
-              "addressRegion": "CA",
-              "addressCountry": "US"
-            }
-          },
-          "sameAs": [
-            "https://github.com/ailedger-dev/ailedger",
-            "https://x.com/ailedger",
-            "https://www.linkedin.com/company/ailedger",
-            "https://www.linkedin.com/in/jake-joyner"
-          ]
+          "@type": "Person",
+          "name": "Jake Joyner"
         },
         {
-          "@type": "WebSite",
-          "@id": "https://ailedger.dev/#website",
-          "name": "AILedger",
-          "alternateName": "AI Ledger",
-          "url": "https://ailedger.dev/",
-          "inLanguage": "en",
-          "publisher": {"@id": "https://ailedger.dev/#organization"},
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": {
-              "@type": "EntryPoint",
-              "urlTemplate": "https://ailedger.dev/?q={search_term_string}"
-            },
-            "query-input": "required name=search_term_string"
-          }
+          "@type": "Person",
+          "name": "Stanley Bishop"
         }
+      ],
+      "foundingDate": "2026-04",
+      "sameAs": [
+        "https://github.com/ailedger-dev/ailedger",
+        "https://www.linkedin.com/company/ailedger"
       ]
-    }
-    </script>
-
-    <!-- Structured data -->
-    <script type="application/ld+json">
+    },
     {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
+      "@type": "WebSite",
+      "@id": "https://ailedger.dev/#website",
       "name": "AILedger",
-      "url": "https://ailedger.dev",
-      "description": "AI inference logging infrastructure for EU AI Act Article 12 compliance. Immutable, tamper-evident audit records with drop-in integration in under 60 seconds.",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD",
-        "description": "Free plan available"
-      },
+      "url": "https://ailedger.dev/",
+      "inLanguage": "en",
       "publisher": {
-        "@type": "Organization",
-        "name": "AILedger",
-        "url": "https://ailedger.dev"
+        "@id": "https://ailedger.dev/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "Consilium",
+      "url": "https://ailedger.dev/",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Self-hosted (VPC or on-premises)",
+      "description": "Federated context layer for AI agents in medical research. Deployed inside the institution; PHI does not egress; every agent decision is written to an append-only, independently verifiable record.",
+      "publisher": {
+        "@id": "https://ailedger.dev/#organization"
       }
     }
-    </script>
+  ]
+}</script>
+    <style>
+:root{
+  --bg:#FBFAF7; --bg-2:#F3F1EC; --bg-3:#EBE8E1; --surface:#FFFFFF;
+  --ink:#14181E; --ink-2:#454E5B; --ink-3:#6E7683; --ink-4:#8D95A1;
+  --line:rgba(20,24,30,.11); --line-2:rgba(20,24,30,.19);
+  --cobalt:#0B4FD6; --cobalt-2:#0A44B8; --wash:rgba(11,79,214,.055);
+  --amber:#8A5D04; --rust:#A8431C; --sage:#2C7A4F;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --display:'Archivo','IBM Plex Sans',system-ui,sans-serif;
+  --serif:'IBM Plex Serif',Georgia,serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --wrap:1080px; color-scheme:only light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:74px}
+body{background:var(--bg);color:var(--ink-2);font-family:var(--sans);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%} a{color:inherit}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 28px}
+.band{padding:86px 0;border-top:1px solid var(--line)}
+.band-raised{background:var(--bg-2)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-4);margin-bottom:14px}
+h1,h2,h3{color:var(--ink);letter-spacing:-.022em;text-wrap:balance;font-weight:600}
+h1,h2{color:var(--ink);text-wrap:balance}
+h1{font-size:clamp(31px,4vw,48px);line-height:1.1}
+h2{font-size:clamp(23px,2.6vw,33px);line-height:1.16;margin-bottom:16px}
+h3{font-size:17px;line-height:1.35;margin-bottom:7px}
+.lede{font-size:clamp(16px,1.4vw,18px);line-height:1.62;color:var(--ink-2);max-width:64ch}
+.lede + .lede{margin-top:15px}
+p{max-width:68ch}
+.cobalt{color:var(--cobalt)}
 
-    <!-- FAQ structured data for rich snippets -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "What is the EU AI Act Article 12?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Article 12 of the EU AI Act (Regulation 2024/1689) requires operators of high-risk AI systems to maintain automatic logging of events throughout the system's lifetime. These logs must be tamper-evident and sufficient to enable post-hoc auditing. AILedger is purpose-built to give you the audit trail Article 12 calls for."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Does AILedger store my prompts or AI outputs?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No. AILedger never stores raw inputs or outputs. It stores only SHA-256 cryptographic hashes - one-way fingerprints that prove a specific exchange occurred without retaining any content."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How long does integration take?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "For OpenAI, Anthropic, Gemini, or any OpenAI-compatible API, integration means pointing your client at our proxy and adding our API key as a header. Most teams are logging within 60 seconds of creating an account."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Where is data stored?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "All data is stored in the EU, namely AWS eu-central-1 (Frankfurt, Germany) via Supabase. This applies to all plans, free and paid. No data ever leaves the EU."
-          }
-        }
-      ]
-    }
-    </script>
+.brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;flex:none}
+
+.wordmark{display:inline-flex;align-items:baseline;gap:9px;white-space:nowrap}
+.wordmark .wm{font-family:var(--display);font-weight:800;font-variation-settings:'wdth' 118;font-size:21px;letter-spacing:-.02em;color:var(--ink);line-height:1}
+.wordmark .wm b{color:var(--cobalt);font-weight:800}
+.wordmark .head{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--cobalt);min-width:5ch}
+.wordmark .by{font-family:var(--sans);font-size:12px;color:var(--ink-4);margin-left:4px}
+@media(max-width:700px){.wordmark .by{display:none}}
+.wordmark .head.tick{animation:tick .5s ease}
+@keyframes tick{from{opacity:.2;transform:translateY(3px)}to{opacity:1;transform:none}}
+.nav{position:sticky;top:31px;z-index:70;background:rgba(251,250,247,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav-in{max-width:var(--wrap);margin:0 auto;padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.nav-links{display:flex;align-items:center;gap:22px}
+.nav-links a{color:var(--ink-3);text-decoration:none;font-size:14px;font-weight:500;transition:color .16s}
+.nav-links a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;padding:10px 20px;border-radius:8px;font-size:14.5px;font-weight:600;text-decoration:none;border:1px solid transparent;transition:background .18s,border-color .18s,transform .18s}
+.btn-primary{background:var(--cobalt);color:#fff;-webkit-text-fill-color:#fff}
+.btn-primary:hover{background:var(--cobalt-2);color:#fff;-webkit-text-fill-color:#fff;transform:translateY(-1px)}
+.btn-ghost{border-color:var(--line-2);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--cobalt);color:var(--cobalt)}
+.btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+
+.hero{position:relative;padding:74px 0 62px;overflow:hidden}
+.hero-glow{position:absolute;left:50%;top:38%;width:1150px;height:1150px;transform:translate(-50%,-50%);pointer-events:none;
+  background:radial-gradient(circle,rgba(11,79,214,.05) 0%,rgba(11,79,214,.015) 42%,transparent 68%);animation:drift 24s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(-52%,-52%) scale(1)}to{transform:translate(-48%,-46%) scale(1.08)}}
+.hero-in{position:relative}
+.hero .lede{margin-top:20px}
+
+/* ── live network + record stream ───────────────────── */
+.net-wrap{position:relative;margin-top:40px;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden;box-shadow:0 1px 3px rgba(20,24,30,.05)}
+.net-cv{display:block;width:100%;height:220px}
+.net-tag{position:absolute;top:14px;left:20px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4)}
+.net-hud{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line);background:var(--bg-2);font-family:var(--mono);font-size:11.5px;letter-spacing:.05em}
+.net-hud .k{color:var(--ink-4);text-transform:uppercase;letter-spacing:.11em;font-size:10px;display:block;margin-bottom:3px}
+.net-hud .v{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+.net-hud .v.zero{color:var(--amber)}
+.stream{position:relative;border-top:1px solid var(--line);height:150px;overflow:hidden;font-family:var(--mono);font-size:12.5px}
+.sr{position:absolute;left:20px;right:20px;top:0;height:25px;display:flex;align-items:stretch;gap:16px;white-space:nowrap;
+  transition:transform .44s cubic-bezier(.22,.61,.36,1),opacity .44s ease}
+.sr>span{display:block;height:25px;line-height:25px}
+.sr .e{flex:0 0 150px;color:var(--cobalt);overflow:hidden;text-overflow:ellipsis}
+.sr .d{flex:1 1 auto;min-width:0;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis}
+.sr .h{flex:0 0 auto;margin-left:auto;color:var(--ink-4);font-size:11.5px;font-variant-numeric:tabular-nums}
+.sr .h.hfin{color:var(--sage)}
+.sr.zero .d{color:var(--ink);font-weight:500} .sr.zero .h{color:var(--amber);font-weight:600}
+
+.wall{border-top:1px solid var(--line);background:var(--bg-2);padding:26px 0}
+.wall-cap{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4);margin:0 0 16px}
+.wall-vp{overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.wall-track{display:flex;width:max-content;align-items:center;animation:marquee 46s linear infinite}
+.wall-vp:hover .wall-track{animation-play-state:paused}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.wl{display:flex;align-items:center;gap:10px;height:44px;padding:0 34px;border-right:1px solid var(--line);flex:none;
+  filter:grayscale(1);opacity:.72;transition:opacity .25s,filter .25s}
+.wl:hover{filter:none;opacity:1}
+.wl img{height:26px;width:auto;display:block;mix-blend-mode:multiply}
+.wl img.ico{height:30px}
+.wl .nm{font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:-.01em;color:var(--ink);white-space:nowrap}
+@media(prefers-reduced-motion:reduce){.wall-track{animation:none}}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.g4{grid-template-columns:1fr}}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.card{border:1px solid var(--line);border-radius:9px;padding:20px;background:var(--surface);transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:var(--line-2);box-shadow:0 2px 8px rgba(20,24,30,.06)}
+.card .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cobalt);margin-bottom:9px}
+.card p{font-size:14.5px;line-height:1.6;color:var(--ink-2)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
+.tile{border:1px solid var(--line);border-radius:10px;padding:22px 20px;background:var(--surface);transition:border-color .2s,box-shadow .2s,transform .2s}
+.tile:hover{border-color:var(--line-2);box-shadow:0 3px 12px rgba(20,24,30,.07);transform:translateY(-2px)}
+.tile h3{font-size:16.5px;margin-bottom:8px}
+.tile p{font-size:14px;color:var(--ink-2);line-height:1.58;max-width:none}
+.tile .ico{width:26px;height:26px;border-radius:7px;background:var(--wash);border:1px solid rgba(11,79,214,.22);display:grid;place-items:center;margin-bottom:14px}
+.tile .ico::after{content:'';width:9px;height:9px;border-radius:2px;background:var(--cobalt);transform:rotate(45deg)}
+.tile .st{margin-top:13px;padding-top:10px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-4)}
+.uc{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:28px}
+.uc-i{background:var(--surface);padding:22px 20px;transition:background .2s}
+.uc-i:hover{background:var(--bg-2)}
+.uc-i b{display:block;font-size:15.5px;color:var(--ink);margin-bottom:6px;font-weight:600;letter-spacing:-.012em}
+.uc-i p{font-size:13.5px;color:var(--ink-2);line-height:1.55;max-width:none}
+.res{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:26px}
+.res a{display:block;border:1px solid var(--line);border-radius:10px;padding:18px;text-decoration:none;background:var(--surface);transition:border-color .2s,box-shadow .2s}
+.res a:hover{border-color:var(--cobalt);box-shadow:0 3px 12px rgba(11,79,214,.09)}
+.res .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);display:block;margin-bottom:9px}
+.res b{display:block;font-size:15px;color:var(--ink);margin-bottom:5px}
+.res span.d{font-size:13px;color:var(--ink-2);line-height:1.5;display:block}
+
+.dl{border-top:1px solid var(--line)}
+.dl-row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:14px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.dl-row dt{font-family:var(--mono);font-size:12.5px;color:var(--cobalt)}
+.dl-row dd{font-size:14.5px;color:var(--ink-2);line-height:1.55;margin:0}
+.dl-row dd b{color:var(--ink);font-weight:600}
+.src{display:block;margin-top:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--ink-4);line-height:1.5}
+.dl-head{padding:0 0 10px}
+.dl-head dt,.dl-head dd{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-4);font-weight:500}
+.dl-head dd{color:var(--ink-4)}
+.dl-cmp .dl-row:not(.dl-head) dd:last-child{color:var(--ink)}
+.fig{display:grid;grid-template-columns:132px minmax(0,1fr);gap:22px;padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.fig .n{font-size:clamp(24px,2.6vw,32px);font-weight:600;color:var(--ink);letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.fig .b{font-size:14.5px;color:var(--ink-2);line-height:1.55}
+.fig .b b{color:var(--ink);font-weight:600}
+
+/* the recorded object stays dark — it is the artifact, not the page */
+.rec{background:#14181E;color:#E9EDF3;border-radius:9px;padding:17px 19px;font-family:var(--mono);box-shadow:0 6px 20px rgba(20,24,30,.16)}
+.rec .k{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#7FA9FF;margin-bottom:9px}
+.rec .ln{font-size:12.5px;line-height:1.75;color:#E9EDF3;display:block}
+.rec .ln span{color:#8D95A1;display:inline-block;min-width:94px}
+
+.bd{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;margin-top:26px}
+.bd-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 20px;border-bottom:1px solid var(--line);background:var(--bg-2);flex-wrap:wrap}
+.bd-done{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--sage)}
+.bd-done::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--sage);box-shadow:0 0 0 3px rgba(44,122,79,.16)}
+.trace{padding:14px 20px 16px;font-family:var(--mono);font-size:12.5px;overflow-x:auto}
+.tr{display:grid;grid-template-columns:74px 168px minmax(0,1fr) 92px;gap:16px;padding:4px 0;align-items:baseline;white-space:nowrap}
+.tr .t{color:var(--ink-4)}
+.tr .e{color:var(--cobalt)}
+.tr .d{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis}
+.tr .m{color:var(--ink-4);text-align:right}
+.tr .m.ok{color:var(--sage)}
+.tr.sum{grid-template-columns:74px minmax(0,1fr);margin-top:8px;padding-top:10px;border-top:1px dashed var(--line-2)}
+.tr.sum .d{color:var(--ink);font-weight:500}
+.tr.sum .d b{color:var(--amber);font-weight:600}
+@media(max-width:900px){.tr{grid-template-columns:70px minmax(0,1fr);gap:2px 12px}.tr .d,.tr .m{grid-column:2}.tr .m{text-align:left}}
+.map{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;margin-top:28px}
+.map-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.map-body{padding:16px 20px 20px}
+.bd-cap{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-4)}
+.replay{background:none;border:1px solid var(--line-2);color:var(--ink-3);font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:6px;cursor:pointer;transition:color .16s,border-color .16s}
+.replay:hover{color:var(--cobalt);border-color:var(--cobalt)}
+.qd{position:relative;background:var(--bg-2)}
+.qd svg{display:block;width:100%;height:auto;padding:4px 0 0}
+.qd .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;fill:var(--ink-4)}
+.qd .nmt{font-family:var(--sans);font-size:12.5px;font-weight:600;fill:var(--ink)}
+.qd .cnt{font-family:var(--mono);font-size:16px;font-weight:600;fill:var(--cobalt);opacity:0;transition:opacity .35s}
+.qd .cnt.on{opacity:1} .qd .cnt.nil{fill:var(--amber)}
+.qd .nbox{fill:#fff;stroke:var(--line-2);stroke-width:1;transition:fill .35s,stroke .35s}
+.qd .nbox.hot{fill:rgba(11,79,214,.09);stroke:var(--cobalt)}
+.qd .nbox.src{fill:rgba(168,67,28,.09);stroke:var(--rust)}
+.qd .nbox.nil{fill:rgba(138,93,4,.09);stroke:var(--amber)}
+.qd .edge{fill:none;stroke:var(--line-2);stroke-width:1.2}
+.qd .pulse{fill:var(--cobalt)}
+.map-q{margin-top:0;padding-top:14px;border-top:1px dashed var(--line-2);font-family:var(--mono);font-size:12.5px;line-height:1.9}
+.map-q div{opacity:.38;color:var(--ink-4);transition:opacity .45s ease,color .45s ease}
+.map-q div.on{opacity:1;color:var(--ink-2)}
+.map-q .lbl{color:inherit;opacity:.72;display:inline-block;min-width:106px}
+.map-q .zero{color:var(--amber);font-weight:600}
+
+.wk{display:grid;grid-template-columns:repeat(4,1fr);margin-top:26px}
+.wk div{padding:16px 16px 16px 0;border-top:2px solid var(--cobalt);position:relative}
+.wk div::before{content:'';position:absolute;top:-6px;left:0;width:10px;height:10px;border-radius:50%;background:var(--cobalt)}
+.wk .w{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cobalt);margin-bottom:6px}
+.wk b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:4px}
+.wk p{font-size:13px;color:var(--ink-2);line-height:1.5}
+
+details{border-top:1px solid var(--line)}
+details:last-of-type{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;list-style:none;padding:17px 34px 17px 0;font-size:16px;font-weight:600;color:var(--ink);position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'+';position:absolute;right:6px;top:15px;font-family:var(--mono);font-size:19px;color:var(--cobalt);transition:transform .2s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{padding:0 34px 18px 0;font-size:14.5px;color:var(--ink-2);line-height:1.62;max-width:76ch}
+
+.ft{border-top:1px solid var(--line);background:var(--bg-2);padding:48px 0 36px}
+.ft-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:30px}
+.ft h4{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-4);margin-bottom:12px;font-weight:500}
+.ft a{display:block;color:var(--ink-3);text-decoration:none;font-size:13.5px;padding:5px 0}
+.ft a:hover{color:var(--ink)}
+.ft-bot{margin-top:36px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--ink-4)}
+:focus-visible{outline:2px solid var(--cobalt);outline-offset:3px;border-radius:3px}
+
+@media(max-width:900px){
+  .band{padding:58px 0}
+  .split,.g2,.g3,.tiles,.uc,.res,.wk,.ft-grid{grid-template-columns:1fr;gap:16px}
+  .dl-row,.fig{grid-template-columns:1fr;gap:4px}
+  .nav-links a:not(.btn){display:none}
+  .sr .d{display:none}
+}
+@media(prefers-reduced-motion:reduce){.hero-glow{animation:none}.sr{transition:none}}
+</style>
   </head>
   <body>
-    <div id="root">
-      <!-- SSR fallback for crawlers -->
-      <noscript>
-        <h1>AILedger | EU AI Act Compliance Infrastructure</h1>
-        <p>AILedger logs every AI inference as an immutable, tamper-evident audit record. 60-second drop-in integration for OpenAI, Anthropic, and Google Gemini. Built for EU AI Act Article 12 audit logging. GDPR compatible. Free to start.</p>
-        <a href="https://dash.ailedger.dev">Get started</a>
-        <a href="https://ailedger.dev/docs">Documentation</a>
-      </noscript>
+    <!-- Static landing (2026-09-04). src/ (legacy React landing) is retained only as tsc/eslint input; nothing mounts it. -->
+    <noscript><h1>AILedger — Consilium, the federated context layer for AI agents in medical research</h1><p>AILedger builds Consilium: agents run inside an institution's own environment, query peer institutions without moving records, and write every decision to an append-only record that verifies offline.</p><a href="mailto:jake@ailedger.dev">Contact</a></noscript>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top" aria-label="AILedger"><span class="wordmark"><span class="wm"><b>AI</b>LEDGER</span><span class="head" id="wmHead" title="chain head">#····</span></span></a>
+    <div class="nav-links">
+      <a href="#capabilities">Capabilities</a>
+      <a href="#use-cases">Use cases</a>
+      <a href="#why-now">Why now</a>
+      <a href="#network">Network</a>
+      <a href="#access">Access</a>
+      <a href="#partners">Design partners</a>
+      <a class="btn btn-primary" href="mailto:jake@ailedger.dev">Contact</a>
     </div>
-    <script type="module" src="/src/main.tsx"></script>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="wrap hero-in">
+    <p class="eyebrow">AILedger, PBC · Product</p>
+    <h1>Consilium: the federated context layer for AI agents in medical research.</h1>
+    <p class="lede">Agents run inside the institution's own environment; clinical and genomic data never leaves. Every decision — conclusion, evidence, rejected alternatives, who signed off — is written to an append-only chain that verifies offline.</p>
+    <p class="lede">The same record lets one institution's agents query another's context without moving a patient record, and attributes every contribution — so shared context is credited and compensated, not given away.</p>
+    <div class="net-wrap">
+      <span class="net-tag">Federated queries · illustrative</span>
+      <canvas class="net-cv" id="netcv" role="img" aria-label="A network of institutional nodes exchanging queries. Questions and answers travel between nodes continuously while the count of patient records moved remains zero."></canvas>
+      <div class="stream" id="stream" aria-live="off"></div>
+      <div class="net-hud">
+        <span><span class="k">queries answered</span><span class="v" id="cAns">1,247</span></span>
+        <span><span class="k">abstentions recorded</span><span class="v" id="cAbs">38</span></span>
+        <span><span class="k">context shared</span><span class="v">cohorts · phenotypes · pathways</span></span>
+        <span><span class="k">patient records moved</span><span class="v zero">0</span></span>
+      </div>
+    </div>
+    <div class="btns">
+      <a class="btn btn-primary" href="#partners">Become a design partner</a>
+      <a class="btn btn-ghost" href="#capabilities">See capabilities</a>
+    </div>
+  </div>
+</header>
+
+<section class="band" id="capabilities">
+  <div class="wrap">
+    <p class="eyebrow">Capabilities</p>
+    <h2>What Consilium provides</h2>
+    <div class="tiles">
+      <div class="tile"><span class="ico"></span><h3>In-environment execution</h3><p>Agents run in the institution's VPC or on-premises. Clinical and genomic data stays inside the network boundary; no PHI egresses at any point.</p><p class="st">deployed in your infrastructure</p></div>
+      <div class="tile"><span class="ico"></span><h3>Decision recording</h3><p>Every agent action is written to an append-only log: the conclusion, the evidence used, the alternatives rejected, and the reviewer who signed off.</p><p class="st">append-only · sha-256 chained</p></div>
+      <div class="tile"><span class="ico"></span><h3>Independent verification</h3><p>The chain verifies offline on the institution's own hardware, with no call to our servers. Canonicalization follows RFC 8785 in two byte-exact implementations.</p><p class="st">rfc 8785 · open source</p></div>
+      <div class="tile"><span class="ico"></span><h3>Scoped context retrieval</h3><p>Institutional knowledge is structured on the open aDNA standard, so an agent loads the relevant subgraph instead of a corpus. Fewer tokens per query, and the right ones.</p><p class="st">adna · mit licensed</p></div>
+      <div class="tile"><span class="ico"></span><h3>Calibrated abstention</h3><p>Where evidence is insufficient the system declines to answer and names what is missing. Abstentions are recorded alongside results and can be measured.</p><p class="st">recorded, not suppressed</p></div>
+      <div class="tile"><span class="ico"></span><h3>Federated dispatch</h3><p>Workloads reach external HPC or cloud GPUs, and questions reach peer institutions. A specification or query crosses; records do not.</p><p class="st">optional · off by default</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="use-cases">
+  <div class="wrap">
+    <p class="eyebrow">Use cases</p>
+    <h2>What researchers do with it</h2>
+    <div class="uc">
+      <div class="uc-i"><b>Score a gene's variants</b><p>Run protein language models across every variant in a gene, cross-referenced to ClinVar, gnomAD and the literature, returning a ranked list with the evidence behind each call. Benchmarked at 14,298 classified variants across 156 genes in 431 s, median AUC 0.938.</p></div>
+      <div class="uc-i"><b>Find patients no code captures</b><p>Identify candidates from unstructured record text, including undiagnosed patients who carry no diagnostic code and do not appear in code-based queries.</p></div>
+      <div class="uc-i"><b>Assemble an evidence package</b><p>Gather what is known about a target, variant or care pathway across scattered sources, each assertion carrying the document and sentence it came from.</p></div>
+      <div class="uc-i"><b>Reach a supercomputer</b><p>Dispatch molecular simulation or large-scale scoring to an HPC allocation while patient data remains behind the institutional firewall.</p></div>
+      <div class="uc-i"><b>Ask a peer institution</b><p>Put a cohort or phenotype question to another node and receive counts and summaries — or a recorded abstention where coverage is absent.</p></div>
+      <div class="uc-i"><b>Answer a review board</b><p>Produce the decision history for any result: what ran, what it concluded, what it rejected, who reviewed it, and proof the record was not altered.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="why-now">
+  <div class="wrap">
+    <p class="eyebrow">Why now</p>
+    <h2>Who holds the record of what AI decided in medicine is being settled in the next two years.</h2>
+    <p class="lede">Every AI decision in medicine will be logged somewhere. The question is whose log: a cloud provider's, rented and editable — or the institution's own, append-only, verifiable offline and readable by a peer. The first deployments decide, and they are happening now.</p>
+    <div class="grid g4" style="margin-top:30px">
+      <div class="tile">
+        <h3>Agents can read a local schema</h3>
+        <p>A frontier model answers a semantic question against an unmapped local schema. Mapping to OMOP, i2b2 or PCORnet before the first query — what stalled federated networks for a decade — becomes a query-time step. Feasible since 2025.</p>
+        <p class="st">Our thesis · stated as such</p>
+      </div>
+      <div class="tile">
+        <h3>Record-keeping became a legal duty</h3>
+        <p>The EU AI Act requires automatic logging for high-risk AI systems, phasing in from 2026, medical devices following. A record no vendor can quietly edit becomes the requirement.</p>
+        <p class="st">Regulation (EU) 2024/1689 · Article 12</p>
+      </div>
+      <div class="tile">
+        <h3>The buyer named the bottleneck</h3>
+        <p>In February 2026 the World Economic Forum's <em>Making Rare Diseases Count</em> named federated data sharing across health systems a priority strategy for a $7.2–8.6 trillion-a-year problem.</p>
+        <p class="st">WEF · February 2026</p>
+      </div>
+      <div class="tile">
+        <h3>Biology is computable. Care is not.</h3>
+        <p>Mondo, HPO and Monarch made rare-disease biology computable. Nothing equivalent exists for care — what to do, where, with which resources. The layer is unbuilt.</p>
+        <p class="st">Mondo · HPO · Monarch</p>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:28px">An institution cannot own its record if a vendor owns the format. So the format is open — published schema, RFC 8785, MIT verifier — and we sell the deployment and the network.</p>
+  </div>
+</section>
+
+<section class="band" id="network">
+  <div class="wrap">
+    <p class="eyebrow">The network</p>
+    <h2>Institutions can query each other without moving records.</h2>
+    <p class="lede">Rare-disease knowledge sits in institutions that cannot exchange records. A verifiable record on both ends lets a question travel where data cannot: one node asks, nodes that can answer return counts and summaries, nodes that cannot record an abstention. Only the question and the answer cross.</p>
+    <div class="map">
+      <div class="map-head"><span class="bd-cap">Cross-institution query · illustrative</span><button class="replay" id="mapReplay" type="button">replay</button></div>
+      <div class="qd" id="qd">
+        <svg viewBox="0 0 900 300" preserveAspectRatio="xMidYMid meet">
+          <path id="qp1" class="edge" d="M290 150 C 380 90, 470 60, 620 66"/>
+          <path id="qp2" class="edge" d="M290 150 C 400 150, 470 150, 620 150"/>
+          <path id="qp3" class="edge" d="M290 150 C 380 210, 470 240, 620 234"/>
+          <g><rect id="qb0" class="nbox" x="40" y="112" width="250" height="76" rx="10"/>
+             <text class="lbl" x="58" y="136">node · perth</text>
+             <text class="nmt" x="58" y="158">Rare care centre</text>
+             <text class="lbl" x="58" y="176">care pathways · phenotypes</text></g>
+          <g><rect id="qb1" class="nbox" x="620" y="28" width="228" height="76" rx="10"/>
+             <text class="lbl" x="638" y="52">peer B</text>
+             <text class="nmt" x="638" y="74">Medical school</text>
+             <text class="lbl" x="638" y="92">genomics · cohorts</text>
+             <text id="qc1" class="cnt" x="830" y="76" text-anchor="end">7</text></g>
+          <g><rect id="qb2" class="nbox" x="620" y="112" width="228" height="76" rx="10"/>
+             <text class="lbl" x="638" y="136">node · singapore</text>
+             <text class="nmt" x="638" y="158">Health system</text>
+             <text class="lbl" x="638" y="176">undiagnosed programme</text>
+             <text id="qc2" class="cnt" x="830" y="160" text-anchor="end">3</text></g>
+          <g><rect id="qb3" class="nbox" x="620" y="196" width="228" height="76" rx="10"/>
+             <text class="lbl" x="638" y="220">peer D</text>
+             <text class="nmt" x="638" y="242">HPC centre</text>
+             <text class="lbl" x="638" y="260">compute · protocols</text>
+             <text id="qc3" class="cnt nil" x="830" y="243" text-anchor="end" style="font-size:13px">abstained</text></g>
+          <circle id="qd1" class="pulse" r="4.5" cx="290" cy="150" style="opacity:0"/>
+          <circle id="qd2" class="pulse" r="4.5" cx="290" cy="150" style="opacity:0"/>
+          <circle id="qd3" class="pulse" r="4.5" cx="290" cy="150" style="opacity:0"/>
+        </svg>
+      </div>
+      <div class="map-body" style="padding-top:0">
+        <div class="map-q" id="mapQ" style="border-top:none;margin-top:0">
+          <div><span class="lbl">query</span>agent@node-a — has anyone seen this variant with this phenotype?</div>
+          <div><span class="lbl">answered</span>Node B <b>7</b> · Node C <b>3</b></div>
+          <div><span class="lbl">abstained</span>Node D — no coverage, recorded as an answer</div>
+          <div><span class="lbl">returned</span>counts, phenotype summaries, a contact route for follow-up</div>
+          <div><span class="lbl">moved</span><span class="zero">0 patient records</span> · every step recorded and attributed</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid g3" style="margin-top:22px">
+      <div class="card"><p class="k">Context, not data</p><p>What crosses is a question and a provenance-carrying answer. Records stay where they are, under the governance they are already under.</p></div>
+      <div class="card"><p class="k">Abstention is an answer</p><p>A node with no coverage says so, and that is recorded. Silence becomes data — it marks where the gaps are.</p></div>
+      <div class="card"><p class="k">Attribution is built in</p><p>The record states which institution contributed what to which result. Credit for contributed context is computable rather than negotiated.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="access">
+  <div class="wrap">
+    <p class="eyebrow">Access</p>
+    <h2>If a question travels instead of data, joining costs almost nothing.</h2>
+    <p class="lede">Federated networks have been limited to institutions that could afford to join: data engineering, common-model mapping, legal work to move records.</p>
+    <p class="lede">Here a participant asks without contributing a dataset, building a pipeline or transferring anything. A regional clinic, a remote hub, a patient organisation or a low-resource health system can join on the asking side alone.</p>
+    <div class="grid g3" style="margin-top:30px">
+      <div class="card">
+        <p class="k">Access is a policy setting</p>
+        <p>Participation is configured, not integrated. Pro-bono or humanitarian access is a change to a participant's authorization scope, not a separate product or contract.</p>
+      </div>
+      <div class="card">
+        <p class="k">Answers carry their assumptions</p>
+        <p>Guidance records the resource tier and jurisdiction it was written under, and what substitutes when a recommended service is out of reach. A tertiary-centre answer is not handed unqualified to a remote clinic.</p>
+      </div>
+      <div class="card">
+        <p class="k">Asking and contributing are separate</p>
+        <p>A participant that only asks still gets answers. One that contributes context is attributed for it. Neither requires the other.</p>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:26px">This is why the company is a public benefit corporation: cheap to answer and cheap to join is what makes pro-bono access practical, and the mission is in the charter so it survives commercial pressure.</p>
+  </div>
+</section>
+
+<section class="band band-raised" id="partners">
+  <div class="wrap">
+    <p class="eyebrow">Founding cohort</p>
+    <h2>The first institutions set the rules the network runs on.</h2>
+    <p class="lede">The network is being assembled now and little about it is fixed: the context schema, the query semantics, the governance model, what an agent may ask of another institution. The first institutions decide these with us, in the deployment — they are the Consilium network.</p>
+    <p class="lede">A partnership begins as a single-institution deployment that stands on its own. Cross-institution querying switches on separately, on the institution's terms, with peers it selects.</p>
+    <div class="split" style="margin-top:30px">
+      <div>
+        <h3>What a design partner receives</h3>
+        <dl class="dl" style="margin-top:14px">
+          <div class="dl-row"><dt>the deployment</dt><dd>The stack in your environment, with a forward-deployed engineer assigned for the full twelve weeks — on the calls, in the environment, writing the integration.</dd></div>
+          <div class="dl-row"><dt>influence</dt><dd>Direct input on the context schema and cross-institution governance model, before either is fixed.</dd></div>
+          <div class="dl-row"><dt>first access</dt><dd>Peer querying as it comes online, with nodes you select.</dd></div>
+          <div class="dl-row"><dt>authorship</dt><dd>Named on the published method and evaluation work, on terms agreed with your faculty.</dd></div>
+          <div class="dl-row"><dt>terms</dt><dd>Founding-cohort pricing, held through the first renewal. Discussed on the first call.</dd></div>
+        </dl>
+      </div>
+      <div>
+        <h3>What a partnership requires</h3>
+        <dl class="dl" style="margin-top:14px">
+          <div class="dl-row"><dt>a sponsor</dt><dd>A department chair or research-computing lead.</dd></div>
+          <div class="dl-row"><dt>a live question</dt><dd>One research question currently unanswered, rather than a synthetic pilot task.</dd></div>
+          <div class="dl-row"><dt>an environment</dt><dd>A deployment target and the information-security contact who owns it.</dd></div>
+          <div class="dl-row"><dt>clinical review</dt><dd>Clinicians who will adjudicate outputs and record where they are wrong.</dd></div>
+          <div class="dl-row"><dt>not required</dt><dd>EHR changes, data migration, or a new committee.</dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="wk">
+      <div><p class="w">Weeks 1–2</p><b>Scope and review</b><p>Use case chosen with faculty. Security package to the InfoSec team. Data flows agreed in writing.</p></div>
+      <div><p class="w">Weeks 3–5</p><b>Deploy</b><p>The forward-deployed engineer stands it up, wires SSO, connects the data the use case needs.</p></div>
+      <div><p class="w">Weeks 6–10</p><b>Run</b><p>Researchers use it on live questions. Weekly sessions shape the schema. The record accumulates from the first run.</p></div>
+      <div><p class="w">Weeks 11–12</p><b>Review</b><p>Findings, cost, compliance assessment, and what changed in the design as a result.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="stack">
+  <div class="wrap">
+    <p class="eyebrow">Adjacent systems</p>
+    <h2>How this differs from systems it is often compared to</h2>
+    <p class="lede">Complementary, not competing: what each system does, and what Consilium adds.</p>
+    <dl class="dl dl-cmp" style="margin-top:26px">
+      <div class="dl-row dl-head" style="grid-template-columns:210px 1fr 1fr">
+        <dt>System</dt><dd>What it does</dd><dd>What Consilium adds</dd>
+      </div>
+      <div class="dl-row" style="grid-template-columns:210px 1fr 1fr">
+        <dt>Bedrock · Azure OpenAI · Vertex</dt>
+        <dd>HIPAA-eligible model inference within an existing compliance boundary, under a BAA.</dd>
+        <dd>Provides inference, not application logic or a decision record. Consilium runs on these providers under the institution's own account.</dd>
+      </div>
+      <div class="dl-row" style="grid-template-columns:210px 1fr 1fr">
+        <dt>CloudTrail · SIEM · access logs</dt>
+        <dd>Record that an API was called, by which principal, at what time.</dd>
+        <dd>Do not record the conclusion reached, the evidence used, the alternatives rejected, or the reviewer. Different object, different altitude.</dd>
+      </div>
+      <div class="dl-row" style="grid-template-columns:210px 1fr 1fr">
+        <dt>Federated research data networks</dt>
+        <dd>Retrospective cohort counts and feasibility across structured, coded records. TriNetX reports 200+ healthcare organisations and 300M+ patients.</dd>
+        <dd>Rare conditions frequently lack a unique ICD-10 code, and undiagnosed patients have none.<span class="src">trinetx.com/data · PMC10904843 · PMC12282508</span></dd>
+      </div>
+      <div class="dl-row" style="grid-template-columns:210px 1fr 1fr">
+        <dt>In-house builds</dt>
+        <dd>Feasible for a single institution. The record layer has the least tolerance for error: canonicalization, chain construction, independent verification.</dd>
+        <dd>Our record layer is open source and can be adopted directly. A single-institution build does not produce a node other institutions can query.</dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<section class="band" id="deploy">
+  <div class="wrap">
+    <p class="eyebrow">Deployment and the record</p>
+    <h2>Where it runs and what it writes down</h2>
+    <div class="bd" style="margin-top:26px">
+      <div class="bd-head">
+        <span class="bd-cap">Example execution trace · variant scan reaching external compute</span>
+        <span class="bd-done">completed</span>
+      </div>
+      <div class="trace" role="img" aria-label="An execution trace: a researcher signs in, submits a variant scan of 1,284 variants, a policy check confirms no PHI may egress, a specification is dispatched to external compute, the job runs four minutes, de-identified results return, the chain verifies intact, and zero patient records left the institution.">
+        <div class="tr"><span class="t">14:02:11</span><span class="e">auth.ok</span><span class="d">SSO · researcher@institution</span><span class="m">saml</span></div>
+        <div class="tr"><span class="t">14:02:11</span><span class="e">workload.submitted</span><span class="d">variant-scan · RYR1 · n=1,284</span><span class="m">local</span></div>
+        <div class="tr"><span class="t">14:02:12</span><span class="e">policy.check</span><span class="d">egress=deny · phi=local-only</span><span class="m ok">pass</span></div>
+        <div class="tr"><span class="t">14:02:12</span><span class="e">context.scoped</span><span class="d">aDNA subgraph · 3 of 412 nodes loaded</span><span class="m">tokens 6.1k</span></div>
+        <div class="tr"><span class="t">14:02:13</span><span class="e">spec.dispatched</span><span class="d">→ coordinating node · no record data</span><span class="m">c03d…ae55</span></div>
+        <div class="tr"><span class="t">14:02:19</span><span class="e">compute.scheduled</span><span class="d">3 nodes · 12 GPUs · queue 6s</span><span class="m">accepted</span></div>
+        <div class="tr"><span class="t">14:06:44</span><span class="e">compute.complete</span><span class="d">elapsed 4m 25s</span><span class="m ok">exit 0</span></div>
+        <div class="tr"><span class="t">14:06:45</span><span class="e">result.returned</span><span class="d">1,284 scored · 41 flagged for review</span><span class="m">77aa…d4e2</span></div>
+        <div class="tr"><span class="t">14:06:45</span><span class="e">chain.verified</span><span class="d">height 48,214 · links intact</span><span class="m ok">verified</span></div>
+        <div class="tr sum"><span class="t"></span><span class="e"></span><span class="d">patient records egressed <b>0</b></span></div>
+      </div>
+    </div>
+    <div class="split" style="margin-top:28px">
+      <div>
+        <dl class="dl">
+          <div class="dl-row"><dt>runs in</dt><dd><b>Your VPC, or on-premises.</b></dd></div>
+          <div class="dl-row"><dt>data egress</dt><dd><b>None.</b> No PHI leaves the network.</dd></div>
+          <div class="dl-row"><dt>models</dt><dd>Open-weight models on local hardware, or existing Bedrock / Azure OpenAI / Vertex accounts.</dd></div>
+          <div class="dl-row"><dt>context retrieval</dt><dd>aDNA-structured knowledge, so an agent loads the relevant subgraph rather than a corpus — fewer tokens per query, and inference spend goes to relevant context.</dd></div>
+          <div class="dl-row"><dt>identity</dt><dd>Your SSO / SAML and existing groups.</dd></div>
+          <div class="dl-row"><dt>storage</dt><dd>Your buckets, your encryption keys.</dd></div>
+          <div class="dl-row"><dt>security package</dt><dd>Architecture and data-flow diagrams, full source of the record layer, a written boundary statement, and residency, retention and deletion terms — at the first technical call.</dd></div>
+          <div class="dl-row"><dt>core licence</dt><dd>Open source. Readable and runnable by your engineers.</dd></div>
+        </dl>
+      </div>
+      <div>
+        <div class="rec">
+          <p class="k">agent.decision — recorded</p>
+          <span class="ln"><span>action</span>score variant · RYR1 c.14582G&gt;A</span>
+          <span class="ln"><span>evidence</span>ClinVar · gnomAD · 3 papers</span>
+          <span class="ln"><span>concluded</span>likely pathogenic · confidence 0.86</span>
+          <span class="ln"><span>rejected</span>benign — conflicts with 2 sources</span>
+          <span class="ln"><span>reviewed by</span>clinician · sign-off recorded</span>
+          <span class="ln"><span>sha256</span>9f2ac41e…77b0c41e</span>
+          <span class="ln"><span>prev</span>e1f4b83d…0977ae55</span>
+          <span class="ln" style="color:#8B3A1C"><span>phi stored</span>none</span>
+        </div>
+        <dl class="dl" style="margin-top:22px">
+          <div class="dl-row"><dt>stores</dt><dd>Fingerprints of inputs and outputs. Not the content.</dd></div>
+          <div class="dl-row"><dt>verification</dt><dd>Offline, on your hardware, with no call to our servers.</dd></div>
+          <div class="dl-row"><dt>export</dt><dd>Open format. The record leaves with you.</dd></div>
+          <div class="dl-row"><dt>canonicalization</dt><dd>RFC 8785 (JCS). Two independent implementations, byte-exact.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="faq">
+  <div class="wrap">
+    <p class="eyebrow">FAQ</p>
+    <h2>Questions</h2>
+    <div style="margin-top:22px">
+      <details open><summary>Does any patient data leave the environment?</summary><p>No. Models execute inside the institution's environment and PHI does not egress. When a workload reaches external compute or a peer asks a question, what crosses is a specification or query and a de-identified answer — each crossing written to the chain.</p></details>
+      <details><summary>We already have Bedrock or Azure OpenAI under a BAA. Why not just use that?</summary><p>Consilium runs on top of them. A hyperscaler provides model inference inside a compliance boundary; it does not provide variant interpretation, phenotype extraction, evidence synthesis or agent orchestration, and it does not record what an agent concluded, which evidence it used, what it rejected, or who signed off. Cloud audit logs record that an API was called, not what was decided.</p></details>
+      <details><summary>What does aDNA do about inference cost?</summary><p>aDNA is an MIT-licensed open standard for structuring knowledge so agents can navigate it. Rather than retrieving bulk documents into context, an agent resolves to a scoped subgraph — the nodes relevant to the question — so fewer tokens are spent per query and the tokens spent carry relevant context. The structure is open, so the institution can inspect and extend it.</p></details>
+      <details><summary>Could a platform team build this in-house?</summary><p>The single-institution version is a feasible build — on the order of six to twelve months for a small team, plus maintenance. The record is the component with the least tolerance for error, since canonicalization, chain construction and independent verification are what a review board examines most closely. The record layer is open source and can be adopted directly. A single-institution build does not produce a node other institutions can query.</p></details>
+      <details><summary>What does joining the network commit an institution to?</summary><p>Nothing beyond what is agreed in writing, per query type. The institution chooses which peers may ask, what categories of question they may ask, and what an answer may contain. Cross-institution querying stays off until it is turned on, and a single-institution deployment is a complete deployment.</p></details>
+      <details><summary>What happens to the records if the engagement ends?</summary><p>They remain the institution's. The chain exports in an open format and stays verifiable using tools that do not contact our servers.</p></details>
+      <details><summary>Is this a medical device?</summary><p>No. It is decision support with a clinician in the loop. It is not FDA or CE cleared and is not marketed for clinical diagnosis.</p></details>
+      <details><summary>How is it priced?</summary><p>Founding-cohort terms are set per deployment and discussed on the first call. Pricing follows seats and workload volume, not patient volume or records held.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="resources">
+  <div class="wrap">
+    <p class="eyebrow">Resources</p>
+    <h2>Documents and source</h2>
+    <div class="res">
+      <a href="https://github.com/ailedger-dev/ailedger"><span class="tag">Source</span><b>Record layer</b><span class="d">Record layer source, verifier and golden vectors.</span></a>
+      <a href="/charter/"><span class="tag">Document</span><b>Charter</b><span class="d">Customers we decline and features we will not build.</span></a>
+      <a href="https://adna.network"><span class="tag">Standard</span><b>aDNA</b><span class="d">MIT-licensed open standard for structuring knowledge for agents.</span></a>
+    </div>
+  </div>
+</section>
+
+<footer class="ft">
+  <div class="wrap">
+    <div class="ft-grid">
+      <div>
+        <a class="brand" href="#top" style="margin-bottom:12px" aria-label="AILedger"><span class="wordmark"><span class="wm"><b>AI</b>LEDGER</span></span></a>
+        <p style="font-size:13.5px;color:var(--ink-4);max-width:34ch">AILedger, PBC builds Consilium, the federated context layer for AI agents in medical research.</p>
+      </div>
+      <div><h4>Product</h4><a href="#capabilities">Capabilities</a><a href="#use-cases">Use cases</a><a href="#deploy">Deployment</a><a href="#network">Network</a>
+      <a href="#access">Access</a></div>
+      <div><h4>Company</h4><a href="/charter/">Charter</a><a href="mailto:jake@ailedger.dev">Contact</a></div>
+      <div><h4>Open source</h4><a href="https://github.com/ailedger-dev/ailedger">GitHub</a><a href="https://adna.network">aDNA standard</a><a href="/privacy/">Privacy</a></div>
+    </div>
+    <div class="ft-bot">
+      <span>AILedger, PBC · Delaware public benefit corporation · CA dba AILEDGER, INC.</span>
+      <span>Patent pending · open-source core</span>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── hero network ───────────────────────────────── */
+  var cv=document.getElementById('netcv');
+  if(cv){
+    var ctx=cv.getContext('2d'),W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2);
+    var nodes=[],edges=[],pulses=[],answered=0,abstained=0,last=0;
+    function layout(){
+      var r=cv.getBoundingClientRect();W=r.width;H=r.height;
+      cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+      var pts=[[.10,.34],[.26,.72],[.40,.22],[.54,.58],[.68,.26],[.83,.66],[.93,.34]];
+      nodes=pts.map(function(p,i){return {x:p[0]*W,y:p[1]*H,r:i%3===0?7:5.5,lit:0};});
+      edges=[[0,1],[0,2],[1,2],[1,3],[2,3],[2,4],[3,4],[3,5],[4,5],[1,6],[3,6],[5,6]];
+    }
+    function spawn(){var e=edges[Math.floor(Math.random()*edges.length)],d=Math.random()<.5;
+      pulses.push({a:d?e[0]:e[1],b:d?e[1]:e[0],t:0,sp:.0022+Math.random()*.0022,ret:false});}
+    var eA=document.getElementById('cAns'),eB=document.getElementById('cAbs');
+    function counts(){if(eA)eA.textContent=(1247+answered).toLocaleString();if(eB)eB.textContent=(38+abstained).toLocaleString();}
+    function draw(ts){
+      ctx.clearRect(0,0,W,H);ctx.lineWidth=1;
+      edges.forEach(function(e){var a=nodes[e[0]],b=nodes[e[1]];
+        ctx.strokeStyle='rgba(20,24,30,0.13)';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();});
+      pulses.forEach(function(p){var a=nodes[p.a],b=nodes[p.b],x=a.x+(b.x-a.x)*p.t,y=a.y+(b.y-a.y)*p.t;
+        var g=ctx.createRadialGradient(x,y,0,x,y,9);
+        g.addColorStop(0,p.ret?'rgba(44,122,79,.55)':'rgba(11,79,214,.5)');
+        g.addColorStop(1,p.ret?'rgba(44,122,79,0)':'rgba(11,79,214,0)');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,9,0,6.284);ctx.fill();
+        ctx.fillStyle=p.ret?'#2C7A4F':'#0B4FD6';ctx.beginPath();ctx.arc(x,y,2.2,0,6.284);ctx.fill();});
+      nodes.forEach(function(n){
+        if(n.lit>0){ctx.fillStyle='rgba(11,79,214,'+(0.13*n.lit)+')';ctx.beginPath();ctx.arc(n.x,n.y,n.r+11,0,6.284);ctx.fill();n.lit-=0.016;}
+        ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,6.284);ctx.fill();
+        ctx.strokeStyle='rgba(20,24,30,0.34)';ctx.stroke();
+        ctx.fillStyle='rgba(11,79,214,0.9)';ctx.beginPath();ctx.arc(n.x,n.y,2,0,6.284);ctx.fill();});
+      if(!reduce){
+        if(ts-last>1100){spawn();last=ts;}
+        for(var i=pulses.length-1;i>=0;i--){var p=pulses[i];p.t+=p.sp;
+          if(p.t>=1){nodes[p.b].lit=1;
+            if(!p.ret){ if(Math.random()<.78) pulses.push({a:p.b,b:p.a,t:0,sp:p.sp,ret:true}); else {abstained++;counts();} }
+            else {answered++;counts();}
+            pulses.splice(i,1);}}
+      }
+      requestAnimationFrame(draw);
+    }
+    layout();counts();addEventListener('resize',layout);
+    if(reduce){for(var k=0;k<5;k++)spawn();pulses.forEach(function(p){p.t=.5;});}
+    requestAnimationFrame(draw);
+  }
+
+  /* ── record stream ──────────────────────────────── */
+  var stream=document.getElementById('stream');
+  if(stream){
+    var HEX='0123456789abcdef',ROWH=25,TOP=11,KEEP=6,FADE=[1,.82,.62,.42,.24,0];
+    var EV=[['agent.decision','variant RYR1 c.14582G>A · likely pathogenic · 1 alternative rejected'],
+      ['context.scoped','aDNA subgraph · 4 of 412 nodes · tokens 6.1k'],
+      ['query.federated','cohort feasibility · phenotype HP:0001252 · 3 peers asked'],
+      ['peer.answered','peer B · 7 matches · counts only'],
+      ['peer.abstained','peer D · no coverage in scope'],
+      ['policy.check','egress=deny · phi=local-only · min-cell 5'],
+      ['compute.dispatched','esm2-650m · 3 shards → HPC allocation'],
+      ['result.returned','1,284 scored · 41 flagged for clinician review'],
+      ['clinician.signoff','reviewer confirmed · disagreed on 2 calls'],
+      ['ontology.resolved','"infantile hypotonia" = HP:0008947 · confidence 0.91'],
+      ['abstention.recorded','evidence insufficient · 2 sources conflict'],
+      ['chain.verified','height 48,214 · links intact'],
+      ['budget.consumed','privacy epsilon 0.4 of 3.0 · requester scoped'],
+      ['attribution.written','node a 4 · node b 7 · node c 3'],
+      ['spec.built','no record data · de-identified projection']];
+    var srRows=[],n=0;
+    function hex(c){var o='';for(var k=0;k<c;k++)o+=HEX[Math.floor(Math.random()*16)];return o;}
+    function place(el,idx,anim){
+      if(!anim){el.style.transition='none';}
+      el.style.transform='translateY('+(TOP+idx*ROWH)+'px)';
+      el.style.opacity=FADE[Math.min(Math.max(idx,0),FADE.length-1)];
+      if(!anim){void el.offsetWidth;el.style.transition='';}
+    }
+    function makeRow(){
+      var zero=(n%9===8);
+      var ev=zero?['records.moved','patient records that left an institution']:EV[n%EV.length];
+      n++;
+      var el=document.createElement('div');
+      el.className='sr'+(zero?' zero':'');
+      var a=document.createElement('span');a.className='e';a.textContent=ev[0];
+      var b=document.createElement('span');b.className='d';b.textContent=ev[1];
+      var c=document.createElement('span');c.className='h';
+      el.appendChild(a);el.appendChild(b);el.appendChild(c);
+      if(zero){c.textContent='0';return el;}
+      var fin=hex(4)+'\u2026'+hex(4);
+      if(reduce){c.textContent=fin;c.classList.add('hfin');var _w=document.getElementById('wmHead');if(_w){_w.textContent='#'+String(fin).replace(/[^0-9a-f]/g,'').slice(0,4);_w.classList.remove('tick');void _w.offsetWidth;_w.classList.add('tick');}return el;}
+      c.textContent=hex(4)+'\u2026'+hex(4);
+      var i=0,iv=setInterval(function(){i++;
+        if(i>2){clearInterval(iv);c.textContent=fin;c.classList.add('hfin');var _w=document.getElementById('wmHead');if(_w){_w.textContent='#'+String(fin).replace(/[^0-9a-f]/g,'').slice(0,4);_w.classList.remove('tick');void _w.offsetWidth;_w.classList.add('tick');}}
+        else c.textContent=hex(4)+'\u2026'+hex(4);},70);
+      return el;
+    }
+    function tick(){
+      var el=makeRow();stream.appendChild(el);srRows.unshift(el);
+      place(el,-1,false);
+      while(srRows.length>KEEP){var o=srRows.pop();if(o.parentNode)o.parentNode.removeChild(o);}
+      for(var k=0;k<srRows.length;k++)place(srRows[k],k,true);
+    }
+    for(var w=0;w<5;w++){var el=makeRow();stream.appendChild(el);srRows.unshift(el);}
+    for(var k=0;k<srRows.length;k++)place(srRows[k],k,false);
+    if(!reduce)setInterval(tick,3400);
+    document.addEventListener('visibilitychange',function(){
+      if(!document.hidden)for(var k=0;k<srRows.length;k++)place(srRows[k],k,false);});
+  }
+
+  /* ── cross-institution query ────────────────────── */
+  var qd=document.getElementById('qd');
+  if(qd){
+    var paths=['qp1','qp2','qp3'].map(function(i){return document.getElementById(i);});
+    var dots=['qd1','qd2','qd3'].map(function(i){return document.getElementById(i);});
+    var boxes=['qb0','qb1','qb2','qb3'].map(function(i){return document.getElementById(i);});
+    var cnts=['qc1','qc2','qc3'].map(function(i){return document.getElementById(i);});
+    var qrows=[].slice.call(document.querySelectorAll('#mapQ div'));
+    var kinds=['hot','hot','nil'],T=[],busy=false;
+    function at(ms,fn){T.push(setTimeout(fn,ms));}
+    function travel(path,dot,dur,back,done){
+      var len=path.getTotalLength(),t0=null;dot.style.opacity='1';
+      function step(ts){if(!t0)t0=ts;var k=Math.min((ts-t0)/dur,1),d=back?len*(1-k):len*k;
+        var pt=path.getPointAtLength(d);dot.setAttribute('cx',pt.x);dot.setAttribute('cy',pt.y);
+        if(k<1)requestAnimationFrame(step);else{dot.style.opacity='0';done&&done();}}
+      requestAnimationFrame(step);
+    }
+    function cycle(){
+      T.forEach(clearTimeout);T=[];busy=true;
+      boxes.forEach(function(b){b.classList.remove('hot','nil','src');});
+      cnts.forEach(function(c){c.classList.remove('on');});
+      qrows.forEach(function(r){r.classList.remove('on');});
+      dots.forEach(function(d){d.style.opacity='0';});
+      if(reduce){boxes[0].classList.add('src');boxes[1].classList.add('hot');boxes[2].classList.add('hot');boxes[3].classList.add('nil');
+        cnts.forEach(function(c){c.classList.add('on');});qrows.forEach(function(r){r.classList.add('on');});busy=false;return;}
+      at(150,function(){boxes[0].classList.add('src');qrows[0].classList.add('on');});
+      [0,1,2].forEach(function(i){
+        at(560+i*620,function(){
+          travel(paths[i],dots[i],1250,false,function(){
+            boxes[i+1].classList.add(kinds[i]);cnts[i].classList.add('on');
+            if(kinds[i]!=='nil')travel(paths[i],dots[i],1250,true);
+            if(i===1)qrows[1].classList.add('on');
+            if(i===2){qrows[2].classList.add('on');at(650,function(){qrows[3].classList.add('on');});
+              at(1150,function(){qrows[4].classList.add('on');busy=false;});}
+          });
+        });
+      });
+    }
+    if('IntersectionObserver' in window && !reduce){
+      var seen=false;
+      new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting&&!seen){seen=true;cycle();}});},{threshold:.3}).observe(qd);
+    } else cycle();
+    var rb=document.getElementById('mapReplay');
+    if(rb)rb.addEventListener('click',function(){busy=false;cycle();});
+  }
+})();
+</script>
+
   </body>
 </html>
