@@ -156,6 +156,8 @@ body:has(.ds-root) {
 .ds-home__arrow { display: inline-block; transition: transform 180ms ease; }
 @media (prefers-reduced-motion: reduce) { .ds-home__arrow { transition: none; } }
 
+/* box-sizing reset — primitives.css gutter math depends on it; normally provided by the app index.css, shipped here so the DS is self-sufficient in Claude Design. */
+*, *::before, *::after { box-sizing: border-box; }
 /* ============================================================================
  * Design-system tokens — extracted from /hiring (the design-language source of
  * truth). Dark, single-palette, theme-INDEPENDENT (no prefers-color-scheme flip
