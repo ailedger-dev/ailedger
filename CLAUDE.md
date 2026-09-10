@@ -76,3 +76,7 @@ inline-code styling, no table or sidebar/TOC primitive, and no per-page scroll
 offset. `/` and `/pricing` currently use lifted cards; `/docs` needs code
 surfaces + a 96px deep-link scroll-margin. When migrating those pages, decide
 explicitly: flatten to match `/hiring`, or extend the system — a design call.
+
+## Homepage publishing preference (2026-09-09)
+
+Jake selected the collective-intelligence homepage ("Intelligence, accumulating.") and explicitly authorized publishing it and every subsequent requested website update to ailedger.dev. Complete relevant checks, use the PR → main → Cloudflare Pages path, and verify production after each update without asking again. This authorization is scoped to the website, not Workers or unrelated product changes.
