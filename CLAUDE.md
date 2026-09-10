@@ -83,4 +83,4 @@ Jake selected the collective-intelligence homepage ("Intelligence, accumulating.
 
 The scroll-driven interactive homepage was approved for production on 2026-09-09 after adding founder backgrounds. Its source is `landing/index.html` and `landing/scroll/`. Jake Joyner and Stanley Bishop are labeled Co-founder only; do not assign CEO or other executive responsibilities without explicit direction.
 
-Stanley’s founder entry was removed from production at Jake’s request pending Stanley’s consent (2026-09-09). A local review artifact preserves the two-founder version. Do not restore Stanley’s entry to production until Jake confirms consent.
+Jake explicitly authorized restoring Stanley’s previous founder entry on 2026-09-10, superseding the earlier publication hold. Keep Stanley first and both founders labeled Co-founder, with their previously approved backgrounds.
