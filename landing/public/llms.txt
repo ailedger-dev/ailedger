@@ -1,17 +1,14 @@
-# AILedger
+# aiLedger
 
-AILedger, PBC (Delaware public benefit corporation; CA dba AILEDGER, INC.) builds **Consilium**, the federated
-context layer for AI agents in medical research.
+aiLedger is building a shared, verifiable record of evidence, decisions and discoveries, so people and AI can build on each other’s work.
 
-- Agents run inside an institution's own environment (VPC or on-premises); clinical and genomic data never leaves.
-- Every agent decision — conclusion, evidence, rejected alternatives, reviewer — is written to an append-only,
-  SHA-256-chained record that verifies offline (RFC 8785 canonicalization; two byte-exact implementations; open source).
-- Institutions can query one another's context without moving patient records: a question travels, counts and
-  summaries return, and a node without coverage records an abstention.
-- Institutional knowledge is structured on the open aDNA standard (MIT), so an agent loads the relevant subgraph
-  rather than a corpus.
-- Access is a policy setting: pro-bono or humanitarian participation is an authorization-scope change, not a
-  separate product.
+Its open-source, append-only record is a foundation for collective intelligence. Alongside it, aiDNA is an open context standard for carrying understanding between efforts.
 
-Deployment: 12-week founding-cohort engagement led by a forward-deployed engineer. Contact: jake@ailedger.dev.
-Charter: https://ailedger.dev/charter/ · Source: https://github.com/ailedger-dev/ailedger · Standard: https://adna.network
+The company’s scientific ambitions include AI-assisted molecular discovery, understanding undiagnosed rare disease, preserving biological and climate data, and environmental investigation. These are ambitions, not claims of delivered clinical or environmental outcomes.
+
+Connecting what we know. Changing what comes next.
+
+Contact: jake@ailedger.dev
+Charter: https://ailedger.dev/charter/
+Source: https://github.com/ailedger-dev/ailedger
+Open context standard: https://adna.network
