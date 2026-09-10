@@ -80,3 +80,5 @@ explicitly: flatten to match `/hiring`, or extend the system — a design call.
 ## Homepage publishing preference (2026-09-09)
 
 Jake selected the collective-intelligence homepage ("Intelligence, accumulating.") and explicitly authorized publishing it and every subsequent requested website update to ailedger.dev. Complete relevant checks, use the PR → main → Cloudflare Pages path, and verify production after each update without asking again. This authorization is scoped to the website, not Workers or unrelated product changes.
+
+The scroll-driven interactive homepage was approved for production on 2026-09-09 after adding founder backgrounds. Its source is `landing/index.html` and `landing/scroll/`. Jake Joyner and Stanley Bishop are labeled Co-founder only; do not assign CEO or other executive responsibilities without explicit direction.
