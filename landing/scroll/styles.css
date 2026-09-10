@@ -8,3 +8,5 @@
 .founder-label{display:block;font-size:11px;color:var(--muted);margin-top:9px}
 
 .founder-bio{font-size:13px;line-height:1.65;color:var(--muted);margin-top:13px;max-width:440px}.team .chapter-copy{max-width:690px}.team-names{max-width:470px}
+
+.story-controls #next-chapter{position:absolute;left:50%;transform:translateX(-50%);width:44px;height:44px;display:grid;place-items:center;padding:0;color:var(--accent);border:1px solid var(--line);border-radius:50%;background:var(--bg);transition:border-color .2s,color .2s}.story-controls #next-chapter:hover{border-color:var(--accent);color:var(--text)}.story-controls #next-chapter[hidden]{display:none}
