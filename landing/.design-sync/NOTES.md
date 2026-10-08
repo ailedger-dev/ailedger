@@ -27,9 +27,16 @@ a Vite *app*, not a published component lib).
 - **`.design-sync/ds-styles.css` is GENERATED** (concat of `src/ds/primitives.css`
   + `src/ds/tokens.css`), and `cssEntry` points at it. `tokensGlob` does nothing
   here because it needs a node_modules `tokensPkg`, and the tokens are a local
-  file. If `primitives.css` or `tokens.css` changes, **regenerate** before build:
-  `{ echo "/* GENERATED ... */"; cat src/ds/primitives.css; echo; cat src/ds/tokens.css; } > .design-sync/ds-styles.css`
+  file. If `primitives.css` or `tokens.css` changes, **regenerate** before build
+  (keep the box-sizing reset line):
+  `{ echo "/* GENERATED ... */"; cat src/ds/primitives.css; printf '\n*, *::before, *::after { box-sizing: border-box; }\n'; cat src/ds/tokens.css; } > .design-sync/ds-styles.css`
   Order matters: primitives FIRST (its Inter `@import` must be the first
   statement) then tokens. A stale ds-styles.css silently desyncs the shipped CSS.
+- **box-sizing reset is REQUIRED in the shipped CSS** (added 2026-06-28). primitives.css
+  depends on the global `*{box-sizing:border-box}` from the app's index.css (which we do
+  NOT sync). Without it, `.ds-section`'s 240px gutters add to element width → every section
+  overflows ~480px → and `:has(.ds-root){overflow-x:clip}` makes the overflow unscrollable
+  → the page renders off-center and horizontally locked in Claude Design. The regen command
+  above ships the reset so the DS is self-sufficient standalone.
 - Previews compose with realistic public marketing copy (FRE 707 / EU AI Act),
   not real customer/internal content — safe to keep.
