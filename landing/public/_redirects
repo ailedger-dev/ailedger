@@ -9,5 +9,8 @@
 # Privacy policy (static, canonical at trailing slash)
 /privacy       /privacy/  301
 
+# Internal sign-in entry: the app launcher (Jake 2026-10-14)
+/login    https://start.ailedger.dev/  302
+
 # SPA catch-all (must be last)
 /* /index.html 200
