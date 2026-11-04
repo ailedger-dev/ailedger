@@ -39,7 +39,7 @@ const PROVIDERS: Record<string, string> = {
 };
 
 export default {
-	async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+	async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
 		// Drain stale pending_log:* entries from KV durable buffer back into
 		// Supabase. Closes the worker-crash-mid-flight gap (whiteboard 2026-04-27
 		// side B "FORWARD-BEFORE-DUR-WRITE unmitigated"; threat model §6.1).
@@ -55,7 +55,13 @@ export default {
 		// and email support + customer via Postmark. The dashboard reads
 		// chain_health for the "monitored" badge regardless of whether the
 		// customer ever clicks Verify.
-		ctx.waitUntil(monitorChains(env));
+		//
+		// Hourly, not every tick: at */5 the monitor alone was ~700 MB/day of
+		// PostgREST egress and most of the project's log ingestion (Supabase
+		// usage, Oct-Nov 2026). Breaks still alert within the hour.
+		if (new Date(event.scheduledTime).getUTCMinutes() < 5) {
+			ctx.waitUntil(monitorChains(env));
+		}
 	},
 
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
