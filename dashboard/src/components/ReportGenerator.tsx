@@ -157,7 +157,7 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
     const systems = (allSystems ?? []) as { id: string; system_name: string; system_purpose: string; annex_iii_category: string }[]
     const orgName = (profileData as { org_name: string } | null)?.org_name || ''
     const dataResidency = 'AWS eu-central-1 (Frankfurt, Germany) via Supabase. Inference data is processed at Cloudflare\'s global edge network prior to storage.'
-    const retentionPolicy = 'Indefinite - records are append-only and cannot be deleted. Immutability is enforced at the database level per EU AI Act Article 12.'
+    const retentionPolicy = 'Indefinite - records are append-only, and the hash chain makes any later change detectable (tamper-evident).'
 
     const now = new Date()
     const periodStart = logs.length > 0 ? new Date(logs[0].logged_at) : now
@@ -430,7 +430,7 @@ export default function ReportGenerator({ customerId, customerEmail, onUpgrade }
       ['Data Residency', dataResidency],
       ['Retention Policy', retentionPolicy],
       ['Hash Algorithm', 'SHA-256 (inputs and outputs - raw data is never stored)'],
-      ['Immutability', 'Append-only - records cannot be modified or deleted'],
+      ['Tamper-evidence', 'Append-only; edits and deletes are rejected by database triggers, and any later change is detectable via the hash chain'],
       ['Chain Integrity', 'Every row\'s chain_prev_hash is the SHA-256 of the prior row\'s canonical serialization (tamper-evident hash chain)'],
     ]
 

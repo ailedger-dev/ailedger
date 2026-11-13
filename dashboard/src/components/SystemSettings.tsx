@@ -359,7 +359,7 @@ export default function SystemSettings({ customerId }: { customerId: string }) {
               <div className="mt-6">
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Retention Policy</label>
                 <div className="w-full px-3 py-2 bg-slate-900 border border-slate-700/50 rounded-lg text-slate-400 text-sm">
-                  Indefinite - records are append-only and cannot be deleted. Immutability is enforced at the database level per EU AI Act Article 12.
+                  Indefinite - records are append-only, and the hash chain makes any later change detectable (tamper-evident).
                 </div>
                 <p className="text-slate-600 text-xs mt-0.5 mb-2 pl-1">Managed by AILedger infrastructure.</p>
               </div>

@@ -22,7 +22,7 @@ verify AILedger's audit logs on their own.
 ## The cross-SDK hash-variance problem
 
 AILedger's proxy logs a SHA-256 hash of every inference request and
-response body. The hash is immutable, stored in an append-only chain,
+response body. The hash is stored in an append-only, tamper-evident chain,
 and designed so regulators and customers can independently re-verify
 the log by replaying the original payload.
 

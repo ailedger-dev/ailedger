@@ -14,7 +14,7 @@ AILedger is the audit substrate for AI-influenced decisions in regulated and adv
 
 AILedger is a substrate, not a logging tool. The unit of analysis is the **Decision Event**: one structured record per AI decision affecting a person.
 
-**Layer 1: Integrity Chain.** Cloudflare Workers proxy at `proxy.ailedger.dev` plus a hash-chained Postgres ledger that wraps Decision Event records. Every record is hashed and chained to the previous; even internal admin database access cannot rewrite history; immutability is structural, not policy. Customers verify the integrity of any record in a single SQL call.
+**Layer 1: Integrity Chain.** Cloudflare Workers proxy at `proxy.ailedger.dev` plus a hash-chained Postgres ledger that wraps Decision Event records. Every record is hashed and chained to the previous, so the ledger is tamper-evident: any later change is detectable. Customers verify the integrity of any record in a single SQL call.
 
 **Layer 2: Decision Event.** Postgres schema on Supabase EU region, one record per AI decision affecting a person. Captures `subject_id` (HMAC-pseudonymized with per-tenant salts; same person across decisions yields same `subject_id`, but the value is not reversible to PII), `inputs_hash` (SHA-256; raw inputs never stored), model version + weights hash, `decision_type` from a fixed taxonomy aligned with EU AI Act Annex III, `protected_class_context` with explicit collection-method tagging (direct / inferred / blind), confidence, `human_in_loop`, structured flag/required-action/actions-taken arrays. The schema makes the diff between `required_actions` and `actions_taken` queryable; that's the unresolved compliance gap.
 
@@ -79,7 +79,7 @@ For audit-time inferred Decision Events (the 4-rung extraction ladder: parse / r
 
 ## Quick start — v1 proxy surface (legacy `inference_logs`)
 
-The v1 inference-log proxy surface is still operational for early customers. New deployments should target the v2 `/v2/detection-events` substrate above.
+The v1 inference-log proxy surface is still operational. New deployments should target the v2 `/v2/detection-events` substrate above.
 
 ```python
 from openai import OpenAI
@@ -147,9 +147,9 @@ Each `ledger.decision_events` row stores `hash_chain_prev` (hash of the previous
 
 The trigger uses a per-tenant `pg_advisory_xact_lock` so concurrent inserts within a tenant serialize; cross-tenant inserts proceed in parallel.
 
-### Immutability
+### Append-only enforcement (tamper-evident, not tamper-proof)
 
-UPDATE and DELETE triggers raise exceptions on `ledger.decision_events` — even from `service_role`. Records are cryptographically and procedurally append-only.
+UPDATE and DELETE triggers raise exceptions on `ledger.decision_events`, including from `service_role`. This keeps the table append-only in normal operation, but it is not absolute: an operator with database-owner access could disable the triggers. What the design guarantees is tamper-evidence: any later change breaks the hash chain, and `ledger.verify_chain()` reports where. Anchoring to an external network (Hedera, testnet only today) is the path to evidence the operator cannot quietly rewrite; see `docs/claims.yaml` for what is and is not claimed.
 
 ### Per-tenant subject pseudonymization (Layer 2)
 

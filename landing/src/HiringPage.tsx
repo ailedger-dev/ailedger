@@ -195,8 +195,8 @@ const PRINCIPLES: { title: string; body: string }[] = [
     body: 'EEOC four-fifths rule. Federal Reserve SR 11-7. OCC 2011-12. Customers can tighten thresholds toward stricter detection; they can’t loosen them. That’s precisely why a regulator trusts the output — and why it commands a premium.',
   },
   {
-    title: 'Immutability is structural.',
-    body: "Hash-chained records. UPDATE and DELETE raise exceptions at the database layer, even from service accounts. We don't ask people to be careful with history; we make rewriting it impossible.",
+    title: 'Tampering is detectable.',
+    body: "Hash-chained records. UPDATE and DELETE raise exceptions at the database layer, even from service accounts, and any change that gets past them breaks the chain. We don't ask people to be careful with history; we make rewriting it visible.",
   },
   {
     title: 'We facilitate. We do not certify.',
