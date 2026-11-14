@@ -62,7 +62,7 @@ Two `.ds-body` paragraphs:
 - Five titled paragraphs (h3 + `.ds-body`):
   - **Article 12, specifically.** `AILedger doesn't attempt to certify your compliance — that's not something any vendor can do. It produces the logs Article 12 calls for: every inference from a high-risk AI system, logged throughout the system's lifetime, in a form an auditor can verify.`
   - **GDPR by construction.** `Raw prompts and outputs never enter AILedger's storage. Only SHA-256 fingerprints plus metadata. No personal data collected means no personal data to leak, subpoena, or subject-access.`
-  - **Append-only by enforcement.** `Records cannot be modified or deleted — not by you, not by us, not by a root DB user. Append-only is a DB-trigger-level guarantee, not a UI checkbox.`
+  - **Append-only, tamper-evident.** `Database triggers reject edits and deletes, and every record is hash-chained to the one before it, so any later change is detectable. Tamper-evident, not tamper-proof.`
   - **Hash-chained, exportable, auditor-reviewable.** `Every record links to the prior one by hash. A tamper-detection pass traces the chain end-to-end. Your compliance team exports the full chain — with metadata, timestamps, and hash-verification — for a regulator's review.`
   - **SOC 2 Type II on track for Q3 2027.** `We're auditing toward SOC 2 Type II with Q3 2027 as the realistic — not aspirational — delivery window. The logging + access-control substrate a SOC 2 audit examines has been in place since v1; the audit engagement is what's scheduled. SOC 2 Type I ships ahead of it in Q3 2026.`
 - A flat bordered callout (DS gap — minimal 1px border, accent-tinted):
